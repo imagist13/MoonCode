@@ -1,0 +1,44 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: moon-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: moon_blog
+      POSTGRES_USER: moon_user
+      POSTGRES_PASSWORD: moon_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - moon-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U moon_user -d moon_blog"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: moon-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - moon-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  moon-network:
+    driver: bridge
