@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>账号 · MoonBlog</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400;1,700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="./assets/style.css" />
+</head>
+<body class="admin-body">
+
+  <aside class="admin-sidebar">
+    <a href="./index.html" class="admin-brand">
+      <span class="nav-brand-logo"></span>
+      <span class="admin-brand-name">MoonBlog</span>
+    </a>
+    <nav class="admin-nav">
+      <a href="./admin.html" class="admin-nav-link">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="9"/></svg>
+        仪表盘
+      </a>
+      <a href="./admin-new.html" class="admin-nav-link">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+        写文章
+      </a>
+      <a href="./admin-account.html" class="admin-nav-link active">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a7 7 0 0 1 14 0v1"/></svg>
+        账号
+      </a>
+    </nav>
+    <div class="admin-user">
+      <div class="admin-user-avatar"></div>
+      <div class="admin-user-info">
+        <div class="admin-user-name">Moon</div>
+        <div class="admin-user-role">Administrator</div>
+      </div>
+      <a href="./index.html" class="admin-user-out">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      </a>
+    </div>
+  </aside>
+
+  <main class="admin-main">
+    <header class="admin-header">
+      <h1 class="admin-h1">账号</h1>
+    </header>
+
+    <!-- 个人资料 -->
+    <section class="admin-section">
+      <div class="admin-section-head"><h2>个人资料</h2></div>
+      <div class="form-max">
+        <div class="form-field">
+          <label>显示名</label>
+          <input type="text" class="input" value="Moon" />
+        </div>
+        <div class="form-field">
+          <label>邮箱</label>
+          <input type="email" class="input" value="hello@moonblog.dev" />
+        </div>
+        <div class="form-field">
+          <label>个人简介</label>
+          <textarea class="input" rows="3">热爱写作与折腾。Go / TypeScript / DDD / 阅读。</textarea>
+        </div>
+        <div>
+          <button class="btn-primary">保存</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 修改密码 -->
+    <section class="admin-section">
+      <div class="admin-section-head"><h2>修改密码</h2></div>
+      <div class="form-max">
+        <div class="form-field">
+          <label>当前密码</label>
+          <input type="password" class="input" placeholder="•••••••••" />
+        </div>
+        <div class="form-field">
+          <label>新密码</label>
+          <input type="password" class="input" placeholder="至少 8 位" />
+        </div>
+        <div class="form-field">
+          <label>确认新密码</label>
+          <input type="password" class="input" />
+        </div>
+        <div>
+          <button class="btn-primary">更新密码</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="./assets/app.js"></script>
+</body>
+</html>

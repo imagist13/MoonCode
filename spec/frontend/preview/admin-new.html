@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>写文章 · MoonBlog</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400;1,700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="./assets/style.css" />
+</head>
+<body class="admin-body">
+
+  <aside class="admin-sidebar">
+    <a href="./index.html" class="admin-brand">
+      <span class="nav-brand-logo"></span>
+      <span class="admin-brand-name">MoonBlog</span>
+    </a>
+    <nav class="admin-nav">
+      <a href="./admin.html" class="admin-nav-link">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
+        仪表盘
+      </a>
+      <a href="./admin-new.html" class="admin-nav-link active">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+        写文章
+      </a>
+      <a href="./admin-account.html" class="admin-nav-link">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a7 7 0 0 1 14 0v1"/></svg>
+        账号
+      </a>
+    </nav>
+    <div class="admin-user">
+      <div class="admin-user-avatar"></div>
+      <div class="admin-user-info">
+        <div class="admin-user-name">Moon</div>
+        <div class="admin-user-role">Administrator</div>
+      </div>
+      <a href="./index.html" class="admin-user-out">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      </a>
+    </div>
+  </aside>
+
+  <main class="admin-main">
+    <header class="admin-header">
+      <h1 class="admin-h1">写文章</h1>
+      <div class="admin-header-actions">
+        <button class="btn-secondary">保存草稿</button>
+        <button class="btn-primary">发布</button>
+      </div>
+    </header>
+
+    <div class="editor-layout">
+      <div class="editor-main">
+        <input type="text" class="input title-input" placeholder="标题" value="用 DDD 构建可维护的 Go 后端" />
+
+        <textarea class="input" rows="2" placeholder="摘要（会显示在文章列表页）"></textarea>
+
+        <textarea class="input editor-area" placeholder="用 Markdown 开始写作..." rows="20">## 一、分层与职责
+
+每一层只关心自己该关心的事：Interface 处理 HTTP、Application 编排用例、Domain 表达业务规则、Infrastructure 对接外部世界。
+
+```go
+type Article struct {
+    ID       uint
+    Title    string
+    Slug     string
+    Content  string
+    AuthorID uint
+}
+```
+
+## 二、仓储接口
+
+Domain 层只定义 `Repository` 接口，具体实现放在 Infrastructure 层。</textarea>
+
+        <div class="editor-status">
+          <span>Markdown · 128 字</span>
+          <span>已自动保存 · 刚刚</span>
+        </div>
+      </div>
+
+      <aside class="editor-side">
+        <div class="side-block">
+          <div class="side-title">分类</div>
+          <select class="input">
+            <option>后端</option>
+            <option>前端</option>
+            <option>工具</option>
+            <option>随笔</option>
+          </select>
+        </div>
+
+        <div class="side-block">
+          <div class="side-title">标签</div>
+          <div class="tag-input">
+            <span class="ti-chip">Go <button>×</button></span>
+            <span class="ti-chip">DDD <button>×</button></span>
+            <input placeholder="回车添加..." />
+          </div>
+        </div>
+      </aside>
+    </div>
+  </main>
+
+  <script src="./assets/app.js"></script>
+</body>
+</html>
