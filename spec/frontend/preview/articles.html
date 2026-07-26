@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>文章 · MoonBlog</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400;1,700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="./assets/style.css" />
+</head>
+<body>
+
+  <nav class="nav-wrap">
+    <div class="nav-shell">
+      <div style="display:flex; align-items:center; justify-content:space-between; gap:.75rem;">
+        <div style="display:flex; align-items:center; gap:2rem;">
+          <a href="./index.html" class="nav-brand"><span class="nav-brand-logo"></span><span class="nav-brand-name">MoonBlog</span></a>
+          <div class="nav-links">
+            <a href="./index.html" data-nav-link class="nav-link">首页</a>
+            <a href="./articles.html" data-nav-link class="nav-link">文章</a>
+            <a href="./categories.html" data-nav-link class="nav-link">分类</a>
+            <a href="./tags.html" data-nav-link class="nav-link">标签</a>
+            <a href="./about.html" data-nav-link class="nav-link">关于</a>
+          </div>
+        </div>
+        <div class="nav-actions">
+          <button class="nav-icon-btn" data-theme-toggle aria-label="切换主题">
+            <svg data-theme-icon="sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+            <svg data-theme-icon="moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+          </button>
+          <button class="nav-icon-btn nav-hamburger" data-mobile-open aria-label="打开菜单">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg>
+          </button>
+          <a href="./login.html" class="nav-cta">登录</a>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <div class="mobile-nav">
+    <button class="mobile-nav-close" data-mobile-close><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    <a href="./index.html">首页</a><a href="./articles.html">文章</a><a href="./categories.html">分类</a><a href="./tags.html">标签</a><a href="./about.html">关于</a><a href="./login.html">登录</a>
+  </div>
+
+  <!-- Header -->
+  <section class="page-shell" style="padding: 8.5rem 1.5rem 2rem;">
+    <div style="max-width:72rem; margin:0 auto;" class="reveal">
+      <span class="nav-pill" style="margin-bottom:1.25rem;">All Writings</span>
+      <h1 class="text-huge" style="margin: 1.25rem 0 1rem;">文章 <span class="serif-italic">列表.</span></h1>
+      <p style="font-size:1rem; color: var(--text-muted); font-weight:400; max-width:32rem; line-height:1.7;">
+        按时间倒序展示所有已发布的文章。点击卡片进入详情。
+      </p>
+    </div>
+  </section>
+
+  <!-- Filter Bar -->
+  <section class="page-shell" style="padding: 0 1.5rem 2rem;">
+    <div style="max-width:72rem; margin:0 auto; display:flex; flex-wrap:wrap; gap:.5rem;" class="reveal">
+      <a href="#" class="chip" style="border-color: var(--text); color: var(--brand-violet);">全部</a>
+      <a href="./categories.html" class="chip">后端</a>
+      <a href="./categories.html" class="chip">前端</a>
+      <a href="./categories.html" class="chip">工具</a>
+      <a href="./categories.html" class="chip">随笔</a>
+    </div>
+  </section>
+
+  <!-- Article rows -->
+  <section class="section-border-t">
+    <div style="max-width:72rem; margin:0 auto;">
+      <div class="page-shell" style="padding: 2.5rem 1.5rem;">
+        <div style="display:flex; flex-direction:column; gap:2.5rem;" id="list">
+          <!-- items rendered by script for brevity -->
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Pagination -->
+  <section class="page-shell section-border-t" style="padding: 2rem 1.5rem 4rem;">
+    <div style="max-width:72rem; margin:0 auto; display:flex; justify-content:space-between; align-items:center; gap:1rem;">
+      <span class="nav-pill">Page 1 / 3</span>
+      <div style="display:flex; gap:.5rem;">
+        <button class="nav-icon-btn" style="border:1px solid var(--border);"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></button>
+        <button class="nav-icon-btn" style="border:1px solid var(--border);"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg></button>
+      </div>
+    </div>
+  </section>
+
+  <footer class="site-footer page-shell">
+    <div class="site-footer-inner">
+      <p>MoonBlog © 2026. 一个专注于阅读体验的个人博客。</p>
+      <nav>
+        <a href="./articles.html">Blog</a><a href="./categories.html">分类</a><a href="./tags.html">标签</a><a href="./about.html">About</a>
+      </nav>
+    </div>
+  </footer>
+
+  <script>
+    const posts = [
+      { d:'2026-07-25', c:'后端',   cc:'brand-violet', t:'用 <i>DDD</i> 构建可维护的 Go 后端',        desc:'DDD 让业务逻辑与技术细节解耦，Go 项目也能有清晰的分层。', min:'8 min', a:'Moon' },
+      { d:'2026-07-20', c:'前端',   cc:'brand-green',  t:'<i>Next.js 16</i> App Router 深度实践',    desc:'路由组、并行路由、Server Actions，一个博客能用到多少？', min:'6 min', a:'Moon' },
+      { d:'2026-07-15', c:'工具',   cc:'brand-orange', t:'用 Redis 做 JWT <i>黑名单</i>',              desc:'无状态 JWT 遇上登出，一个务实的组合方案。', min:'4 min', a:'Moon' },
+      { d:'2026-07-08', c:'随笔',   cc:'brand-pink',   t:'一个后端工程师的 <i>审美</i> 修炼',           desc:'代码之外，也需要一点对排版、颜色、留白的敏感度。', min:'5 min', a:'Moon' },
+      { d:'2026-07-01', c:'工具',   cc:'brand-yellow', t:'我的 <i>2026</i> 开发环境全览',              desc:'终端、编辑器、快捷键、字体，一份持续维护的清单。', min:'7 min', a:'Moon' },
+      { d:'2026-06-25', c:'后端',   cc:'brand-violet', t:'PostgreSQL 与 <i>索引</i> 那些事',           desc:'B-Tree、GIN、部分索引，怎么选、怎么用。', min:'9 min', a:'Moon' },
+    ];
+    const list = document.getElementById('list');
+    posts.forEach((p, i) => {
+      const el = document.createElement('a');
+      el.href = './article.html';
+      el.className = 'reveal';
+      el.style.cssText = 'display:grid; grid-template-columns: 1fr; gap:1.25rem; padding: 1.75rem 0; border-top: 1px solid var(--border); text-decoration:none; color:var(--text);';
+      if (i === 0) el.style.borderTop = 'none';
+      el.innerHTML = `
+        <div class="row-meta" style="display:flex; flex-direction:column; gap:.35rem;">
+          <span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--text-soft);">${p.d}</span>
+          <span style="font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.14em; color:var(--${p.cc});">${p.c}</span>
+        </div>
+        <div>
+          <h3 style="font-size: clamp(1.25rem, 2.2vw, 1.75rem); line-height:1.25; margin:0 0 .5rem; font-weight:500; letter-spacing:-.01em;">
+            ${p.t.replace(/<i>/g,'<span class="serif-italic">').replace(/<\/i>/g,'</span>')}
+          </h3>
+          <p style="color:var(--text-muted); font-size:.95rem; line-height:1.7; font-weight:400; max-width:36rem; margin:0 0 .75rem;">${p.desc}</p>
+          <div style="display:flex; align-items:center; gap:.6rem; font-size:12px;">
+            <span class="serif-italic" style="opacity:.5;">Written by</span>
+            <span style="font-weight:600;">${p.a}</span>
+            <span style="opacity:.4;">·</span>
+            <span style="color:var(--text-muted);">${p.min}</span>
+          </div>
+        </div>
+      `;
+      list.appendChild(el);
+    });
+
+    // observe new rows
+    const io = new IntersectionObserver(es => es.forEach(e => e.isIntersecting && (e.target.classList.add('in'), io.unobserve(e.target))), { threshold: .1 });
+    document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+
+    // Layout md+
+    const media = window.matchMedia('(min-width: 768px)');
+    const apply = () => document.querySelectorAll('#list > a').forEach(el => { el.style.gridTemplateColumns = media.matches ? '140px 1fr' : '1fr'; });
+    apply(); media.addEventListener('change', apply);
+  </script>
+
+  <script src="./assets/app.js"></script>
+</body>
+</html>
