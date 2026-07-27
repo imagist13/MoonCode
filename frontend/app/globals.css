@@ -1,26 +1,151 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+/* -----------------------------------------------------------
+ * Moon Design Tokens
+ * -----------------------------------------------------------
+ * 站点默认走浅色，`.dark` 覆盖至深色。变量既服务于自定义 UI，
+ * 也覆盖 shadcn/ui 常用命名，保证组件外观一致。
+ * --------------------------------------------------------- */
 
 @theme inline {
+  /* Fonts —— 由 next/font 注入 CSS 变量 */
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-playfair), ui-serif, Georgia, serif;
+  --font-mono: var(--font-jetbrains), ui-monospace, SFMono-Regular, monospace;
+
+  /* Custom design tokens */
+  --color-bg: var(--bg);
+  --color-bg-elev: var(--bg-elev);
+  --color-fg: var(--fg);
+  --color-muted: var(--muted-color);
+  --color-border-line: var(--border-line);
+  --color-accent: var(--accent);
+  --color-accent-2: var(--accent-2);
+
+  /* shadcn 通用 tokens */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted-bg: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent-bg: var(--accent-bg);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --radius-sm: 8px;
+  --radius: 14px;
+  --radius-lg: 24px;
 }
 
-@media (prefers-color-scheme: dark) {
+/* 让 shadcn 常用工具类名映射到 CSS 变量。 */
+@layer base {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    /* 站点自有变量（浅色） */
+    --bg: #fafaf7;
+    --bg-elev: #ffffff;
+    --fg: #171716;
+    --muted-color: #71717a;
+    --border-line: #e5e5e2;
+    --accent: #7c3aed;
+    --accent-2: #ec4899;
+
+    /* shadcn 兼容变量（浅色） */
+    --background: #fafaf7;
+    --foreground: #171716;
+    --card: #ffffff;
+    --card-foreground: #171716;
+    --popover: #ffffff;
+    --popover-foreground: #171716;
+    --primary: #171716;
+    --primary-foreground: #fafaf7;
+    --secondary: #f0efea;
+    --secondary-foreground: #171716;
+    --muted: #f0efea;
+    --muted-foreground: #71717a;
+    --accent-bg: #ede9fe;
+    --accent-foreground: #4c1d95;
+    --destructive: #dc2626;
+    --destructive-foreground: #fafaf7;
+    --border: #e5e5e2;
+    --input: #e5e5e2;
+    --ring: #7c3aed;
+  }
+
+  .dark {
+    --bg: #0a0a09;
+    --bg-elev: #18181b;
+    --fg: #f5f5f4;
+    --muted-color: #a1a1aa;
+    --border-line: #27272a;
+    --accent: #a78bfa;
+    --accent-2: #f472b6;
+
+    --background: #0a0a09;
+    --foreground: #f5f5f4;
+    --card: #131313;
+    --card-foreground: #f5f5f4;
+    --popover: #131313;
+    --popover-foreground: #f5f5f4;
+    --primary: #f5f5f4;
+    --primary-foreground: #0a0a09;
+    --secondary: #1c1c1e;
+    --secondary-foreground: #f5f5f4;
+    --muted: #1c1c1e;
+    --muted-foreground: #a1a1aa;
+    --accent-bg: #2e1065;
+    --accent-foreground: #ede9fe;
+    --destructive: #ef4444;
+    --destructive-foreground: #fafaf7;
+    --border: #27272a;
+    --input: #27272a;
+    --ring: #a78bfa;
+  }
+
+  * {
+    border-color: hsl(var(--border) / 1);
+  }
+
+  html {
+    color-scheme: light dark;
+  }
+
+  body {
+    background: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  ::selection {
+    background: var(--accent-bg);
+    color: var(--accent-foreground);
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* 更强调 serif italic 的默认排印。 */
+@layer components {
+  .display-serif {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-weight: 400;
+    letter-spacing: -0.02em;
+  }
+  .label-mono {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+  }
 }
