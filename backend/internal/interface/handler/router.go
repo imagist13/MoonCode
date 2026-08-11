@@ -18,6 +18,10 @@ func SetupRouter() *gin.Engine {
 
 	v1 := r.Group("/api/v1")
 	{
+		v1.GET("/healthz", func(c *gin.Context) {
+			c.JSON(200, gin.H{"status": "ok"})
+		})
+
 		setupUserRoutes(v1)
 		setupArticleRoutes(v1)
 		setupCategoryRoutes(v1)

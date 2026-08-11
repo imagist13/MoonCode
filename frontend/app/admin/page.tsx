@@ -1,115 +1,101 @@
-import { FileText, Folder, Tag as TagIcon, Users } from "lucide-react";
-import { StatCard } from "@/components/admin/stat-card";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { articles } from "@/lib/api/articles";
-import { categories } from "@/lib/api/categories";
-import { tags } from "@/lib/api/tags";
-import { getSession } from "@/lib/auth/session";
-import type { Article } from "@/types/article";
-import { format } from "date-fns";
-import Link from "next/link";
+import { FileText, FolderTree, Tag as TagIcon, Eye } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { readServerSession } from "@/lib/auth/session";
+import { api } from "@/lib/api/client";
+import type { ArticleListResponse } from "@/types/article";
+import type { Category } from "@/types/category";
+import type { Tag } from "@/types/tag";
 
-export const dynamic = "force-dynamic";
-
-/** 后台仪表盘 —— 统计 + 最近文章表格。 */
-export default async function AdminDashboardPage() {
-  const session = await getSession();
-
-  const [articleData, categoryData, tagData] = await Promise.all([
-    articles.list({ page: 1, pageSize: 5 }).catch(() => ({ list: [], total: 0 })),
-    categories.list().catch(() => []),
-    tags.list().catch(() => []),
+async function fetchStats(token: string) {
+  const [articles, cats, tags] = await Promise.allSettled([
+    api<ArticleListResponse>("/articles", { query: { pageSize: 1 }, token }),
+    api<Category[]>("/categories", { token }),
+    api<Tag[]>("/tags", { token }),
   ]);
-
-  return (
-    <div className="space-y-10">
-      <header>
-        <div className="label-mono text-muted-foreground">Dashboard</div>
-        <h1 className="mt-2 text-3xl tracking-tight">
-          <span className="display-serif">Welcome</span>
-          {session?.user?.nickname
-            ? `, ${session.user.nickname}`
-            : session?.user?.username
-            ? `, ${session.user.username}`
-            : ""}
-          。
-        </h1>
-      </header>
-
-      <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard
-          label="Articles"
-          value={articleData.total ?? 0}
-          icon={FileText}
-        />
-        <StatCard
-          label="Categories"
-          value={categoryData.length}
-          icon={Folder}
-        />
-        <StatCard label="Tags" value={tagData.length} icon={TagIcon} />
-        <StatCard label="Users" value={session ? 1 : 0} icon={Users} />
-      </section>
-
-      <section>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="text-base">最近文章</CardTitle>
-            <Link
-              href="/admin/articles/new"
-              className="label-mono text-muted-foreground hover:text-foreground"
-            >
-              新建 →
-            </Link>
-          </CardHeader>
-          <CardContent className="p-0">
-            <RecentArticleTable list={articleData.list ?? []} />
-          </CardContent>
-        </Card>
-      </section>
-    </div>
-  );
+  return {
+    totalArticles:
+      articles.status === "fulfilled" ? articles.value.total : 0,
+    totalCategories:
+      cats.status === "fulfilled" ? cats.value.length : 0,
+    totalTags: tags.status === "fulfilled" ? tags.value.length : 0,
+    totalViews:
+      articles.status === "fulfilled"
+        ? articles.value.items.reduce((acc, a) => acc + (a.viewCount ?? 0), 0)
+        : 0,
+  };
 }
 
-function RecentArticleTable({ list }: { list: Article[] }) {
-  if (list.length === 0) {
-    return (
-      <div className="p-6 text-sm text-muted-foreground">
-        暂无文章。到「写文章」新建一篇。
-      </div>
-    );
-  }
+export default async function AdminDashboard() {
+  const session = (await readServerSession())!;
+  const stats = await fetchStats(session.token);
+
+  const items = [
+    {
+      label: "文章",
+      value: stats.totalArticles,
+      icon: FileText,
+      tint: "bg-primary/10 text-primary",
+    },
+    {
+      label: "分类",
+      value: stats.totalCategories,
+      icon: FolderTree,
+      tint: "bg-accent/15 text-accent",
+    },
+    {
+      label: "标签",
+      value: stats.totalTags,
+      icon: TagIcon,
+      tint: "bg-emerald-500/15 text-emerald-500",
+    },
+    {
+      label: "总阅读",
+      value: stats.totalViews,
+      icon: Eye,
+      tint: "bg-amber-500/15 text-amber-500",
+    },
+  ];
+
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-sm">
-        <thead className="border-b text-left text-xs uppercase tracking-widest text-muted-foreground">
-          <tr>
-            <th className="px-6 py-3 font-mono">标题</th>
-            <th className="px-6 py-3 font-mono">状态</th>
-            <th className="px-6 py-3 font-mono">更新</th>
-          </tr>
-        </thead>
-        <tbody>
-          {list.map((a) => (
-            <tr key={a.id} className="border-b last:border-b-0">
-              <td className="px-6 py-3">{a.title}</td>
-              <td className="px-6 py-3 text-muted-foreground">
-                {a.status === 1 ? "已发布" : a.status === 2 ? "归档" : "草稿"}
-              </td>
-              <td className="px-6 py-3 text-muted-foreground">
-                {a.updated_at
-                  ? format(new Date(a.updated_at), "yyyy-MM-dd HH:mm")
-                  : "-"}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight">仪表盘</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          概览你的写作数据。
+        </p>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+        {items.map((s) => {
+          const Icon = s.icon;
+          return (
+            <Card key={s.label}>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-xs font-medium text-muted-foreground">
+                  {s.label}
+                </CardTitle>
+                <span className={`inline-flex h-8 w-8 items-center justify-center rounded-lg ${s.tint}`}>
+                  <Icon className="h-4 w-4" />
+                </span>
+              </CardHeader>
+              <CardContent>
+                <p className="text-2xl font-semibold tabular-nums">{s.value}</p>
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">快速开始</CardTitle>
+        </CardHeader>
+        <CardContent className="grid gap-3 text-sm text-muted-foreground">
+          <p>· 在「写文章」里发布第一篇内容。</p>
+          <p>· 在「分类」和「标签」里整理你的主题。</p>
+          <p>· 在「账号」里更新你的资料与签名。</p>
+        </CardContent>
+      </Card>
     </div>
   );
 }

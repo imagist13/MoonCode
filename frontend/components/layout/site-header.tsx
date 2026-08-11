@@ -1,31 +1,83 @@
 import Link from "next/link";
-import { primaryNav } from "@/config/nav";
-import { siteConfig } from "@/config/site";
-import { NavLinks } from "./nav-links";
+import { Moon, Github, Rss, Twitter } from "lucide-react";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
-import { Button } from "@/components/ui/button";
+import { siteConfig } from "@/config/site";
+import { cn } from "@/lib/utils";
 
-/** 顶部站点 header：Logo · 胶囊导航 · 主题 · 登录。 */
-export function SiteHeader() {
+interface SiteHeaderProps {
+  className?: string;
+}
+
+export function SiteHeader({ className }: SiteHeaderProps) {
   return (
-    <header className="sticky top-0 z-40 border-b border-border/60 bg-background/70 backdrop-blur">
-      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
-        <Link href="/" className="flex items-baseline gap-2">
-          <span className="font-serif text-2xl italic tracking-tight">
-            {siteConfig.name}
+    <header
+      className={cn(
+        "sticky top-0 z-40 w-full border-b border-border/60 glass",
+        className
+      )}
+    >
+      <div className="mx-auto flex h-16 max-w-6xl items-center gap-6 px-4 sm:px-6 lg:px-8">
+        <Link
+          href="/"
+          className="group inline-flex items-center gap-2 font-semibold tracking-tight"
+        >
+          <span className="relative inline-flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-moon to-moon-glow shadow-[0_0_18px_-4px_hsl(var(--moon-glow))]">
+            <Moon className="h-4 w-4 text-night" strokeWidth={2.4} />
           </span>
-          <span className="font-mono text-[10px] uppercase tracking-[0.3em] text-muted-foreground">
-            journal
-          </span>
+          <span className="text-base">{siteConfig.name}</span>
         </Link>
 
-        <NavLinks items={primaryNav} className="hidden md:flex" />
+        <nav className="hidden flex-1 items-center gap-1 text-sm md:flex">
+          {[
+            { href: "/", label: "首页" },
+            { href: "/articles", label: "归档" },
+            { href: "/categories", label: "分类" },
+            { href: "/tags", label: "标签" },
+            { href: "/about", label: "关于" },
+          ].map((item) => (
+            <Link
+              key={item.href}
+              href={item.href as never}
+              className="rounded-md px-3 py-1.5 text-foreground/70 transition-colors hover:bg-muted hover:text-foreground"
+            >
+              {item.label}
+            </Link>
+          ))}
+        </nav>
 
-        <div className="flex items-center gap-2">
+        <div className="ml-auto flex items-center gap-2">
+          <a
+            href={siteConfig.social[0].href}
+            target="_blank"
+            rel="noreferrer"
+            aria-label="GitHub"
+            className="hidden h-9 w-9 items-center justify-center rounded-md text-foreground/70 transition-colors hover:bg-muted hover:text-foreground sm:inline-flex"
+          >
+            <Github className="h-4 w-4" />
+          </a>
+          <a
+            href={siteConfig.social[1].href}
+            target="_blank"
+            rel="noreferrer"
+            aria-label="X"
+            className="hidden h-9 w-9 items-center justify-center rounded-md text-foreground/70 transition-colors hover:bg-muted hover:text-foreground sm:inline-flex"
+          >
+            <Twitter className="h-4 w-4" />
+          </a>
+          <Link
+            href="/rss.xml"
+            aria-label="RSS"
+            className="hidden h-9 w-9 items-center justify-center rounded-md text-foreground/70 transition-colors hover:bg-muted hover:text-foreground sm:inline-flex"
+          >
+            <Rss className="h-4 w-4" />
+          </Link>
           <ThemeToggle />
-          <Button asChild variant="outline" size="sm" className="hidden sm:inline-flex">
-            <Link href="/login">Sign in</Link>
-          </Button>
+          <Link
+            href="/admin"
+            className="hidden h-9 items-center rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 sm:inline-flex"
+          >
+            写作
+          </Link>
         </div>
       </div>
     </header>

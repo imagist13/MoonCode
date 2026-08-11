@@ -11,14 +11,19 @@ import (
 
 func AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
+		// 优先 Authorization Header，fallback 到 HttpOnly Cookie，
+		// 以便前端 SSR middleware（无 Header）也能识别登录态。
 		token := c.GetHeader("Authorization")
+		if token == "" {
+			token, _ = c.Cookie("moon_token")
+		}
+		token = strings.TrimPrefix(token, "Bearer ")
+
 		if token == "" {
 			response.Error(c, 401, "未登录")
 			c.Abort()
 			return
 		}
-
-		token = strings.TrimPrefix(token, "Bearer ")
 
 		blacklisted, err := IsTokenBlacklisted(c.Request.Context(), token)
 		if err != nil {

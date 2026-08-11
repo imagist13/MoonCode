@@ -1,38 +1,52 @@
-import { apiFetch, qs } from "./client";
-import type { Paginated } from "@/types/api";
+import { api, getJSON } from "./client";
 import type {
   Article,
-  ArticleListQuery,
-  CreateArticlePayload,
+  ArticleListResponse,
+  ArticleSummary,
 } from "@/types/article";
 
-/** 文章相关 API。 */
-export const articles = {
-  list: (params: ArticleListQuery = {}, opts?: { revalidate?: number }) =>
-    apiFetch<Paginated<Article>>(`/articles${qs(params)}`, {
-      next: opts?.revalidate !== undefined ? { revalidate: opts.revalidate } : undefined,
-    }),
+export interface ListArticlesParams {
+  page?: number;
+  pageSize?: number;
+  category?: string;
+  tag?: string;
+  q?: string;
+  status?: "draft" | "published";
+  token?: string;
+}
 
-  bySlug: (slug: string, opts?: { revalidate?: number }) =>
-    apiFetch<Article>(`/articles/slug/${encodeURIComponent(slug)}`, {
-      next: opts?.revalidate !== undefined ? { revalidate: opts.revalidate } : undefined,
-    }),
+export function listArticles(params: ListArticlesParams = {}) {
+  const { token, ...rest } = params;
+  return getJSON<ArticleListResponse>("/articles", rest);
+}
 
-  byId: (id: number | string, token?: string) =>
-    apiFetch<Article>(`/articles/${id}`, { token }),
+export function getArticleBySlug(slug: string) {
+  return getJSON<Article>(`/articles/slug/${encodeURIComponent(slug)}`);
+}
 
-  slugs: () => apiFetch<string[]>("/articles/slugs"),
+export function createArticle(input: Partial<Article> & { token: string }) {
+  const { token, ...rest } = input;
+  return api<Article>("/articles", { method: "POST", body: rest, token });
+}
 
-  create: (payload: CreateArticlePayload, token: string) =>
-    apiFetch<Article>("/articles", { method: "POST", body: payload, token }),
+export function updateArticle(
+  id: number,
+  input: Partial<Article> & { token: string }
+) {
+  const { token, ...rest } = input;
+  return api<Article>(`/articles/${id}`, {
+    method: "PUT",
+    body: rest,
+    token,
+  });
+}
 
-  update: (id: number, payload: Partial<CreateArticlePayload>, token: string) =>
-    apiFetch<Article>(`/articles/${id}`, {
-      method: "PUT",
-      body: payload,
-      token,
-    }),
+export function deleteArticle(id: number, token: string) {
+  return api<void>(`/articles/${id}`, { method: "DELETE", token });
+}
 
-  remove: (id: number, token: string) =>
-    apiFetch<null>(`/articles/${id}`, { method: "DELETE", token }),
-};
+export function myDrafts(token: string) {
+  return getJSON<ArticleListResponse>("/articles/me", { token });
+}
+
+export type { Article, ArticleSummary };

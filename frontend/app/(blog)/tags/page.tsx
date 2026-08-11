@@ -1,47 +1,41 @@
-import type { Metadata } from "next";
 import Link from "next/link";
-import { tags } from "@/lib/api/tags";
+import { MainGrid } from "@/components/layout/main-grid";
+import { HomeSidebar } from "@/components/sidebar/home-sidebar";
 import { Badge } from "@/components/ui/badge";
-import type { Tag } from "@/types/tag";
-
-export const revalidate = 120;
-
-export const metadata: Metadata = {
-  title: "Tags",
-  description: "所有标签。",
-};
+import { listTags } from "@/lib/api/tags";
 
 export default async function TagsPage() {
-  let list: Tag[] = [];
-  try {
-    list = (await tags.list({ revalidate: 120 })) ?? [];
-  } catch {
-    list = [];
-  }
+  const tags = await listTags().catch(() => []);
   return (
-    <>
-      <header className="mb-12">
-        <div className="label-mono text-muted-foreground">Index</div>
-        <h1 className="mt-3 text-4xl tracking-tight md:text-5xl">
-          <span className="display-serif">Tags</span>
-        </h1>
+    <MainGrid sidebar={<HomeSidebar />}>
+      <header className="mb-6">
+        <h1 className="text-2xl font-bold tracking-tight">所有标签</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          共 {tags.length} 个标签
+        </p>
       </header>
-      {list.length === 0 ? (
-        <p className="text-sm text-muted-foreground">暂无标签。</p>
+      {tags.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-border p-12 text-center text-sm text-muted-foreground">
+          还没有标签。
+        </div>
       ) : (
         <div className="flex flex-wrap gap-2">
-          {list.map((t) => (
-            <Link key={t.id} href={`/tags/${t.slug}`}>
-              <Badge variant="outline" className="font-mono text-[10px] uppercase tracking-widest">
-                {t.name}
-                {typeof t.count === "number" && (
-                  <span className="ml-1 opacity-60">{t.count}</span>
-                )}
+          {tags.map((t) => (
+            <Link
+              key={t.slug}
+              href={`/tags/${t.slug}` as never}
+              className="inline-flex"
+            >
+              <Badge variant="outline" className="px-3 py-1.5 text-sm hover:bg-primary/10 hover:text-primary">
+                #{t.name}
+                <span className="ml-1.5 text-xs text-muted-foreground">
+                  {t.articleCount ?? 0}
+                </span>
               </Badge>
             </Link>
           ))}
         </div>
       )}
-    </>
+    </MainGrid>
   );
 }

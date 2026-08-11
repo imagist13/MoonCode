@@ -1,68 +1,50 @@
-import type { Metadata } from "next";
-import { articles } from "@/lib/api/articles";
-import { ArticleCard } from "@/components/blog/article-card";
-import { Pagination } from "@/components/blog/pagination";
-import type { Article } from "@/types/article";
+import { MainGrid } from "@/components/layout/main-grid";
+import { HomeSidebar } from "@/components/sidebar/home-sidebar";
+import { PostCard } from "@/components/post/post-card";
+import { Pagination } from "@/components/post/pagination";
+import { listArticles } from "@/lib/api/articles";
 
-export const revalidate = 60;
+const PAGE_SIZE = 9;
 
-export const metadata: Metadata = {
-  title: "Articles",
-  description: "所有已发布的文章。",
-};
-
-/** 文章列表页 —— Server Component，直接 await 数据。 */
-export default async function ArticlesPage({
-  searchParams,
-}: {
+interface PageProps {
   searchParams: Promise<{ page?: string }>;
-}) {
-  const { page: pageParam } = await searchParams;
-  const page = Math.max(1, Number(pageParam) || 1);
-  const pageSize = 10;
+}
 
-  let list: Article[] = [];
-  let total = 0;
-  try {
-    const data = await articles.list(
-      { page, pageSize, status: 1 },
-      { revalidate: 60 }
-    );
-    list = data.list ?? [];
-    total = data.total ?? 0;
-  } catch {
-    // 后端不可用时展示空态
-  }
+export default async function ArticlesPage({ searchParams }: PageProps) {
+  const sp = await searchParams;
+  const page = Math.max(1, Number(sp.page ?? 1));
+  const data = await listArticles({
+    page,
+    pageSize: PAGE_SIZE,
+    status: "published",
+  }).catch(() => ({ items: [], total: 0, page, pageSize: PAGE_SIZE }));
 
   return (
-    <>
-      <header className="mb-12">
-        <div className="label-mono text-muted-foreground">Journal</div>
-        <h1 className="mt-3 text-4xl tracking-tight md:text-5xl">
-          <span className="display-serif">All</span> articles
-        </h1>
-        <p className="mt-3 max-w-xl text-sm text-muted-foreground">
-          按时间倒序排列的写作记录。
+    <MainGrid sidebar={<HomeSidebar />}>
+      <header className="mb-6">
+        <h1 className="text-2xl font-bold tracking-tight">文章归档</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          共 {data.total} 篇 · 第 {data.page} / {Math.max(1, Math.ceil(data.total / PAGE_SIZE))} 页
         </p>
       </header>
-
-      {list.length === 0 ? (
-        <p className="py-16 text-center text-sm text-muted-foreground">
-          还没有已发布的文章。稍后再来看看，或者到后台写一篇。
-        </p>
+      {data.items.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-border p-12 text-center text-sm text-muted-foreground">
+          还没有文章。
+        </div>
       ) : (
-        <div>
-          {list.map((a) => (
-            <ArticleCard key={a.id} article={a} />
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+          {data.items.map((a) => (
+            <PostCard key={a.id} article={a} />
           ))}
-          <Pagination
-            page={page}
-            pageSize={pageSize}
-            total={total}
-            basePath="/articles"
-          />
         </div>
       )}
-    </>
+      <Pagination
+        page={data.page}
+        pageSize={data.pageSize}
+        total={data.total}
+        basePath="/articles"
+        className="mt-8"
+      />
+    </MainGrid>
   );
 }

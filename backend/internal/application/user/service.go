@@ -38,6 +38,7 @@ type UpdateCmd struct {
 	Nickname string
 	Email    string
 	Avatar   string
+	Bio      string
 }
 
 type UserDTO struct {
@@ -46,6 +47,7 @@ type UserDTO struct {
 	Nickname string `json:"nickname"`
 	Email    string `json:"email"`
 	Avatar   string `json:"avatar"`
+	Bio      string `json:"bio"`
 	Status   int    `json:"status"`
 }
 
@@ -114,6 +116,9 @@ func (s *UserService) Update(ctx context.Context, id uint, cmd *UpdateCmd) (*Use
 	if cmd.Avatar != "" {
 		u.Avatar = cmd.Avatar
 	}
+	if cmd.Bio != "" {
+		u.Bio = cmd.Bio
+	}
 
 	if err := s.repo.Update(ctx, u); err != nil {
 		return nil, err
@@ -152,6 +157,7 @@ func toDTO(u *user.User) *UserDTO {
 		Nickname: u.Nickname,
 		Email:    u.Email,
 		Avatar:   u.Avatar,
+		Bio:      u.Bio,
 		Status:   u.Status,
 	}
 }

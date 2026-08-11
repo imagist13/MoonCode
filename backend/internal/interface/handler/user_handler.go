@@ -13,6 +13,18 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
+/** 登录态 Cookie 名：与前端 lib/constants.ts TOKEN_COOKIE 对齐。 */
+const sessionCookieName = "moon_token"
+
+/** Cookie 有效期：与 JWT 过期一致。 */
+func sessionCookieMaxAge() int {
+	cfg := config.GetConfig()
+	if cfg == nil || cfg.JWT.Expire <= 0 {
+		return int((7 * 24 * time.Hour).Seconds())
+	}
+	return cfg.JWT.Expire
+}
+
 type UserHandler struct {
 	service *user.UserService
 }
@@ -62,6 +74,18 @@ func (h *UserHandler) Login(c *gin.Context) {
 		response.Error(c, 500, "生成token失败")
 		return
 	}
+
+	// 与前端协同：把 JWT 写入 HttpOnly Cookie。
+	// SameSite=Lax 兼容 SSR 跨站跳转，HttpOnly 防止 XSS 读取。
+	c.SetCookie(
+		sessionCookieName,
+		token,
+		sessionCookieMaxAge(),
+		"/",
+		"",
+		false, // dev 不强制 secure
+		true,  // HttpOnly
+	)
 
 	response.Success(c, gin.H{
 		"token": token,
@@ -155,7 +179,11 @@ func (h *UserHandler) DeleteUser(c *gin.Context) {
 }
 
 func (h *UserHandler) Logout(c *gin.Context) {
-	token := c.GetHeader("Authorization")
+	// 优先从 Cookie 取 token，兼容 Authorization header。
+	token, _ := c.Cookie(sessionCookieName)
+	if token == "" {
+		token = c.GetHeader("Authorization")
+	}
 	token = strings.TrimPrefix(token, "Bearer ")
 
 	claims := &jwt.MapClaims{}
@@ -168,6 +196,9 @@ func (h *UserHandler) Logout(c *gin.Context) {
 			middleware.AddTokenToBlacklist(c.Request.Context(), token, int64(exp))
 		}
 	}
+
+	// 清理浏览器侧的 Cookie。
+	c.SetCookie(sessionCookieName, "", -1, "/", "", false, true)
 
 	response.Success(c, nil)
 }

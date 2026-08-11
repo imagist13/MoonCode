@@ -1,20 +1,26 @@
-import { create } from "zustand";
+"use client";
 
-/** 通用 UI 状态：侧栏抽屉、命令面板等。 */
-interface UiState {
-  sidebarOpen: boolean;
-  commandOpen: boolean;
-  toggleSidebar: () => void;
-  setSidebar: (open: boolean) => void;
-  toggleCommand: () => void;
-  setCommand: (open: boolean) => void;
+import { create } from "zustand";
+import { persist } from "zustand/middleware";
+
+export type Theme = "light" | "dark" | "system";
+
+interface ThemeState {
+  theme: Theme;
+  setTheme: (theme: Theme) => void;
+  toggle: () => void;
 }
 
-export const useUiStore = create<UiState>((set) => ({
-  sidebarOpen: false,
-  commandOpen: false,
-  toggleSidebar: () => set((s) => ({ sidebarOpen: !s.sidebarOpen })),
-  setSidebar: (open) => set({ sidebarOpen: open }),
-  toggleCommand: () => set((s) => ({ commandOpen: !s.commandOpen })),
-  setCommand: (open) => set({ commandOpen: open }),
-}));
+export const useThemeStore = create<ThemeState>()(
+  persist(
+    (set, get) => ({
+      theme: "system",
+      setTheme: (theme) => set({ theme }),
+      toggle: () => {
+        const t = get().theme;
+        set({ theme: t === "dark" ? "light" : "dark" });
+      },
+    }),
+    { name: "moon-theme" }
+  )
+);

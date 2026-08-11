@@ -1,31 +1,16 @@
-/** 用户实体。 */
 export interface User {
   id: number;
   username: string;
+  nickname?: string | null;
   email?: string;
-  nickname?: string;
-  avatar?: string;
-  bio?: string;
-  role?: number;
-  created_at?: string;
-  updated_at?: string;
+  avatar?: string | null;
+  bio?: string | null;
+  role: "admin" | "editor" | "user";
+  createdAt?: string;
 }
 
-/** 登录请求体。 */
-export interface LoginPayload {
-  username: string;
-  password: string;
-}
-
-/** 注册请求体。 */
-export interface RegisterPayload {
-  username: string;
-  email: string;
-  password: string;
-}
-
-/** 登录响应。 */
-export interface LoginResult {
-  token: string;
+export interface AuthSession {
   user: User;
+  token: string;
+  expiresAt?: string;
 }

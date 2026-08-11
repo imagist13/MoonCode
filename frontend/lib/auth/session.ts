@@ -1,26 +1,50 @@
 import { cookies } from "next/headers";
-import { TOKEN_COOKIE } from "@/lib/constants";
-import { users } from "@/lib/api/users";
-import type { User } from "@/types/user";
 
-/**
- * 服务端读取当前登录会话（token + 用户资料）。
- * 未登录或 token 失效返回 null。
- */
-export async function getSession(): Promise<{ token: string; user: User } | null> {
-  const store = await cookies();
-  const token = store.get(TOKEN_COOKIE)?.value;
-  if (!token) return null;
+export const SESSION_COOKIE = "moon-session";
+
+export interface ServerSession {
+  token: string;
+  userId: number;
+}
+
+interface CookiePayload {
+  token: string;
+  user: { id: number; [k: string]: unknown };
+}
+
+// 服务端从 cookie 读取会话——给 RSC 用，不依赖 zustand（持久化在 localStorage）。
+export async function readServerSession(): Promise<ServerSession | null> {
+  const c = await cookies();
+  const raw = c.get(SESSION_COOKIE)?.value;
+  if (!raw) return null;
   try {
-    const user = await users.profile(token);
-    return { token, user };
+    const parsed = JSON.parse(decodeURIComponent(raw)) as CookiePayload;
+    if (!parsed?.token || !parsed?.user?.id) return null;
+    return { token: parsed.token, userId: parsed.user.id };
   } catch {
     return null;
   }
 }
 
-/** 仅读取 token（不校验）。 */
-export async function getToken(): Promise<string | null> {
-  const store = await cookies();
-  return store.get(TOKEN_COOKIE)?.value ?? null;
+export async function writeServerSession(
+  token: string,
+  userId: number,
+  extras: Record<string, unknown> = {}
+) {
+  const c = await cookies();
+  const value = encodeURIComponent(
+    JSON.stringify({ token, user: { id: userId, ...extras } })
+  );
+  c.set(SESSION_COOKIE, value, {
+    httpOnly: false, // 客户端 zustand 也读，便于即时同步
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+    maxAge: 60 * 60 * 24 * 7,
+  });
+}
+
+export async function clearServerSession() {
+  const c = await cookies();
+  c.delete(SESSION_COOKIE);
 }

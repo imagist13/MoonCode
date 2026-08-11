@@ -36,6 +36,19 @@ func (r *ArticleRepository) FindBySlug(ctx context.Context, slug string) (*artic
 	return &a, nil
 }
 
+/** 列出全部文章 slug，供前端 ISR generateStaticParams 使用。 */
+func (r *ArticleRepository) ListSlugs(ctx context.Context) ([]string, error) {
+	var slugs []string
+	if err := r.db.WithContext(ctx).
+		Model(&article.Article{}).
+		Where("status = ?", 1).
+		Order("created_at DESC").
+		Pluck("slug", &slugs).Error; err != nil {
+		return nil, err
+	}
+	return slugs, nil
+}
+
 func (r *ArticleRepository) Update(ctx context.Context, a *article.Article) error {
 	return r.db.WithContext(ctx).Save(a).Error
 }
@@ -44,7 +57,7 @@ func (r *ArticleRepository) Delete(ctx context.Context, id uint) error {
 	return r.db.WithContext(ctx).Delete(&article.Article{}, id).Error
 }
 
-func (r *ArticleRepository) List(ctx context.Context, page, pageSize int, categoryID *uint, status *int) ([]*article.Article, int64, error) {
+func (r *ArticleRepository) List(ctx context.Context, page, pageSize int, categoryID *uint, tagID *uint, keyword *string, status *int) ([]*article.Article, int64, error) {
 	var articles []*article.Article
 	var total int64
 	offset := (page - 1) * pageSize
@@ -59,11 +72,28 @@ func (r *ArticleRepository) List(ctx context.Context, page, pageSize int, catego
 		query = query.Where("status = ?", *status)
 	}
 
+	if keyword != nil && *keyword != "" {
+		like := "%" + *keyword + "%"
+		query = query.Where("title ILIKE ? OR description ILIKE ?", like, like)
+	}
+
+	if tagID != nil {
+		// 通过 article_tags 关联表过滤。仅引入一次连接。
+		query = query.
+			Joins("JOIN article_tags ON article_tags.article_id = articles.id").
+			Where("article_tags.tag_id = ?", *tagID)
+	}
+
 	if err := query.Count(&total).Error; err != nil {
 		return nil, 0, err
 	}
 
-	if err := query.Offset(offset).Limit(pageSize).Order("created_at DESC").Find(&articles).Error; err != nil {
+	order := "created_at DESC"
+	if status != nil && *status == 1 {
+		order = "published_at DESC NULLS LAST, created_at DESC"
+	}
+
+	if err := query.Offset(offset).Limit(pageSize).Order(order).Find(&articles).Error; err != nil {
 		return nil, 0, err
 	}
 

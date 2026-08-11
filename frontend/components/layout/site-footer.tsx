@@ -1,38 +1,80 @@
+import { Github, Rss, Twitter } from "lucide-react";
 import Link from "next/link";
 import { siteConfig } from "@/config/site";
 
-/** 站点页脚。 */
 export function SiteFooter() {
   return (
-    <footer className="border-t border-border/60 py-10">
-      <div className="mx-auto flex max-w-6xl flex-col gap-4 px-6 text-sm text-muted-foreground md:flex-row md:items-center md:justify-between">
-        <div className="flex items-baseline gap-2">
-          <span className="font-serif text-xl italic text-foreground">
-            {siteConfig.name}
-          </span>
-          <span className="font-mono text-[10px] uppercase tracking-[0.3em]">
-            © {new Date().getFullYear()}
-          </span>
+    <footer className="border-t border-border/60 bg-card/30">
+      <div className="mx-auto grid max-w-6xl gap-8 px-4 py-10 sm:px-6 md:grid-cols-3 lg:px-8">
+        <div>
+          <p className="text-sm font-semibold tracking-tight">
+            {siteConfig.title}
+          </p>
+          <p className="mt-2 max-w-xs text-sm text-muted-foreground">
+            {siteConfig.description}
+          </p>
         </div>
-        <nav className="flex gap-6 font-mono text-xs uppercase tracking-[0.14em]">
-          <Link href="/articles" className="hover:text-foreground">
-            Articles
-          </Link>
-          <Link href="/categories" className="hover:text-foreground">
-            Categories
-          </Link>
-          <Link href="/about" className="hover:text-foreground">
-            About
-          </Link>
-          <a
-            href={siteConfig.social.github}
-            target="_blank"
-            rel="noreferrer noopener"
-            className="hover:text-foreground"
-          >
-            GitHub
-          </a>
-        </nav>
+        <div className="text-sm text-muted-foreground">
+          <p className="font-medium text-foreground">导航</p>
+          <ul className="mt-3 space-y-1.5">
+            <li>
+              <Link href="/articles" className="hover:text-foreground">
+                文章归档
+              </Link>
+            </li>
+            <li>
+              <Link href="/categories" className="hover:text-foreground">
+                分类
+              </Link>
+            </li>
+            <li>
+              <Link href="/tags" className="hover:text-foreground">
+                标签
+              </Link>
+            </li>
+            <li>
+              <Link href="/about" className="hover:text-foreground">
+                关于
+              </Link>
+            </li>
+          </ul>
+        </div>
+        <div className="text-sm text-muted-foreground">
+          <p className="font-medium text-foreground">联系</p>
+          <div className="mt-3 flex items-center gap-3">
+            <a
+              href={siteConfig.social[0].href}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-border hover:bg-muted hover:text-foreground"
+              aria-label="GitHub"
+            >
+              <Github className="h-4 w-4" />
+            </a>
+            <a
+              href={siteConfig.social[1].href}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-border hover:bg-muted hover:text-foreground"
+              aria-label="X"
+            >
+              <Twitter className="h-4 w-4" />
+            </a>
+            <Link
+              href="/rss.xml"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-border hover:bg-muted hover:text-foreground"
+              aria-label="RSS"
+            >
+              <Rss className="h-4 w-4" />
+            </Link>
+          </div>
+        </div>
+      </div>
+      <div className="border-t border-border/60">
+        <p className="mx-auto max-w-6xl px-4 py-4 text-xs text-muted-foreground sm:px-6 lg:px-8">
+          © {new Date().getFullYear()} {siteConfig.name} · Built with Next.js &amp;
+          Go.
+        </p>
       </div>
     </footer>
   );

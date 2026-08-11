@@ -1,71 +1,41 @@
 import type { Metadata } from "next";
-import { Inter, JetBrains_Mono, Playfair_Display } from "next/font/google";
+import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { siteConfig } from "@/config/site";
-import { Providers } from "@/components/providers";
-import { themeScript } from "@/components/common/theme-provider";
+import { themeInitScript, ThemeProvider } from "@/components/theme-provider";
 
-const inter = Inter({
+const geistSans = Geist({
+  variable: "--font-geist-sans",
   subsets: ["latin"],
-  variable: "--font-inter",
   display: "swap",
 });
 
-const playfair = Playfair_Display({
+const geistMono = Geist_Mono({
+  variable: "--font-geist-mono",
   subsets: ["latin"],
-  variable: "--font-playfair",
-  style: ["normal", "italic"],
-  weight: ["400", "600"],
-  display: "swap",
-});
-
-const jetbrains = JetBrains_Mono({
-  subsets: ["latin"],
-  variable: "--font-jetbrains",
   display: "swap",
 });
 
 export const metadata: Metadata = {
   title: {
-    default: siteConfig.title,
-    template: `%s · ${siteConfig.name}`,
+    default: "Moon · 月下博客",
+    template: "%s · Moon",
   },
-  description: siteConfig.description,
-  keywords: [...siteConfig.keywords],
-  authors: [{ name: siteConfig.author }],
-  metadataBase: new URL(siteConfig.url),
-  openGraph: {
-    type: "website",
-    title: siteConfig.title,
-    description: siteConfig.description,
-    siteName: siteConfig.name,
-    url: siteConfig.url,
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: siteConfig.title,
-    description: siteConfig.description,
-  },
-  icons: {
-    icon: "/favicon.ico",
-  },
+  description: "记录、思考与代码——在月光下，慢一点写。",
+  metadataBase: new URL("http://localhost:3000"),
 };
 
-export default function RootLayout({
-  children,
-}: Readonly<{ children: React.ReactNode }>) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html
       lang="zh-CN"
-      className={`${inter.variable} ${playfair.variable} ${jetbrains.variable} h-full antialiased`}
       suppressHydrationWarning
+      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <head>
-        {/* 在注水前同步主题，避免闪烁 */}
-        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
       </head>
-      <body className="min-h-full bg-background text-foreground">
-        <Providers>{children}</Providers>
+      <body className="min-h-full flex flex-col bg-background text-foreground">
+        <ThemeProvider>{children}</ThemeProvider>
       </body>
     </html>
   );

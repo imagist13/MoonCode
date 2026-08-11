@@ -1,39 +1,52 @@
-import type { Metadata } from "next";
-import { categories } from "@/lib/api/categories";
-import { CategoryPill } from "@/components/blog/category-pill";
-import type { Category } from "@/types/category";
-
-export const revalidate = 120;
-
-export const metadata: Metadata = {
-  title: "Categories",
-  description: "所有分类。",
-};
+import Link from "next/link";
+import { MainGrid } from "@/components/layout/main-grid";
+import { HomeSidebar } from "@/components/sidebar/home-sidebar";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { listCategories } from "@/lib/api/categories";
 
 export default async function CategoriesPage() {
-  let list: Category[] = [];
-  try {
-    list = (await categories.list({ revalidate: 120 })) ?? [];
-  } catch {
-    list = [];
-  }
+  const cats = await listCategories().catch(() => []);
   return (
-    <>
-      <header className="mb-12">
-        <div className="label-mono text-muted-foreground">Index</div>
-        <h1 className="mt-3 text-4xl tracking-tight md:text-5xl">
-          <span className="display-serif">Categories</span>
-        </h1>
+    <MainGrid sidebar={<HomeSidebar />}>
+      <header className="mb-6">
+        <h1 className="text-2xl font-bold tracking-tight">所有分类</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          按主题浏览，共 {cats.length} 个分类
+        </p>
       </header>
-      {list.length === 0 ? (
-        <p className="text-sm text-muted-foreground">暂无分类。</p>
+      {cats.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-border p-12 text-center text-sm text-muted-foreground">
+          还没有分类。
+        </div>
       ) : (
-        <div className="flex flex-wrap gap-3">
-          {list.map((c) => (
-            <CategoryPill key={c.id} category={c} />
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          {cats.map((c) => (
+            <Link
+              key={c.slug}
+              href={`/categories/${c.slug}` as never}
+              className="block"
+            >
+              <Card className="h-full transition-all hover:-translate-y-0.5 hover:shadow-md">
+                <CardHeader>
+                  <CardTitle className="flex items-center justify-between text-base">
+                    <span>{c.name}</span>
+                    <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground tabular-nums">
+                      {c.articleCount ?? 0}
+                    </span>
+                  </CardTitle>
+                </CardHeader>
+                {c.description && (
+                  <CardContent>
+                    <p className="line-clamp-2 text-sm text-muted-foreground">
+                      {c.description}
+                    </p>
+                  </CardContent>
+                )}
+              </Card>
+            </Link>
           ))}
         </div>
       )}
-    </>
+    </MainGrid>
   );
 }

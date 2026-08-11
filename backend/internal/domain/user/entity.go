@@ -13,6 +13,7 @@ type User struct {
 	Nickname  string         `gorm:"size:50" json:"nickname"`
 	Email     string         `gorm:"unique;size:100" json:"email"`
 	Avatar    string         `gorm:"size:255" json:"avatar"`
+	Bio       string         `gorm:"size:255" json:"bio"`
 	Status    int            `gorm:"default:1" json:"status"`
 	CreatedAt time.Time      `json:"created_at"`
 	UpdatedAt time.Time      `json:"updated_at"`

@@ -1,10 +1,13 @@
-/** 分类实体。 */
+import type { ArticleSummary } from "./article";
+
 export interface Category {
   id: number;
   name: string;
   slug: string;
-  description?: string;
-  count?: number;
-  created_at?: string;
-  updated_at?: string;
+  description?: string | null;
+  articleCount?: number;
+  latestArticle?: Pick<
+    ArticleSummary,
+    "id" | "title" | "slug" | "publishedAt"
+  > | null;
 }

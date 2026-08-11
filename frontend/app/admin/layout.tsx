@@ -1,16 +1,17 @@
-import { AdminSidebar } from "@/components/layout/admin-sidebar";
+import { AdminSidebar } from "@/components/admin/admin-sidebar";
+import { readServerSession } from "@/lib/auth/session";
+import { redirect } from "next/navigation";
+import type { ReactNode } from "react";
 
-/** 后台布局：Sidebar + 主内容区。 */
-export default function AdminLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default async function AdminLayout({ children }: { children: ReactNode }) {
+  const session = await readServerSession();
+  if (!session) redirect("/login?redirect=/admin");
+
   return (
-    <div className="flex min-h-screen bg-background">
+    <div className="mx-auto flex w-full max-w-7xl gap-0">
       <AdminSidebar />
-      <main className="flex-1 overflow-x-hidden">
-        <div className="mx-auto max-w-5xl px-6 py-10">{children}</div>
+      <main className="min-h-[calc(100vh-4rem)] flex-1 px-4 py-6 sm:px-6 lg:px-8">
+        {children}
       </main>
     </div>
   );

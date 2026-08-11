@@ -1,42 +1,42 @@
-import type { Metadata } from "next";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Card, CardContent } from "@/components/ui/card";
+import { MainGrid } from "@/components/layout/main-grid";
+import { HomeSidebar } from "@/components/sidebar/home-sidebar";
 import { siteConfig } from "@/config/site";
 
-export const metadata: Metadata = {
-  title: "About",
-  description: siteConfig.description,
-};
-
-/** 关于页 —— 静态内容。 */
 export default function AboutPage() {
   return (
-    <article className="prose prose-neutral max-w-none dark:prose-invert">
-      <div className="label-mono not-prose text-muted-foreground">Colophon</div>
-      <h1 className="not-prose mt-3 text-4xl tracking-tight md:text-5xl">
-        <span className="display-serif">About</span> {siteConfig.name}
-      </h1>
-
-      <p className="not-prose mt-6 max-w-2xl text-base leading-relaxed text-muted-foreground">
-        Moon 是一个记录工程思考与工艺细节的写作栖息地。这里没有营销的喧嚣，
-        只有节奏、字体与代码。
-      </p>
-
-      <section className="mt-12">
-        <h2 className="text-2xl tracking-tight">Stack</h2>
-        <ul className="mt-3 space-y-1 text-sm text-muted-foreground">
-          <li>· Next.js 16 · React 19 · TypeScript 5</li>
-          <li>· Tailwind CSS v4 · shadcn/ui 风格组件</li>
-          <li>· Go · Gin · GORM （后端 · REST API）</li>
-        </ul>
-      </section>
-
-      <section className="mt-12">
-        <h2 className="text-2xl tracking-tight">Contact</h2>
-        <p className="mt-3 text-sm text-muted-foreground">
-          <a href={`mailto:${siteConfig.social.email}`}>
-            {siteConfig.social.email}
-          </a>
-        </p>
-      </section>
-    </article>
+    <MainGrid sidebar={<HomeSidebar />}>
+      <Card>
+        <CardContent className="p-8">
+          <div className="flex flex-col items-center text-center">
+            <Avatar className="h-24 w-24 shadow">
+              <AvatarImage src={siteConfig.author.avatar} alt={siteConfig.author.name} />
+              <AvatarFallback>{siteConfig.author.name[0]}</AvatarFallback>
+            </Avatar>
+            <h1 className="mt-4 text-2xl font-bold tracking-tight">
+              {siteConfig.author.name}
+            </h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {siteConfig.author.handle}
+            </p>
+          </div>
+          <div className="prose prose-slate mx-auto mt-8 max-w-2xl dark:prose-invert">
+            <p>{siteConfig.author.bio}</p>
+            <h2>关于这个博客</h2>
+            <p>
+              Moon 是一个用 Next.js + Go 写的个人博客，记录我日常的折腾、想法与代码片段。
+              设计上偏向手绘和夜空意象，希望能让你在阅读时也有一丝安静。
+            </p>
+            <h2>技术栈</h2>
+            <ul>
+              <li>前端：Next.js (App Router) · React 19 · Tailwind v4</li>
+              <li>后端：Go · Gin · PostgreSQL · Redis</li>
+              <li>部署：Docker · Nginx</li>
+            </ul>
+          </div>
+        </CardContent>
+      </Card>
+    </MainGrid>
   );
 }

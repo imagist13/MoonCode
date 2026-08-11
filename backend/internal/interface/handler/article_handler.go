@@ -5,6 +5,7 @@ import (
 	"blog-backend/internal/infrastructure/middleware"
 	"blog-backend/internal/infrastructure/response"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 )
@@ -113,6 +114,15 @@ func (h *ArticleHandler) List(c *gin.Context) {
 		}
 	}
 
+	var tagID *uint
+	if t := c.Query("tag_id"); t != "" {
+		id, err := strconv.ParseUint(t, 10, 64)
+		if err == nil {
+			tid := uint(id)
+			tagID = &tid
+		}
+	}
+
 	var status *int
 	if s := c.Query("status"); s != "" {
 		st, err := strconv.Atoi(s)
@@ -121,7 +131,12 @@ func (h *ArticleHandler) List(c *gin.Context) {
 		}
 	}
 
-	dtos, total, err := h.service.List(c.Request.Context(), page, pageSize, categoryID, status)
+	var keyword *string
+	if k := strings.TrimSpace(c.Query("keyword")); k != "" {
+		keyword = &k
+	}
+
+	dtos, total, err := h.service.List(c.Request.Context(), page, pageSize, categoryID, tagID, keyword, status)
 	if err != nil {
 		response.Error(c, 500, "获取文章列表失败")
 		return
@@ -131,6 +146,16 @@ func (h *ArticleHandler) List(c *gin.Context) {
 		"list":  dtos,
 		"total": total,
 	})
+}
+
+/** 返回已发布文章的 slug 列表，供前端 ISR generateStaticParams。 */
+func (h *ArticleHandler) Slugs(c *gin.Context) {
+	slugs, err := h.service.ListSlugs(c.Request.Context())
+	if err != nil {
+		response.Error(c, 500, "获取 slug 列表失败")
+		return
+	}
+	response.Success(c, slugs)
 }
 
 func (h *ArticleHandler) Like(c *gin.Context) {
@@ -151,6 +176,7 @@ func (h *ArticleHandler) Like(c *gin.Context) {
 func (h *ArticleHandler) Routes(r *gin.RouterGroup) {
 	r.POST("/", middleware.AuthMiddleware(), h.Create)
 	r.GET("/", h.List)
+	r.GET("/slugs", h.Slugs)
 	r.GET("/:id", h.GetByID)
 	r.GET("/slug/:slug", h.GetBySlug)
 	r.PUT("/:id", middleware.AuthMiddleware(), h.Update)

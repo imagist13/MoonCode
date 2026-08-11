@@ -1,16 +1,34 @@
-import { NextRequest, NextResponse } from "next/server";
-import { TOKEN_COOKIE } from "@/lib/constants";
+import { NextResponse, type NextRequest } from "next/server";
 
-/** 后台路由鉴权：无 token 一律回登录页。 */
-export const config = {
-  matcher: ["/admin/:path*"],
-};
+const PROTECTED = ["/admin"];
+const COOKIE = "moon-session";
 
 export function middleware(req: NextRequest) {
-  const token = req.cookies.get(TOKEN_COOKIE)?.value;
-  if (!token) {
-    const url = new URL("/login", req.url);
+  const { pathname } = req.nextUrl;
+  const protectedRoute = PROTECTED.some(
+    (p) => pathname === p || pathname.startsWith(p + "/")
+  );
+  if (!protectedRoute) return NextResponse.next();
+
+  const raw = req.cookies.get(COOKIE)?.value;
+  if (!raw) {
+    const url = req.nextUrl.clone();
+    url.pathname = "/login";
+    url.searchParams.set("redirect", pathname);
+    return NextResponse.redirect(url);
+  }
+  try {
+    const parsed = JSON.parse(decodeURIComponent(raw));
+    if (!parsed?.token) throw new Error("no token");
+  } catch {
+    const url = req.nextUrl.clone();
+    url.pathname = "/login";
+    url.searchParams.set("redirect", pathname);
     return NextResponse.redirect(url);
   }
   return NextResponse.next();
 }
+
+export const config = {
+  matcher: ["/admin/:path*"],
+};
