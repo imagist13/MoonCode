@@ -57,19 +57,44 @@ export default function CategoriesPage() {
 
   return (
     <div>
-      <h1 className="text-3xl font-bold">分类</h1>
-      <p className="mt-2 text-muted-foreground">
-        共 {categories.length} 个分类
-      </p>
+      <div className="relative mb-10 overflow-hidden rounded-2xl border border-border/60
+                      bg-linear-to-br from-brand-50 via-background to-purple-50/30
+                      dark:from-brand-900/20 dark:via-background dark:to-purple-900/10
+                      px-6 py-8 md:px-10 md:py-10">
+        <div className="pointer-events-none absolute -top-12 -right-12 h-48 w-48
+                        rounded-full bg-brand-400/20 blur-3xl" />
+        <div className="relative">
+          <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
+            <span className="bg-linear-to-r from-brand-500 via-brand-600 to-purple-500
+                             bg-clip-text text-transparent">
+              分类
+            </span>
+          </h1>
+          <p className="mt-2 text-muted-foreground">
+            共 {categories.length} 个分类
+          </p>
+        </div>
+      </div>
 
-      <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {categories.map((cat) => (
-          <Link key={cat.id} href={`/?categoryId=${cat.id}`}>
-            <Card className="transition-shadow hover:shadow-lg">
+          <Link key={cat.id} href={`/?categoryId=${cat.id}`} className="group">
+            <Card className="h-full">
               <CardHeader>
-                <CardTitle className="text-lg">{cat.categoryName}</CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-lg transition-colors
+                                         group-hover:text-brand-600
+                                         dark:group-hover:text-brand-400">
+                    {cat.categoryName}
+                  </CardTitle>
+                  <span className="inline-flex h-7 items-center rounded-full
+                                   bg-brand-50 px-2.5 text-xs font-medium text-brand-700
+                                   dark:bg-brand-900/40 dark:text-brand-300">
+                    {cat.articleCount}
+                  </span>
+                </div>
                 <CardDescription>
-                  {cat.articleCount} 篇文章
+                  点击查看该分类下的全部文章
                 </CardDescription>
               </CardHeader>
             </Card>

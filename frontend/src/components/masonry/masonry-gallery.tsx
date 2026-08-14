@@ -91,7 +91,7 @@ export function MasonryGallery({
             )}
 
             {/* Hover Overlay */}
-            <div className="absolute inset-0 flex items-end bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 transition-opacity group-hover:opacity-100">
+            <div className="absolute inset-0 flex items-end bg-linear-to-t from-black/60 via-transparent to-transparent opacity-0 transition-opacity group-hover:opacity-100">
               <div className="w-full p-3">
                 <p className="truncate text-sm text-white">{photo.photoName}</p>
                 <p className="text-xs text-white/70">{photo.createTime}</p>

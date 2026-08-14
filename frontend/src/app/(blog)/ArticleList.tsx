@@ -122,7 +122,7 @@ export default function ArticleList({ categoryId, tagId }: ArticleListProps = {}
     <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
       {articles.map((article) => (
         <Link key={article.id} href={`/articles/${article.id}`}>
-          <Card className="group h-full overflow-hidden transition-shadow hover:shadow-lg">
+          <Card className="group h-full overflow-hidden">
             {article.articleCover && (
               <div className="aspect-video overflow-hidden">
                 <Image
@@ -130,7 +130,7 @@ export default function ArticleList({ categoryId, tagId }: ArticleListProps = {}
                   alt={article.articleTitle}
                   fill
                   sizes="(max-width: 768px) 100vw, 50vw"
-                  className="object-cover transition-transform group-hover:scale-105"
+                  className="object-cover transition-transform duration-500 group-hover:scale-105"
                   loading="lazy"
                 />
               </div>
@@ -138,17 +138,23 @@ export default function ArticleList({ categoryId, tagId }: ArticleListProps = {}
             <CardHeader className="pb-2">
               <div className="flex items-center gap-2">
                 {article.isTop && (
-                  <Badge variant="destructive" className="text-xs">
+                  <Badge className="bg-brand-500 text-xs text-white hover:bg-brand-500">
                     置顶
                   </Badge>
                 )}
                 {article.categoryName && (
-                  <Badge variant="secondary" className="text-xs">
+                  <Badge
+                    variant="secondary"
+                    className="text-xs bg-brand-50 text-brand-700
+                               dark:bg-brand-900/30 dark:text-brand-300"
+                  >
                     {article.categoryName}
                   </Badge>
                 )}
               </div>
-              <CardTitle className="line-clamp-2 text-lg">
+              <CardTitle className="line-clamp-2 text-lg transition-colors
+                                     group-hover:text-brand-600
+                                     dark:group-hover:text-brand-400">
                 {article.articleTitle}
               </CardTitle>
             </CardHeader>
@@ -159,7 +165,11 @@ export default function ArticleList({ categoryId, tagId }: ArticleListProps = {}
               <div className="mt-3 flex items-center justify-between">
                 <div className="flex gap-1">
                   {article.tagVOList?.slice(0, 3).map((tag) => (
-                    <Badge key={tag.id} variant="outline" className="text-xs">
+                    <Badge
+                      key={tag.id}
+                      variant="outline"
+                      className="text-xs transition-colors hover:border-brand-300 hover:text-brand-600"
+                    >
                       {tag.tagName}
                     </Badge>
                   ))}

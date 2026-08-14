@@ -190,7 +190,9 @@ export default function AdminLayout({
           <SidebarMenu>
             <SidebarMenuItem>
               <SidebarMenuButton size="lg" render={<Link href="/admin" />}>
-                <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+                <div className="flex aspect-square size-8 items-center justify-center rounded-lg
+                                bg-linear-to-br from-brand-500 via-brand-600 to-purple-500
+                                text-primary-foreground shadow-sm shadow-brand-500/30">
                   <FileText className="size-4" />
                 </div>
                 <div className="grid flex-1 text-left text-sm leading-tight">
