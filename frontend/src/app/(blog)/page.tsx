@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import ArticleList from "./ArticleList";
-import { Hero } from "@/components/blog/Hero";
+import { Hero, type HeroPinned } from "@/components/blog/Hero";
 import { FeaturedCard } from "@/components/blog/FeaturedCard";
 import { CategoryList } from "@/components/blog/CategoryList";
 import { TagCloud } from "@/components/blog/TagCloud";
@@ -26,10 +26,11 @@ export default async function HomePage({ searchParams }: HomePageProps) {
       <Hero
         siteName={config?.name}
         slogan={config?.slogan as string | undefined}
+        pinned={featured as HeroPinned | null}
         hasFilter={hasFilter}
       />
 
-      <div className="grid gap-8 lg:grid-cols-[1fr_300px]">
+      <div id="articles" className="grid gap-8 lg:grid-cols-[1fr_300px]">
         {/* 左栏：文章列表 */}
         <main className="min-w-0">
           <Suspense
