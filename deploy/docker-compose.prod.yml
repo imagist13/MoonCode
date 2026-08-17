@@ -103,6 +103,17 @@ services:
       - JWT_SECRET=${JWT_SECRET:?JWT_SECRET 必填}
       - AUTO_MIGRATE_ON_STARTUP=${AUTO_MIGRATE_ON_STARTUP:-false}
       - TZ=Asia/Shanghai
+      - POSTGRES_USER=${POSTGRES_USER:?POSTGRES_USER 必填}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:?POSTGRES_PASSWORD 必填}
+      - POSTGRES_DB=${POSTGRES_DB:?POSTGRES_DB 必填}
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - DATABASE_SSLMODE=disable
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_DB=0
+      - RABBITMQ_URL=amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@rabbitmq:5672/
+      - ELASTICSEARCH_URL=http://elasticsearch:9200
     volumes:
       - backend_uploads:/app/uploads
     depends_on:
