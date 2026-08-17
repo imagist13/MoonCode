@@ -5,33 +5,32 @@ server:
 database:
   host: "postgres"
   port: 5432
-  user: "blog"
-  password: "blog123"
-  dbname: "blog"
+  user: ""              # 由 POSTGRES_USER 注入
+  password: ""          # 由 POSTGRES_PASSWORD 注入
+  dbname: ""            # 由 POSTGRES_DB 注入
   sslmode: "disable"
 
 redis:
-  addr: "redis:6379"
-  password: ""
-  db: 0
+  addr: ""              # 由 REDIS_HOST:REDIS_PORT 注入
+  password: ""          # 由 REDIS_PASSWORD 注入
+  db: 0                 # 由 REDIS_DB 注入
 
 rabbitmq:
-  url: "amqp://guest:guest@rabbitmq:5672/"
+  url: ""               # 由 RABBITMQ_HOST/PORT/USER/PASSWORD 或 RABBITMQ_URL 注入
 
 elasticsearch:
-  addresses:
-    - "http://elasticsearch:9200"
+  addresses: []         # 由 ELASTICSEARCH_URL 注入
 
 jwt:
-  secret: ""
+  secret: ""            # 由 JWT_SECRET 注入（必填）
   expire_hour: 6
 
 mail:
   host: "smtp.qq.com"
   port: 587
-  username: ""
-  password: ""
-  from: ""
+  username: ""          # 由 MAIL_USERNAME 注入
+  password: ""          # 由 MAIL_PASSWORD 注入
+  from: ""              # 由 MAIL_FROM 注入
 
 upload:
   mode: "local"
