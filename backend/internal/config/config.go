@@ -82,9 +82,13 @@ var AppConfig Config
 // envBindings 列出需要显式 BindEnv 的关键配置路径。
 // 显式绑定能保证在未提供 YAML 文件、完全用环境变量部署的场景下
 // （例如 Kubernetes ConfigMap/Secret）配置也能被正确读取。
+//
+// 命名约定：与基础设施镜像（postgres / redis / rabbitmq）一致，
+// 方便 docker compose / k8s 共享同一份 .env。
 var envBindings = []string{
 	"server.port",
 	"server.mode",
+	"server.allowed_origins",
 	"database.host",
 	"database.port",
 	"database.user",
@@ -108,11 +112,45 @@ var envBindings = []string{
 	"upload.max_size_mb",
 }
 
+// envAliases 把「基础设施镜像用的标准变量」映射到「viper 内部路径」。
+// 多个 env 写入同一个 key 时 viper 按注册顺序后者覆盖前者，
+// 所以一对多（HOST+PORT→addr）的关系不放在这里，改在 Load() 里合成。
+var envAliases = []struct {
+	envName string
+	key     string
+}{
+	// 数据库：与 postgres 镜像共享 POSTGRES_*
+	{"POSTGRES_HOST", "database.host"},
+	{"POSTGRES_PORT", "database.port"},
+	{"POSTGRES_USER", "database.user"},
+	{"POSTGRES_PASSWORD", "database.password"},
+	{"POSTGRES_DB", "database.dbname"},
+	{"DATABASE_SSLMODE", "database.sslmode"},
+	// Redis：与 redis 镜像共享 REDIS_*（addr 由 host:port 在 Load 里合成）
+	{"REDIS_PASSWORD", "redis.password"},
+	{"REDIS_DB", "redis.db"},
+	// RabbitMQ：完整 URL 直接走 RABBITMQ_URL；HOST/PORT/USER/PASSWORD 在 Load 里合成
+	{"RABBITMQ_URL", "rabbitmq.url"},
+	// JWT / Mail / Upload：与现有命名保持一致
+	{"JWT_SECRET", "jwt.secret"},
+	{"JWT_EXPIRE_HOUR", "jwt.expire_hour"},
+	{"MAIL_HOST", "mail.host"},
+	{"MAIL_PORT", "mail.port"},
+	{"MAIL_USERNAME", "mail.username"},
+	{"MAIL_PASSWORD", "mail.password"},
+	{"MAIL_FROM", "mail.from"},
+	{"UPLOAD_MODE", "upload.mode"},
+	{"UPLOAD_LOCAL_PATH", "upload.local_path"},
+	{"UPLOAD_MAX_SIZE_MB", "upload.max_size_mb"},
+}
+
 // Load 加载配置文件；配置文件不存在时不致命，退化为仅使用环境变量。
 //
 // 环境变量约定：
 //   - 点号替换为下划线（server.port -> SERVER_PORT）
 //   - 所有环境变量大小写敏感，建议统一大写
+//   - 与基础设施镜像共享标准名（POSTGRES_* / REDIS_* / RABBITMQ_*），
+//     让一份 .env 同时驱动 postgres / redis / rabbitmq / backend 四个服务
 //
 // 必填项：jwt.secret、database.host、database.user、database.dbname
 func Load(path string) {
@@ -123,6 +161,10 @@ func Load(path string) {
 	// 显式 BindEnv 才能让 Unmarshal 感知到环境变量（AutomaticEnv 对 Unmarshal 有已知限制）
 	for _, key := range envBindings {
 		_ = viper.BindEnv(key)
+	}
+	// 基础设施标准变量名 → 内部 key 的别名注册
+	for _, a := range envAliases {
+		_ = viper.BindEnv(a.key, a.envName)
 	}
 
 	if err := viper.ReadInConfig(); err != nil {
@@ -139,11 +181,64 @@ func Load(path string) {
 		log.Fatalf("解析配置文件失败: %v", err)
 	}
 
+	// 合成：HOST + PORT -> addr
+	composeAddrFromHostPort(&AppConfig)
+	// 合成：RabbitMQ HOST/PORT/USER/PASSWORD -> url（仅当 RABBITMQ_URL 未显式给出时）
+	composeRabbitURL()
+	// 合成：ELASTICSEARCH_URL -> addresses
+	composeESAddresses()
+
 	if err := validate(&AppConfig); err != nil {
 		log.Fatalf("配置校验失败: %v", err)
 	}
 
 	log.Printf("配置加载完成，运行模式: %s", AppConfig.Server.Mode)
+}
+
+// composeAddrFromHostPort 如果 REDIS_ADDR 未设置但 REDIS_HOST 给出，则拼成 host:port
+func composeAddrFromHostPort(_ *Config) {
+	if AppConfig.Redis.Addr == "" {
+		host := viper.GetString("REDIS_HOST")
+		if host != "" {
+			port := viper.GetString("REDIS_PORT")
+			if port == "" {
+				port = "6379"
+			}
+			AppConfig.Redis.Addr = host + ":" + port
+		}
+	}
+}
+
+// composeRabbitURL 如果 RABBITMQ_URL 未设置但 HOST/USER/PASSWORD 给出，则拼出 amqp:// URL
+func composeRabbitURL() {
+	if AppConfig.RabbitMQ.URL != "" {
+		return
+	}
+	host := viper.GetString("RABBITMQ_HOST")
+	user := viper.GetString("RABBITMQ_USER")
+	if host == "" || user == "" {
+		return
+	}
+	port := viper.GetString("RABBITMQ_PORT")
+	if port == "" {
+		port = "5672"
+	}
+	password := viper.GetString("RABBITMQ_PASSWORD")
+	if password == "" {
+		AppConfig.RabbitMQ.URL = fmt.Sprintf("amqp://%s@%s:%s/", user, host, port)
+	} else {
+		AppConfig.RabbitMQ.URL = fmt.Sprintf("amqp://%s:%s@%s:%s/", user, password, host, port)
+	}
+}
+
+// composeESAddresses 如果 ELASTICSEARCH_URL 给出但 addresses 为空，注入到 addresses
+func composeESAddresses() {
+	if len(AppConfig.ES.Addresses) > 0 {
+		return
+	}
+	if u := viper.GetString("ELASTICSEARCH_URL"); u != "" {
+		AppConfig.ES.Addresses = []string{u}
+	}
 }
 
 // validate 检查必填配置。缺失时返回错误，由调用方决定是否 fatal。
@@ -153,13 +248,13 @@ func validate(cfg *Config) error {
 		missing = append(missing, "jwt.secret (env: JWT_SECRET)")
 	}
 	if strings.TrimSpace(cfg.Database.Host) == "" {
-		missing = append(missing, "database.host (env: DATABASE_HOST)")
+		missing = append(missing, "database.host (env: POSTGRES_HOST)")
 	}
 	if strings.TrimSpace(cfg.Database.User) == "" {
-		missing = append(missing, "database.user (env: DATABASE_USER)")
+		missing = append(missing, "database.user (env: POSTGRES_USER)")
 	}
 	if strings.TrimSpace(cfg.Database.DBName) == "" {
-		missing = append(missing, "database.dbname (env: DATABASE_DBNAME)")
+		missing = append(missing, "database.dbname (env: POSTGRES_DB)")
 	}
 	if len(missing) > 0 {
 		return fmt.Errorf("以下必填配置缺失: %s", strings.Join(missing, ", "))
