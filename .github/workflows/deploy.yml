@@ -1,0 +1,77 @@
+name: Deploy
+
+# 把 main 分支的构建产物推送到服务器。
+# 触发后：
+#   1. SSH 到服务器
+#   2. git pull
+#   3. docker compose build --pull
+#   4. 滚动重启（先 frontend / backend，再基础设施）
+#
+# 必须在仓库 Settings → Secrets 配置以下 Secrets：
+#   DEPLOY_HOST        服务器地址（例：1.2.3.4）
+#   DEPLOY_PORT        SSH 端口（默认 22，可省略）
+#   DEPLOY_USER        登录用户名
+#   DEPLOY_SSH_KEY     私钥（id_ed25519 全文，含 BEGIN/END 行）
+#   DEPLOY_PATH        项目目录（例：/opt/moon）
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: SSH 拉取最新代码
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          port: ${{ secrets.DEPLOY_PORT || 22 }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          script: |
+            cd ${{ secrets.DEPLOY_PATH }}
+            git fetch --prune --tags
+            git reset --hard origin/main
+
+      - name: 重新构建并滚动重启
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          port: ${{ secrets.DEPLOY_PORT || 22 }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          script: |
+            set -e
+            cd ${{ secrets.DEPLOY_PATH }}
+
+            echo ">>> 构建新镜像（前端 + 后端）"
+            docker compose build --pull frontend backend
+
+            echo ">>> 先滚动重启 backend（零停机：起新再停旧）"
+            docker compose up -d --no-deps --scale backend=2 backend
+            sleep 5
+            docker compose up -d --no-deps --scale backend=1 backend
+
+            echo ">>> 重启 frontend"
+            docker compose up -d --no-deps frontend
+
+            echo ">>> 清理悬空镜像"
+            docker image prune -f
+
+            echo ">>> 健康检查"
+            sleep 10
+            curl -fsS http://127.0.0.1:8080/health || (echo "后端健康检查失败" && exit 1)
+            curl -fsS -o /dev/null http://127.0.0.1:3000 || (echo "前端健康检查失败" && exit 1)
+
+            echo ">>> 当前容器状态"
+            docker compose ps

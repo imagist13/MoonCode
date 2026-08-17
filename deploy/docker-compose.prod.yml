@@ -1,0 +1,167 @@
+# 生产环境 docker-compose
+#
+# 与根目录 docker-compose.yml 的差别：
+#   1. nginx 作为唯一对外端口（80/443），不再直接暴露 3000/8080
+#   2. 后端 mode 强制 release（不留 debug 接口）
+#   3. 日志 json-file + size 轮转（避免磁盘被填满）
+#   4. AUTO_MIGRATE_ON_STARTUP 默认 false，必须手动跑 ./migrate
+#   5. 基础设施服务只跑 postgres / redis / rabbitmq / elasticsearch
+#   6. volumes 命名化（postgres_data 等），方便备份迁移
+#
+# 启动：
+#   cp deploy/.env.production.example .env   # 编辑后填值
+#   docker compose -f deploy/docker-compose.prod.yml up -d --build
+#   docker compose -f deploy/docker-compose.prod.yml exec backend ./migrate
+#   docker compose -f deploy/docker-compose.prod.yml exec backend ./seed
+#   docker compose -f deploy/docker-compose.prod.yml exec backend ./reindex
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: blog-postgres
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-blog}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-blog}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-blog}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "5" }
+
+  redis:
+    image: redis:7-alpine
+    container_name: blog-redis
+    restart: always
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "5" }
+
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: blog-rabbitmq
+    restart: always
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-guest}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmqctl", "status"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "5" }
+
+  elasticsearch:
+    image: elasticsearch:7.17.24
+    container_name: blog-elasticsearch
+    restart: always
+    environment:
+      - discovery.type=single-node
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+      - xpack.security.enabled=false
+    volumes:
+      - es_data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fs http://localhost:9200/_cluster/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "5" }
+
+  backend:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    container_name: blog-backend
+    restart: always
+    environment:
+      - JWT_SECRET=${JWT_SECRET:?JWT_SECRET 必填}
+      - AUTO_MIGRATE_ON_STARTUP=${AUTO_MIGRATE_ON_STARTUP:-false}
+      - TZ=Asia/Shanghai
+    volumes:
+      - backend_uploads:/app/uploads
+    depends_on:
+      postgres:        { condition: service_healthy }
+      redis:           { condition: service_healthy }
+      rabbitmq:        { condition: service_healthy }
+      elasticsearch:   { condition: service_healthy }
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    # 不暴露 8080，对外只走 nginx
+    expose: ["8080"]
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "5" }
+
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+      args:
+        - NEXT_PUBLIC_API_BASE=/api/v1
+        - BACKEND_URL=http://backend:8080
+    container_name: blog-frontend
+    restart: always
+    environment:
+      - BACKEND_URL=http://backend:8080
+      - TZ=Asia/Shanghai
+    depends_on:
+      backend: { condition: service_healthy }
+    expose: ["3000"]
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "5" }
+
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: blog-nginx
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/moon.conf:/etc/nginx/conf.d/moon.conf:ro
+      - ./nginx/moon-ssl.conf:/etc/nginx/conf.d/moon-ssl.conf:ro
+      - ./nginx/snippets:/etc/nginx/snippets:ro
+      - ./nginx/certs:/etc/nginx/ssl:ro
+    depends_on:
+      backend:  { condition: service_healthy }
+      frontend: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost/healthz || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "5" }
+
+volumes:
+  postgres_data:
+  redis_data:
+  rabbitmq_data:
+  es_data:
+  backend_uploads:
