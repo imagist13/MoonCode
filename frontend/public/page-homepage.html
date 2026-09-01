@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>博客首页 - Dim Stack</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    /* ===== CSS Reset & Base ===== */
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    :root {
+      /* Brand Colors (OKLCH) */
+      --brand-50: oklch(0.97 0.014 250);
+      --brand-100: oklch(0.93 0.030 250);
+      --brand-200: oklch(0.87 0.060 250);
+      --brand-300: oklch(0.78 0.115 250);
+      --brand-400: oklch(0.70 0.160 250);
+      --brand-500: oklch(0.62 0.195 255);
+      --brand-600: oklch(0.55 0.220 258);
+      --brand-700: oklch(0.48 0.225 262);
+      --brand-800: oklch(0.42 0.215 265);
+      --brand-900: oklch(0.36 0.190 268);
+      
+      /* Neutrals */
+      --background: oklch(1 0 0);
+      --foreground: oklch(0.145 0 0);
+      --card: oklch(1 0 0);
+      --card-foreground: oklch(0.145 0 0);
+      --muted: oklch(0.97 0 0);
+      --muted-foreground: oklch(0.556 0 0);
+      --border: oklch(0.922 0 0);
+      --input: oklch(0.922 0 0);
+      --destructive: oklch(0.577 0.245 27.325);
+      --accent: oklch(0.96 0.025 250);
+      --accent-foreground: var(--brand-700);
+      
+      /* Radius */
+      --radius: 0.625rem;
+      
+      /* Shadows */
+      --shadow-card: 0 1px 3px 0 rgb(0 0 0 / .06), 0 1px 2px -1px rgb(0 0 0 / .04);
+      --shadow-card-hover: 0 10px 25px -3px rgb(0 0 0 / .08), 0 4px 10px -4px rgb(0 0 0 / .04);
+      --shadow-brand-glow: 0 0 0 3px rgb(59 130 246 / .18);
+    }
+    
+    html { font-family: "Geist", ui-sans-serif, system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; }
+    body { background: var(--background); color: var(--foreground); -webkit-font-smoothing: antialiased; }
+    
+    /* ===== Top Navigation ===== */
+    .topnav {
+      position: sticky; top: 0; z-index: 50;
+      height: 64px;
+      background: rgb(255 255 255 / 0.8);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid rgb(0 0 0 / 0.06);
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 16px;
+    }
+    
+    .topnav-logo {
+      font-size: 1.125rem; font-weight: 700; letter-spacing: -0.025em;
+      color: var(--brand-500); text-decoration: none;
+      transition: opacity 0.2s;
+    }
+    .topnav-logo:hover { opacity: 0.8; }
+    
+    .topnav-links {
+      display: flex; gap: 4px; align-items: center;
+    }
+    @media (max-width: 768px) { .topnav-links { display: none; } }
+    
+    .topnav-link {
+      padding: 6px 12px; font-size: 0.875rem; font-weight: 500;
+      color: var(--muted-foreground); text-decoration: none;
+      border-radius: calc(var(--radius) * 0.8);
+      transition: all 0.2s;
+    }
+    .topnav-link:hover { background: var(--accent); color: var(--foreground); }
+    .topnav-link.active { color: var(--brand-600); }
+    
+    .topnav-actions { display: flex; align-items: center; gap: 8px; }
+    
+    .theme-btn {
+      width: 36px; height: 36px; border: none; background: transparent;
+      border-radius: calc(var(--radius) * 0.8); cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--muted-foreground);
+      transition: all 0.2s;
+    }
+    .theme-btn:hover { background: var(--brand-50); color: var(--brand-600); }
+    
+    .login-btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      height: 32px; padding: 0 12px;
+      font-size: 0.875rem; font-weight: 500;
+      background: var(--brand-500); color: white;
+      border: none; border-radius: 999px;
+      cursor: pointer; text-decoration: none;
+      box-shadow: 0 1px 2px rgb(59 130 246 / 0.3);
+      transition: all 0.2s;
+    }
+    .login-btn:hover { background: var(--brand-600); }
+    
+    /* ===== Main Container ===== */
+    .container {
+      max-width: 1100px; margin: 0 auto; padding: 0 16px;
+    }
+    
+    /* ===== Hero Section ===== */
+    .hero {
+      position: relative;
+      margin: 24px 0;
+      min-height: 420px; max-height: 500px;
+      border-radius: calc(var(--radius) * 2.4);
+      overflow: hidden;
+      isolation: isolate;
+      box-shadow: 
+        inset 0 1px 0 rgb(255 255 255 / 0.08),
+        0 20px 50px -12px rgb(0 0 0 / 0.5),
+        0 8px 20px -8px rgb(0 0 0 / 0.4);
+    }
+    
+    .hero-bg {
+      position: absolute; inset: 0;
+      background-image: url('/Hero.jpg');
+      background-size: cover; background-position: center;
+      transform: scale(1.02);
+    }
+    
+    .hero-mask {
+      position: absolute; inset: 0;
+      background: linear-gradient(to right,
+        rgb(8 12 24 / 0.92) 0%,
+        rgb(8 12 24 / 0.75) 30%,
+        rgb(8 12 24 / 0.35) 60%,
+        rgb(8 12 24 / 0.1) 85%,
+        transparent 100%
+      );
+    }
+    
+    .hero-mask-bottom {
+      position: absolute; inset: 0;
+      background: linear-gradient(to top,
+        rgb(0 0 0 / 0.55) 0%,
+        rgb(0 0 0 / 0.25) 25%,
+        transparent 50%
+      );
+    }
+    
+    .hero-topline {
+      position: absolute; top: 0; left: 0; right: 0; height: 1px;
+      background: linear-gradient(to right, transparent, rgb(255 255 255 / 0.5), transparent);
+      z-index: 2;
+    }
+    
+    .hero-content {
+      position: relative; z-index: 10;
+      height: 100%; min-height: 420px;
+      display: flex; flex-direction: column; justify-content: flex-end;
+      padding: 40px;
+    }
+    
+    .hero-badges { display: flex; gap: 8px; margin-bottom: 12px; }
+    
+    .badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 5px 12px; font-size: 11px; font-weight: 500;
+      letter-spacing: 0.15em; text-transform: uppercase;
+      border-radius: 999px; backdrop-filter: blur(8px);
+      border: 1px solid rgb(255 255 255 / 0.2);
+    }
+    
+    .badge-welcome {
+      background: rgb(255 255 255 / 0.1);
+      color: rgb(255 255 255 / 0.9);
+    }
+    .badge-welcome::before {
+      content: ''; width: 5px; height: 5px; border-radius: 50%;
+      background: #4ade80; box-shadow: 0 0 8px rgb(74 222 128 / 0.6);
+      animation: pulse 2s ease-in-out infinite;
+    }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+    
+    .badge-cat {
+      background: rgb(59 130 246 / 0.25);
+      color: #93c5fd;
+      border-color: rgb(59 130 246 / 0.4);
+    }
+    
+    .hero-panel {
+      max-width: 560px;
+      background: rgb(255 255 255 / 0.08);
+      backdrop-filter: blur(16px);
+      border: 1px solid rgb(255 255 255 / 0.15);
+      border-radius: calc(var(--radius) * 2.4);
+      padding: 28px 32px;
+      box-shadow: 0 8px 32px rgb(0 0 0 / 0.3);
+    }
+    
+    .hero-title {
+      font-size: clamp(1.75rem, 4vw, 2.5rem);
+      font-weight: 700; line-height: 1.2; letter-spacing: -0.02em;
+      color: white;
+    }
+    .hero-title .accent {
+      background: linear-gradient(135deg, white, var(--brand-200), white);
+      -webkit-background-clip: text; background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .hero-title .underline {
+      display: block; width: 100%; height: 2px; margin-top: 4px;
+      background: linear-gradient(to right, var(--brand-400), transparent);
+      border-radius: 2px;
+    }
+    
+    .hero-subtitle {
+      margin-top: 12px; font-size: 0.9375rem; line-height: 1.6;
+      color: rgb(255 255 255 / 0.8);
+    }
+    
+    .hero-actions { display: flex; gap: 12px; margin-top: 20px; }
+    
+    .btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 10px 20px; font-size: 0.875rem; font-weight: 500;
+      border-radius: 999px; cursor: pointer; text-decoration: none;
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      border: 1px solid transparent;
+    }
+    
+    .btn-primary {
+      background: var(--brand-500); color: white;
+      border-color: rgb(255 255 255 / 0.2);
+      box-shadow: 0 1px 0 rgb(255 255 255 / 0.2) inset, 0 4px 12px rgb(59 130 246 / 0.4);
+    }
+    .btn-primary:hover { background: var(--brand-600); transform: translateY(-1px); }
+    .btn-primary svg { transition: transform 0.2s; }
+    .btn-primary:hover svg { transform: translateX(3px); }
+    
+    .btn-secondary {
+      background: rgb(255 255 255 / 0.12);
+      color: rgb(255 255 255 / 0.9);
+      border-color: rgb(255 255 255 / 0.2);
+      backdrop-filter: blur(8px);
+    }
+    .btn-secondary:hover { background: rgb(255 255 255 / 0.2); border-color: rgb(255 255 255 / 0.35); }
+    
+    /* ===== Two Column Layout ===== */
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr 300px;
+      gap: 32px;
+      padding: 32px 0;
+    }
+    @media (max-width: 1024px) { .two-col { grid-template-columns: 1fr; } }
+    
+    /* ===== Article Cards ===== */
+    .section-title {
+      font-size: 1.25rem; font-weight: 600; letter-spacing: -0.01em;
+      margin-bottom: 20px;
+    }
+    
+    .article-list { display: flex; flex-direction: column; gap: 20px; }
+    
+    .article-card {
+      display: flex; gap: 16px;
+      padding: 16px; background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: calc(var(--radius) * 1.4);
+      box-shadow: var(--shadow-card);
+      transition: all 0.2s;
+    }
+    .article-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-card-hover); }
+    
+    .article-thumb {
+      width: 176px; height: 128px; flex-shrink: 0;
+      border-radius: calc(var(--radius) * 0.8);
+      object-fit: cover;
+      background: linear-gradient(135deg, var(--brand-100), var(--brand-200));
+    }
+    
+    .article-body { flex: 1; display: flex; flex-direction: column; }
+    
+    .article-cat {
+      font-size: 0.6875rem; font-weight: 500; letter-spacing: 0.1em;
+      text-transform: uppercase; color: var(--brand-600);
+      margin-bottom: 6px;
+    }
+    
+    .article-title {
+      font-size: 1rem; font-weight: 600; line-height: 1.4;
+      color: var(--foreground); margin-bottom: 8px;
+      transition: color 0.2s;
+    }
+    .article-card:hover .article-title { color: var(--brand-600); }
+    
+    .article-excerpt {
+      font-size: 0.875rem; line-height: 1.5;
+      color: var(--muted-foreground);
+      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    
+    .article-meta {
+      margin-top: auto; padding-top: 12px;
+      font-size: 0.75rem; color: var(--muted-foreground);
+      display: flex; gap: 12px;
+    }
+    
+    /* ===== Sidebar ===== */
+    .sidebar { display: flex; flex-direction: column; gap: 24px; }
+    
+    .widget { }
+    
+    .widget-title {
+      font-size: 0.875rem; font-weight: 600;
+      margin-bottom: 12px; padding-left: 10px;
+      border-left: 3px solid var(--brand-500);
+    }
+    
+    /* Featured Card */
+    .featured-card {
+      position: relative; border-radius: calc(var(--radius) * 1.4);
+      overflow: hidden; aspect-ratio: 16/9;
+      background: linear-gradient(135deg, var(--brand-700), var(--brand-900));
+      box-shadow: var(--shadow-card);
+    }
+    .featured-card img {
+      width: 100%; height: 100%; object-fit: cover;
+      transition: transform 0.5s;
+    }
+    .featured-card:hover img { transform: scale(1.05); }
+    
+    .featured-overlay {
+      position: absolute; inset: 0;
+      background: linear-gradient(to top, rgb(0 0 0 / 0.7) 0%, transparent 60%);
+      padding: 16px;
+      display: flex; flex-direction: column; justify-content: flex-end;
+    }
+    
+    .featured-tag {
+      position: absolute; top: 12px; left: 12px;
+      font-size: 0.625rem; font-weight: 500; letter-spacing: 0.1em;
+      text-transform: uppercase; color: var(--brand-700);
+      background: rgb(255 255 255 / 0.85);
+      padding: 3px 8px; border-radius: 4px;
+      backdrop-filter: blur(4px);
+    }
+    
+    .featured-cat { font-size: 0.6875rem; color: var(--brand-300); margin-bottom: 4px; }
+    .featured-title { font-size: 0.9375rem; font-weight: 600; color: white; line-height: 1.3; }
+    
+    /* Category Tags */
+    .cat-tags { display: flex; flex-wrap: wrap; gap: 8px; }
+    
+    .cat-tag {
+      padding: 6px 14px; font-size: 0.8125rem; font-weight: 500;
+      background: var(--muted); color: var(--muted-foreground);
+      border-radius: 999px; text-decoration: none;
+      transition: all 0.2s;
+      border: 1px solid var(--border);
+    }
+    .cat-tag:hover { background: var(--brand-50); color: var(--brand-700); border-color: var(--brand-200); }
+    
+    /* Tag Cloud */
+    .tag-cloud { display: flex; flex-wrap: wrap; gap: 8px; }
+    
+    .tag-item {
+      padding: 4px 10px; font-size: 0.75rem;
+      background: var(--muted); color: var(--muted-foreground);
+      border-radius: calc(var(--radius) * 0.6);
+      text-decoration: none; transition: all 0.2s;
+    }
+    .tag-item:hover { background: var(--brand-100); color: var(--brand-700); }
+    
+    /* ===== Footer ===== */
+    .footer {
+      margin-top: 48px; padding: 32px 0;
+      border-top: 1px solid var(--border);
+      text-align: center; font-size: 0.875rem;
+      color: var(--muted-foreground);
+    }
+    
+    /* ===== Responsive ===== */
+    @media (max-width: 640px) {
+      .hero-content { padding: 24px; }
+      .hero-panel { padding: 20px 24px; }
+      .article-card { flex-direction: column; }
+      .article-thumb { width: 100%; height: 160px; }
+    }
+  </style>
+</head>
+<body>
+  <!-- Top Navigation -->
+  <nav class="topnav">
+    <a href="/" class="topnav-logo">Blogs</a>
+    <div class="topnav-links">
+      <a href="/" class="topnav-link active">首页</a>
+      <a href="/archives" class="topnav-link">归档</a>
+      <a href="/categories" class="topnav-link">分类</a>
+      <a href="/tags" class="topnav-link">标签</a>
+      <a href="/talks" class="topnav-link">说说</a>
+      <a href="/friends" class="topnav-link">友链</a>
+      <a href="/messages" class="topnav-link">留言</a>
+      <a href="/about" class="topnav-link">关于</a>
+    </div>
+    <div class="topnav-actions">
+      <button class="theme-btn" aria-label="切换主题">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+        </svg>
+      </button>
+      <a href="/login" class="login-btn">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+        </svg>
+        登录
+      </a>
+    </div>
+  </nav>
+
+  <main class="container">
+    <!-- Hero Section -->
+    <section class="hero">
+      <div class="hero-bg"></div>
+      <div class="hero-mask"></div>
+      <div class="hero-mask-bottom"></div>
+      <div class="hero-topline"></div>
+      
+      <div class="hero-content">
+        <div class="hero-badges">
+          <span class="badge badge-welcome">Welcome</span>
+          <span class="badge badge-cat">技术博客</span>
+        </div>
+        
+        <div class="hero-panel">
+          <h1 class="hero-title">
+            欢迎来到
+            <span class="accent">次元栈</span>
+            <span class="underline"></span>
+          </h1>
+          <p class="hero-subtitle">
+            记录技术、分享生活。Stay hungry, stay foolish. 探索无限可能的代码世界。
+          </p>
+          <div class="hero-actions">
+            <a href="#articles" class="btn btn-primary">
+              开始阅读
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M5 12h14M12 5l7 7-7 7"/>
+              </svg>
+            </a>
+            <a href="/about" class="btn btn-secondary">了解更多</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Two Column Content -->
+    <div class="two-col">
+      <!-- Left: Article List -->
+      <section class="main-content">
+        <h2 class="section-title">最新文章</h2>
+        <div class="article-list">
+          <article class="article-card">
+            <img class="article-thumb" src="https://picsum.photos/352/256?random=1" alt="缩略图">
+            <div class="article-body">
+              <div class="article-cat">技术分享</div>
+              <h3 class="article-title">Next.js 15 App Router 完全指南：从入门到精通</h3>
+              <p class="article-excerpt">深入探索 Next.js 15 的 App Router 架构，包括服务端组件、流式渲染、缓存策略等核心概念。</p>
+              <div class="article-meta">
+                <span>2026-08-15</span>
+                <span>阅读 1.2k</span>
+              </div>
+            </div>
+          </article>
+          
+          <article class="article-card">
+            <img class="article-thumb" src="https://picsum.photos/352/256?random=2" alt="缩略图">
+            <div class="article-body">
+              <div class="article-cat">开发工具</div>
+              <h3 class="article-title">TypeScript 5.5 新特性详解与实战应用</h3>
+              <p class="article-excerpt">全面解析 TypeScript 5.5 的新增功能，包括类型推断改进、装饰器标准化等重要更新。</p>
+              <div class="article-meta">
+                <span>2026-08-10</span>
+                <span>阅读 986</span>
+              </div>
+            </div>
+          </article>
+          
+          <article class="article-card">
+            <img class="article-thumb" src="https://picsum.photos/352/256?random=3" alt="缩略图">
+            <div class="article-body">
+              <div class="article-cat">经验总结</div>
+              <h3 class="article-title">打造高效开发工作流的 10 个必备技巧</h3>
+              <p class="article-excerpt">分享我在日常开发中总结的高效工作流经验，从代码编辑器到终端配置全面覆盖。</p>
+              <div class="article-meta">
+                <span>2026-08-05</span>
+                <span>阅读 2.3k</span>
+              </div>
+            </div>
+          </article>
+          
+          <article class="article-card">
+            <img class="article-thumb" src="https://picsum.photos/352/256?random=4" alt="缩略图">
+            <div class="article-body">
+              <div class="article-cat">性能优化</div>
+              <h3 class="article-title">Web 性能优化实战：让页面加载快如闪电</h3>
+              <p class="article-excerpt">从 Core Web Vitals 角度出发，详细讲解图片优化、代码分割、缓存策略等实战技巧。</p>
+              <div class="article-meta">
+                <span>2026-07-28</span>
+                <span>阅读 1.8k</span>
+              </div>
+            </div>
+          </article>
+          
+          <article class="article-card">
+            <img class="article-thumb" src="https://picsum.photos/352/256?random=5" alt="缩略图">
+            <div class="article-body">
+              <div class="article-cat">框架探索</div>
+              <h3 class="article-title">React Server Components 深度解析</h3>
+              <p class="article-excerpt">深入理解 React Server Components 的工作原理，以及它如何改变前端开发范式。</p>
+              <div class="article-meta">
+                <span>2026-07-20</span>
+                <span>阅读 1.5k</span>
+              </div>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <!-- Right: Sidebar -->
+      <aside class="sidebar">
+        <!-- Featured -->
+        <div class="widget">
+          <h3 class="widget-title">今日推荐</h3>
+          <a href="/article/nextjs-guide" class="featured-card">
+            <img src="https://picsum.photos/480/270?random=10" alt="封面">
+            <div class="featured-overlay">
+              <span class="featured-tag">RECOMMEND</span>
+              <span class="featured-cat">技术分享</span>
+              <span class="featured-title">Next.js 15 完全指南</span>
+            </div>
+          </a>
+        </div>
+
+        <!-- Categories -->
+        <div class="widget">
+          <h3 class="widget-title">分类</h3>
+          <div class="cat-tags">
+            <a href="/category/tech" class="cat-tag">技术分享</a>
+            <a href="/category/tools" class="cat-tag">开发工具</a>
+            <a href="/category/exp" class="cat-tag">经验总结</a>
+            <a href="/category/perf" class="cat-tag">性能优化</a>
+            <a href="/category/frame" class="cat-tag">框架探索</a>
+            <a href="/category/life" class="cat-tag">生活随笔</a>
+          </div>
+        </div>
+
+        <!-- Tags -->
+        <div class="widget">
+          <h3 class="widget-title">标签云</h3>
+          <div class="tag-cloud">
+            <a href="/tag/nextjs" class="tag-item">Next.js</a>
+            <a href="/tag/typescript" class="tag-item">TypeScript</a>
+            <a href="/tag/react" class="tag-item">React</a>
+            <a href="/tag/nodejs" class="tag-item">Node.js</a>
+            <a href="/tag/python" class="tag-item">Python</a>
+            <a href="/tag/docker" class="tag-item">Docker</a>
+            <a href="/tag/git" class="tag-item">Git</a>
+            <a href="/tag/linux" class="tag-item">Linux</a>
+            <a href="/tag/database" class="tag-item">Database</a>
+            <a href="/tag/ai" class="tag-item">AI</a>
+            <a href="/tag/performance" class="tag-item">Performance</a>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <p>© 2026 Dim Stack · 使用 <a href="https://nextjs.org" style="color: var(--brand-600);">Next.js</a> 构建</p>
+  </footer>
+</body>
+</html>

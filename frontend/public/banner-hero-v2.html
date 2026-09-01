@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>博客 Hero - 优化版</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: "Geist", ui-sans-serif, system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      background: #0a0a0a;
+    }
+
+    /* ===== Hero Banner 优化版 ===== */
+    .hero {
+      position: relative;
+      width: 100%;
+      max-width: 1100px;
+      margin: 24px auto;
+      aspect-ratio: 16 / 9;
+      min-height: 420px;
+      border-radius: 20px;
+      overflow: hidden;
+      isolation: isolate;
+      box-shadow:
+        0 1px 0 rgba(255, 255, 255, 0.08) inset,
+        0 20px 50px -12px rgba(0, 0, 0, 0.5),
+        0 8px 20px -8px rgba(0, 0, 0, 0.4);
+    }
+
+    /* ===== 背景图（保留你的二次元插图） ===== */
+    .hero-bg {
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+      background-image: url('/Hero.jpg');
+      background-size: cover;
+      background-position: center;
+      transform: scale(1.02); /* 防止边缘露出 */
+    }
+
+    /* ===== 多层渐变蒙版（关键优化点） ===== */
+    /* 主蒙版：左侧深，向右逐渐透明 */
+    .hero-mask-base {
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      background:
+        linear-gradient(
+          to right,
+          rgba(8, 12, 24, 0.92) 0%,
+          rgba(8, 12, 24, 0.75) 30%,
+          rgba(8, 12, 24, 0.35) 60%,
+          rgba(8, 12, 24, 0.1) 85%,
+          transparent 100%
+        );
+    }
+
+    /* 底部加深：让文字所在的左下区域有"立足点" */
+    .hero-mask-bottom {
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      background:
+        linear-gradient(
+          to top,
+          rgba(0, 0, 0, 0.55) 0%,
+          rgba(0, 0, 0, 0.25) 25%,
+          transparent 50%
+        );
+    }
+
+    /* 顶部柔光 */
+    .hero-mask-top {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 1px;
+      z-index: 2;
+      background: linear-gradient(
+        to right,
+        transparent 0%,
+        rgba(255, 255, 255, 0.4) 50%,
+        transparent 100%
+      );
+    }
+
+    /* 细微噪点纹理（增加质感） */
+    .hero-noise {
+      position: absolute;
+      inset: 0;
+      z-index: 2;
+      opacity: 0.04;
+      pointer-events: none;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    }
+
+    /* ===== 内容容器 ===== */
+    .hero-content {
+      position: relative;
+      z-index: 10;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      padding: 32px 40px;
+    }
+
+    /* ===== 文字层 ===== */
+    .hero-text {
+      max-width: 520px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    /* 顶部徽章行 */
+    .hero-badges {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 4px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 12px;
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      border-radius: 999px;
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+    }
+
+    .badge-welcome {
+      background: rgba(255, 255, 255, 0.08);
+      color: rgba(255, 255, 255, 0.85);
+    }
+
+    .badge-welcome::before {
+      content: '';
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: #4ade80;
+      box-shadow: 0 0 8px rgba(74, 222, 128, 0.6);
+      animation: pulse-dot 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    .badge-cat {
+      background: rgba(59, 130, 246, 0.2);
+      color: #93c5fd;
+      border-color: rgba(59, 130, 246, 0.35);
+    }
+
+    /* 主标题 */
+    .hero-title {
+      font-size: clamp(28px, 4vw, 44px);
+      font-weight: 700;
+      line-height: 1.15;
+      letter-spacing: -0.02em;
+      color: #ffffff;
+      text-shadow: 0 2px 20px rgba(0, 0, 0, 0.4);
+    }
+
+    .hero-title .accent {
+      background: linear-gradient(
+        135deg,
+        #ffffff 0%,
+        #93c5fd 50%,
+        #ffffff 100%
+      );
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      position: relative;
+      display: inline-block;
+    }
+
+    .hero-title .accent::after {
+      content: '';
+      position: absolute;
+      bottom: -4px;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: linear-gradient(
+        to right,
+        transparent,
+        rgba(147, 197, 253, 0.8),
+        transparent
+      );
+      border-radius: 2px;
+    }
+
+    /* 副标题 */
+    .hero-subtitle {
+      font-size: 15px;
+      line-height: 1.6;
+      color: rgba(255, 255, 255, 0.75);
+      max-width: 480px;
+      text-shadow: 0 1px 8px rgba(0, 0, 0, 0.3);
+    }
+
+    /* CTA 行 */
+    .hero-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-top: 8px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 11px 22px;
+      font-size: 14px;
+      font-weight: 500;
+      border-radius: 999px;
+      cursor: pointer;
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      text-decoration: none;
+      border: none;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+      color: #ffffff;
+      box-shadow:
+        0 1px 0 rgba(255, 255, 255, 0.2) inset,
+        0 8px 20px -4px rgba(59, 130, 246, 0.5);
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-1px);
+      box-shadow:
+        0 1px 0 rgba(255, 255, 255, 0.2) inset,
+        0 12px 28px -4px rgba(59, 130, 246, 0.6);
+    }
+
+    .btn-primary svg {
+      transition: transform 0.25s ease;
+    }
+
+    .btn-primary:hover svg {
+      transform: translateX(3px);
+    }
+
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.08);
+      color: rgba(255, 255, 255, 0.9);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+    }
+
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.14);
+      border-color: rgba(255, 255, 255, 0.3);
+    }
+
+    /* ===== 浮动装饰元素 ===== */
+    .deco {
+      position: absolute;
+      z-index: 3;
+      pointer-events: none;
+    }
+
+    /* 右上的光晕 */
+    .deco-glow {
+      top: -60px;
+      right: 10%;
+      width: 300px;
+      height: 300px;
+      background: radial-gradient(
+        circle,
+        rgba(147, 197, 253, 0.25) 0%,
+        transparent 70%
+      );
+      filter: blur(20px);
+      animation: glow-float 8s ease-in-out infinite;
+    }
+
+    @keyframes glow-float {
+      0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.8; }
+      50% { transform: translate(-20px, 20px) scale(1.1); opacity: 1; }
+    }
+
+    /* 装饰性小线条（呼应品牌色） */
+    .deco-line {
+      bottom: 32px;
+      right: 40px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      align-items: flex-end;
+    }
+
+    .deco-line span {
+      display: block;
+      height: 2px;
+      background: linear-gradient(
+        to right,
+        transparent,
+        rgba(255, 255, 255, 0.4),
+        transparent
+      );
+      border-radius: 2px;
+    }
+
+    .deco-line span:nth-child(1) { width: 60px; }
+    .deco-line span:nth-child(2) { width: 40px; }
+    .deco-line span:nth-child(3) { width: 80px; opacity: 0.6; }
+
+    /* 滚动提示 */
+    .scroll-hint {
+      position: absolute;
+      bottom: 16px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 5;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      color: rgba(255, 255, 255, 0.5);
+      font-size: 10px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+    }
+
+    .scroll-hint .mouse {
+      width: 18px;
+      height: 28px;
+      border: 1.5px solid rgba(255, 255, 255, 0.4);
+      border-radius: 12px;
+      position: relative;
+    }
+
+    .scroll-hint .mouse::before {
+      content: '';
+      position: absolute;
+      top: 6px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 2px;
+      height: 5px;
+      background: rgba(255, 255, 255, 0.6);
+      border-radius: 2px;
+      animation: scroll-wheel 1.5s ease-in-out infinite;
+    }
+
+    @keyframes scroll-wheel {
+      0% { opacity: 1; transform: translate(-50%, 0); }
+      100% { opacity: 0; transform: translate(-50%, 8px); }
+    }
+
+    /* ===== 响应式 ===== */
+    @media (max-width: 640px) {
+      .hero {
+        margin: 12px;
+        aspect-ratio: auto;
+        min-height: 380px;
+        border-radius: 16px;
+      }
+      .hero-content {
+        padding: 24px;
+      }
+      .hero-title {
+        font-size: 24px;
+      }
+      .deco-line { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div style="padding: 24px; background: #0a0a0a; min-height: 100vh;">
+    <section class="hero">
+      <!-- 二次元插图背景 -->
+      <div class="hero-bg"></div>
+
+      <!-- 渐变蒙版层 -->
+      <div class="hero-mask-base"></div>
+      <div class="hero-mask-bottom"></div>
+      <div class="hero-mask-top"></div>
+      <div class="hero-noise"></div>
+
+      <!-- 装饰元素 -->
+      <div class="deco deco-glow"></div>
+      <div class="deco deco-line">
+        <span></span>
+        <span></span>
+        <span></span>
+      </div>
+
+      <!-- 内容 -->
+      <div class="hero-content">
+        <div class="hero-text">
+          <!-- 徽章行 -->
+          <div class="hero-badges">
+            <span class="badge badge-welcome">Welcome</span>
+            <span class="badge badge-cat">技术博客</span>
+          </div>
+
+          <!-- 主标题 -->
+          <h1 class="hero-title">
+            欢迎来到
+            <span class="accent">我的博客</span>
+          </h1>
+
+          <!-- 副标题 -->
+          <p class="hero-subtitle">
+            记录技术、分享生活。Stay hungry, stay foolish.
+          </p>
+
+          <!-- 操作按钮 -->
+          <div class="hero-actions">
+            <a href="#articles" class="btn btn-primary">
+              开始阅读
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M5 12h14M12 5l7 7-7 7"/>
+              </svg>
+            </a>
+            <a href="#about" class="btn btn-secondary">
+              了解更多
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- 滚动提示 -->
+      <div class="scroll-hint">
+        <div class="mouse"></div>
+        <span>Scroll</span>
+      </div>
+    </section>
+  </div>
+</body>
+</html>

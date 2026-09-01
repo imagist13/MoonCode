@@ -4,23 +4,6 @@
 
 ---
 
-## 0. 本部署信息
-
-> 本节记录当前生产环境的**非敏感**信息，便于交接。**密码、密钥、JWT_SECRET 等必须放在 `.env`（已 gitignore）或服务器的密钥管理里，绝不能进 git**。
-
-| 项目 | 值 |
-|------|-----|
-| 公网 IP | `154.37.221.209` |
-| SSH 用户 | `root` |
-| 域名 | `ideast.top` |
-| 服务器项目目录 | `/opt/moon/MoonCode` |
-| 证书目录 | `/opt/moon/MoonCode/deploy/nginx/certs/ideast.top` |
-| 备用 IP 访问 | `http://154.37.221.209`（HTTPS 前临时） |
-
-**鉴权方式**：强烈推荐 SSH 公私钥 + 禁用密码登录（命令见下文 §2.0）。如果暂时用密码，密码**只能**保存在本地 `.env` / 密码管理器里，不要写进任何仓库文件。
-
----
-
 ## 1. 架构总览
 
 ```
@@ -110,13 +93,7 @@ cp deploy/.env.production.example .env
 $EDITOR .env
 ```
 
-> 重要：
-> - **不要**把真实 `.env` 提交到 git
-> - 密码里若含 `# $ ! \` 等符号，**必须用单引号包起来**，否则 docker compose 会把 `#` 后的内容当注释
-> - 用 `-f deploy/docker-compose.prod.yml` 启动时，docker compose 默认从**项目目录**（即 deploy 目录）找 `.env`，**不会**自动读项目根的 `.env`。三种解决方案：
->   - `docker compose --env-file .env -f deploy/docker-compose.prod.yml up -d`（推荐，**显式**指定 env 文件，路径相对当前目录）
->   - `docker compose --project-directory . -f deploy/docker-compose.prod.yml up -d`（把项目根当项目目录）
->   - 或把 `.env` 链接/复制到 `deploy/.env`
+> `deploy/.env.production.example` 已加进 `.gitignore` 范畴之外的目录结构里；真实 `.env` 一定不要提交。
 
 ---
 
@@ -127,29 +104,23 @@ $EDITOR .env
 ```bash
 sudo apt install -y certbot
 
-# 临时停掉占用 80 的容器（certbot standalone 必须独占 80 端口）
-# 如果 blog-nginx 正在跑，先停掉；申请完再起回来
-cd /opt/moon/MoonCode
-docker compose -f deploy/docker-compose.prod.yml stop nginx
+# 临时停掉占用 80 的容器（首次申请时），或用 --standalone 之外的方式
 sudo certbot certonly --standalone \
-  -d ideast.top -d www.ideast.top \
-  --agree-tos -m 3467217107@qq.com
-
-# 申请完重启 nginx
-docker compose -f deploy/docker-compose.prod.yml up -d nginx
+  -d moon.example.com -d www.moon.example.com \
+  --agree-tos -m you@example.com
 
 # 拷贝证书到 nginx 容器目录
-sudo mkdir -p /opt/moon/MoonCode/deploy/nginx/certs/ideast.top
-sudo cp /etc/letsencrypt/live/ideast.top/fullchain.pem \
-        /opt/moon/MoonCode/deploy/nginx/certs/ideast.top/
-sudo cp /etc/letsencrypt/live/ideast.top/privkey.pem \
-        /opt/moon/MoonCode/deploy/nginx/certs/ideast.top/
+sudo mkdir -p /opt/moon/deploy/nginx/certs/moon.example.com
+sudo cp /etc/letsencrypt/live/moon.example.com/fullchain.pem \
+        /opt/moon/deploy/nginx/certs/moon.example.com/
+sudo cp /etc/letsencrypt/live/moon.example.com/privkey.pem \
+        /opt/moon/deploy/nginx/certs/moon.example.com/
 sudo chown -R $USER:$USER /opt/moon/deploy/nginx/certs
 
 # 自动续期（certbot hook：续期后同步到 deploy 目录）
 sudo tee /etc/letsencrypt/renewal-hooks/deploy/sync-moon.sh > /dev/null <<'EOF'
 #!/bin/bash
-DOMAIN=ideast.top
+DOMAIN=moon.example.com
 cp /etc/letsencrypt/live/$DOMAIN/fullchain.pem /opt/moon/deploy/nginx/certs/$DOMAIN/
 cp /etc/letsencrypt/live/$DOMAIN/privkey.pem  /opt/moon/deploy/nginx/certs/$DOMAIN/
 docker exec blog-nginx nginx -s reload
@@ -181,7 +152,7 @@ docker compose -f deploy/docker-compose.prod.yml logs -f backend frontend nginx
 ```
 
 访问：
-- `http://ideast.top`（或 `https://`）
+- `http://moon.example.com`（或 `https://`）
 - 后台 `/admin`
 
 ---
@@ -234,7 +205,7 @@ docker compose -f deploy/docker-compose.prod.yml logs -f backend frontend nginx
 | `DEPLOY_PORT` | SSH 端口（默认 22 可省略） |
 | `DEPLOY_USER` | SSH 用户 |
 | `DEPLOY_SSH_KEY` | 私钥全文（含 `BEGIN OPENSSH PRIVATE KEY` 行） |
-| `DEPLOY_PATH` | 服务器上项目目录（例：`/opt/moon/MoonCode`） |
+| `DEPLOY_PATH` | 服务器上项目目录（例：`/opt/moon`） |
 
 ### 7.2 首次：免密钥登录
 

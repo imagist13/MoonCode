@@ -70,7 +70,12 @@ services:
       options: { max-size: "10m", max-file: "5" }
 
   elasticsearch:
-    image: elasticsearch:7.17.24
+    build:
+      context: ./elasticsearch
+      dockerfile: Dockerfile
+      args:
+        IK_VERSION: 7.17.24
+    image: blog-elasticsearch:7.17.24-ik
     container_name: blog-elasticsearch
     restart: always
     environment:
@@ -95,30 +100,20 @@ services:
     container_name: blog-backend
     restart: always
     environment:
-      # 必填
       - JWT_SECRET=${JWT_SECRET:?JWT_SECRET 必填}
-      # 数据库（与 postgres 服务共享同一组 POSTGRES_*）
-      - POSTGRES_HOST=postgres
-      - POSTGRES_PORT=5432
-      - POSTGRES_USER=${POSTGRES_USER}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-      - POSTGRES_DB=${POSTGRES_DB:-blog}
-      - DATABASE_SSLMODE=disable
-      # Redis（与 redis 服务共享）
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - REDIS_PASSWORD=${REDIS_PASSWORD:-}
-      - REDIS_DB=${REDIS_DB:-0}
-      # RabbitMQ（与 rabbitmq 服务共享）
-      - RABBITMQ_HOST=rabbitmq
-      - RABBITMQ_PORT=5672
-      - RABBITMQ_USER=${RABBITMQ_USER:-guest}
-      - RABBITMQ_PASSWORD=${RABBITMQ_PASSWORD:-guest}
-      # ES
-      - ELASTICSEARCH_URL=http://elasticsearch:9200
-      # 控制开关
       - AUTO_MIGRATE_ON_STARTUP=${AUTO_MIGRATE_ON_STARTUP:-false}
       - TZ=Asia/Shanghai
+      - POSTGRES_USER=${POSTGRES_USER:?POSTGRES_USER 必填}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:?POSTGRES_PASSWORD 必填}
+      - POSTGRES_DB=${POSTGRES_DB:?POSTGRES_DB 必填}
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - DATABASE_SSLMODE=disable
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_DB=0
+      - RABBITMQ_URL=amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@rabbitmq:5672/
+      - ELASTICSEARCH_URL=http://elasticsearch:9200
     volumes:
       - backend_uploads:/app/uploads
     depends_on:
@@ -152,6 +147,12 @@ services:
     depends_on:
       backend: { condition: service_healthy }
     expose: ["3000"]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fs http://localhost:3000/ || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
     logging:
       driver: json-file
       options: { max-size: "10m", max-file: "5" }
