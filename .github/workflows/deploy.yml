@@ -105,8 +105,8 @@ jobs:
             echo ">>> 构建新镜像（前端 + 后端）"
             $COMPOSE build --pull frontend backend
 
-            echo ">>> 启动基础设施（postgres / redis / rabbitmq / es）"
-            $COMPOSE up -d postgres redis rabbitmq es
+            echo ">>> 启动基础设施（postgres / redis / rabbitmq / elasticsearch）"
+            $COMPOSE up -d postgres redis rabbitmq elasticsearch
 
             echo ">>> 等待 postgres 就绪（最长 60 秒）"
             for i in $(seq 1 30); do
