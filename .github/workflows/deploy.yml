@@ -96,7 +96,8 @@ jobs:
             cd ${{ secrets.DEPLOY_PATH }}
 
             # 固定 project name，避免与根目录 docker-compose.yml 串
-            COMPOSE="docker compose -f deploy/docker-compose.prod.yml -p blog"
+            # 强制指定 .env 文件（部分定制版 compose 不会自动加载）
+            COMPOSE="docker compose --env-file .env -f deploy/docker-compose.prod.yml -p blog"
 
             echo ">>> 构建新镜像（前端 + 后端）"
             $COMPOSE build --pull frontend backend
