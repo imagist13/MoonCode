@@ -136,8 +136,8 @@ jobs:
               exit 1
             fi
 
-            echo ">>> 启动 backend 和 frontend（强制用新镜像）"
-            $COMPOSE up -d --no-deps --force-recreate --remove-orphans backend frontend
+            echo ">>> 启动 backend / frontend / nginx（强制用新镜像）"
+            $COMPOSE up -d --no-deps --force-recreate --remove-orphans backend frontend nginx
 
             echo ">>> 等待服务就绪"
             sleep 15
