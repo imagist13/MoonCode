@@ -99,21 +99,36 @@ jobs:
             # 强制指定 .env 文件（部分定制版 compose 不会自动加载）
             COMPOSE="docker compose --env-file .env -f deploy/docker-compose.prod.yml -p blog"
 
+            echo ">>> 清理旧容器（保留 volumes）"
+            $COMPOSE down --remove-orphans || true
+
             echo ">>> 构建新镜像（前端 + 后端）"
             $COMPOSE build --pull frontend backend
 
-            echo ">>> 数据库迁移（AUTO_MIGRATE_ON_STARTUP=false 时必跑）"
-            if $COMPOSE run --rm --no-deps backend /app/migrate; then
-              echo "迁移完成"
+            echo ">>> 启动基础设施（postgres / redis / rabbitmq / es）"
+            $COMPOSE up -d postgres redis rabbitmq es
+
+            echo ">>> 等待 postgres 就绪（最长 60 秒）"
+            for i in $(seq 1 30); do
+              if $COMPOSE exec -T postgres pg_isready -U "${POSTGRES_USER:-ideast}" >/dev/null 2>&1; then
+                echo "✅ Postgres ready"
+                break
+              fi
+              echo "  等待 postgres ... $i"
+              sleep 2
+            done
+
+            echo ">>> 数据库迁移（用 run 创建一次性容器，--rm 自动清理）"
+            if $COMPOSE run --rm backend /app/migrate; then
+              echo "✅ 迁移完成"
             else
-              echo "::warning::迁移失败，若表已存在可忽略"
+              echo "::error::迁移失败，请看 postgres 日志"
+              $COMPOSE logs --tail=80 postgres
+              exit 1
             fi
 
-            echo ">>> 重启 backend（--force-recreate 短暂停机换稳定性，避免双实例共享上传卷冲突）"
-            $COMPOSE up -d --no-deps --force-recreate backend
-
-            echo ">>> 重启 frontend"
-            $COMPOSE up -d --no-deps --force-recreate frontend
+            echo ">>> 启动 backend 和 frontend（强制用新镜像）"
+            $COMPOSE up -d --no-deps --force-recreate --remove-orphans backend frontend
 
             echo ">>> 等待服务就绪"
             sleep 15
