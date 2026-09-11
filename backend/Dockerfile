@@ -25,7 +25,7 @@ FROM alpine:3.20
 
 WORKDIR /app
 
-RUN apk add --no-cache ca-certificates tzdata
+RUN apk add --no-cache ca-certificates tzdata wget
 ENV TZ=Asia/Shanghai
 
 COPY --from=builder /app/server .
