@@ -102,6 +102,15 @@ jobs:
             echo ">>> 清理旧容器（保留 volumes）"
             $COMPOSE down --remove-orphans || true
 
+            # 显式清理同名固定容器名（不同 project 残留，例如根目录 compose 起的）
+            for c in blog-postgres blog-redis blog-rabbitmq blog-elasticsearch \
+                     blog-backend blog-frontend blog-nginx; do
+              if docker ps -a --format '{{.Names}}' | grep -qx "$c"; then
+                echo "  移除残留容器 $c"
+                docker rm -f "$c" >/dev/null 2>&1 || true
+              fi
+            done
+
             echo ">>> 构建新镜像（前端 + 后端）"
             $COMPOSE build --pull frontend backend
 
