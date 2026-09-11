@@ -2,10 +2,10 @@ name: Deploy
 
 # 把 main 分支的构建产物推送到服务器。
 # 触发后：
-#   1. SSH 到服务器
-#   2. git pull
-#   3. docker compose build --pull
-#   4. 滚动重启（先 frontend / backend，再基础设施）
+#   1. 校验 Secrets
+#   2. SSH 到服务器 → 备份 .env → git reset --hard
+#   3. 用 deploy/docker-compose.prod.yml 构建 + 迁移 + 重启
+#   4. 通过 docker exec 做容器内健康检查
 #
 # 必须在仓库 Settings → Secrets 配置以下 Secrets：
 #   DEPLOY_HOST        服务器地址（例：1.2.3.4）
@@ -13,6 +13,12 @@ name: Deploy
 #   DEPLOY_USER        登录用户名
 #   DEPLOY_SSH_KEY     私钥（id_ed25519 全文，含 BEGIN/END 行）
 #   DEPLOY_PATH        项目目录（例：/opt/moon）
+#
+# 服务器侧首次部署需手动：
+#   cd $DEPLOY_PATH
+#   cp .env.example .env
+#   vim .env        # 必须填 JWT_SECRET / POSTGRES_PASSWORD / RABBITMQ_PASSWORD 等
+#   chmod 600 .env
 
 on:
   push:
@@ -26,24 +32,24 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     environment: production
+    permissions:
+      contents: read
     steps:
-      - name: 检出代码
-        uses: actions/checkout@v4
+      - name: 校验 Secrets
+        run: |
+          : "${DEPLOY_HOST:?需要 DEPLOY_HOST}"
+          : "${DEPLOY_USER:?需要 DEPLOY_USER}"
+          : "${DEPLOY_SSH_KEY:?需要 DEPLOY_SSH_KEY}"
+          : "${DEPLOY_PATH:?需要 DEPLOY_PATH}"
+        env:
+          DEPLOY_HOST:     ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER:     ${{ secrets.DEPLOY_USER }}
+          DEPLOY_SSH_KEY:  ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_PATH:     ${{ secrets.DEPLOY_PATH }}
 
-      - name: SSH 拉取最新代码
-        uses: appleboy/ssh-action@v1
-        with:
-          host: ${{ secrets.DEPLOY_HOST }}
-          port: ${{ secrets.DEPLOY_PORT || 22 }}
-          username: ${{ secrets.DEPLOY_USER }}
-          key: ${{ secrets.DEPLOY_SSH_KEY }}
-          script: |
-            cd ${{ secrets.DEPLOY_PATH }}
-            git fetch --prune --tags
-            git reset --hard origin/main
-
-      - name: 重新构建并滚动重启
+      - name: SSH 拉取最新代码（保留 .env）
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.DEPLOY_HOST }}
@@ -54,24 +60,74 @@ jobs:
             set -e
             cd ${{ secrets.DEPLOY_PATH }}
 
-            echo ">>> 构建新镜像（前端 + 后端）"
-            docker compose build --pull frontend backend
+            # .env 必须存在（生产 compose 用 ${VAR:?} 强校验）
+            if [ ! -f .env ]; then
+              echo "::error::服务器上缺少 .env。请先：cp .env.example .env && vim .env"
+              exit 1
+            fi
 
-            echo ">>> 先滚动重启 backend（零停机：起新再停旧）"
-            docker compose up -d --no-deps --scale backend=2 backend
-            sleep 5
-            docker compose up -d --no-deps --scale backend=1 backend
+            # 备份 .env，防止 reset --hard 把它冲掉
+            cp -p .env .env.bak.$(date +%Y%m%d%H%M%S)
+
+            git fetch --prune --tags
+            git reset --hard origin/main
+
+            # 二次确认 .env 还在
+            if [ ! -f .env ]; then
+              echo "::error::git reset --hard 后 .env 丢失，请确认 .gitignore 包含 .env"
+              LATEST_BAK=$(ls -t .env.bak.* 2>/dev/null | head -1)
+              if [ -n "$LATEST_BAK" ]; then
+                cp "$LATEST_BAK" .env
+                echo "::warning::已从 $LATEST_BAK 恢复 .env"
+              else
+                exit 1
+              fi
+            fi
+
+      - name: 构建 + 迁移 + 重启
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          port: ${{ secrets.DEPLOY_PORT || 22 }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          script: |
+            set -e
+            cd ${{ secrets.DEPLOY_PATH }}
+
+            # 固定 project name，避免与根目录 docker-compose.yml 串
+            COMPOSE="docker compose -f deploy/docker-compose.prod.yml -p blog"
+
+            echo ">>> 构建新镜像（前端 + 后端）"
+            $COMPOSE build --pull frontend backend
+
+            echo ">>> 数据库迁移（AUTO_MIGRATE_ON_STARTUP=false 时必跑）"
+            if $COMPOSE run --rm --no-deps backend /app/migrate; then
+              echo "迁移完成"
+            else
+              echo "::warning::迁移失败，若表已存在可忽略"
+            fi
+
+            echo ">>> 重启 backend（--force-recreate 短暂停机换稳定性，避免双实例共享上传卷冲突）"
+            $COMPOSE up -d --no-deps --force-recreate backend
 
             echo ">>> 重启 frontend"
-            docker compose up -d --no-deps frontend
+            $COMPOSE up -d --no-deps --force-recreate frontend
+
+            echo ">>> 等待服务就绪"
+            sleep 15
+
+            echo ">>> 健康检查：nginx 端到端（80 端口是唯一对外端口）"
+            curl -fsS -o /dev/null http://127.0.0.1/ || { echo "nginx 首页失败" && exit 1; }
+
+            echo ">>> 健康检查：backend 容器内（8080 不暴露宿主机，走 docker exec）"
+            $COMPOSE exec -T backend wget -qO- http://127.0.0.1:8080/health >/dev/null || { echo "后端 /health 失败" && exit 1; }
+
+            echo ">>> 健康检查：frontend 容器内"
+            $COMPOSE exec -T frontend curl -fsS http://127.0.0.1:3000/ >/dev/null || { echo "前端首页失败" && exit 1; }
 
             echo ">>> 清理悬空镜像"
             docker image prune -f
 
-            echo ">>> 健康检查"
-            sleep 10
-            curl -fsS http://127.0.0.1:8080/health || (echo "后端健康检查失败" && exit 1)
-            curl -fsS -o /dev/null http://127.0.0.1:3000 || (echo "前端健康检查失败" && exit 1)
-
             echo ">>> 当前容器状态"
-            docker compose ps
+            $COMPOSE ps

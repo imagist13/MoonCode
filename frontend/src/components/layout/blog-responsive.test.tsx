@@ -8,9 +8,18 @@ vi.mock("@/hooks/useSiteConfig", () => ({
   useSiteConfig: () => ({ name: "Test Blog" }),
 }));
 
-// Mock next/navigation
+// Mock next/navigation（补齐 useRouter / useSearchParams，避免覆盖 setup.ts 全局 mock）
 vi.mock("next/navigation", () => ({
+  useRouter: () => ({
+    push: vi.fn(),
+    replace: vi.fn(),
+    back: vi.fn(),
+    forward: vi.fn(),
+    refresh: vi.fn(),
+    prefetch: vi.fn(),
+  }),
   usePathname: () => "/",
+  useSearchParams: () => new URLSearchParams(),
 }));
 
 describe("Blog Responsive (TASK-5.4)", () => {
