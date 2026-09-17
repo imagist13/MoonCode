@@ -1,314 +1,233 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
-import { api } from "@/lib/api";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { FileText, Users, MessageSquare, Eye } from "lucide-react";
-import { StatsCard } from "@/components/dashboard/stats-card";
-import { QuickActions } from "@/components/dashboard/quick-actions";
-import { RecentActivities } from "@/components/dashboard/recent-activities";
-import { TopArticles } from "@/components/dashboard/top-articles";
-import { TodoList } from "@/components/dashboard/todo-list";
-import { SkeletonChart } from "@/components/ui/skeleton-chart";
-import { EmptyState } from "@/components/ui/empty-state";
-import { ErrorBoundary } from "@/components/error-boundary";
+import { useEffect, useState } from "react";
+import Link from "next/link";
 import {
-  PieChart,
-  Pie,
-  Cell,
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  Legend,
-} from "recharts";
-
-/* ==============================
- * 数据类型定义
- * ============================== */
+  FileText,
+  Users,
+  MessageSquare,
+  Eye,
+  Plus,
+  List,
+  FolderTree,
+  Tags,
+  Mail,
+  MessageCircle,
+  Camera,
+  ArrowRight,
+  Bell,
+  Check,
+  Trash2,
+} from "lucide-react";
+import { api } from "@/lib/api";
+import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 interface DashboardData {
   articleCount: number;
   userCount: number;
   messageCount: number;
   viewCount: number;
-  categoryList: { name: string; value: number }[];
-  viewList: { date: string; count: number }[];
 }
 
-interface TopArticle {
+interface Notification {
   id: number;
   title: string;
-  viewCount: number;
-  commentCount: number;
-  likeCount: number;
+  content: string;
+  read: boolean;
+  createTime: string;
 }
-
-interface TodoItem {
-  type: "draft" | "comment" | "message";
-  count: number;
-  label: string;
-  link: string;
-}
-
-const CHART_COLORS = [
-  "var(--color-chart-1)",
-  "var(--color-chart-2)",
-  "var(--color-chart-3)",
-  "var(--color-chart-4)",
-  "var(--color-chart-5)",
-];
-
-const TIME_RANGES = [
-  { label: "7天", value: 7 },
-  { label: "30天", value: 30 },
-  { label: "90天", value: 90 },
-] as const;
-
-/* ==============================
- * 仪表盘页面
- * ============================== */
 
 export default function DashboardPage() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [timeRange, setTimeRange] = useState<number>(7);
-  const [, startTransition] = useTransition();
-  
-  // Extended data (may not be available from backend)
-  const [topArticles, setTopArticles] = useState<TopArticle[]>([]);
-  const [todos, setTodos] = useState<TodoItem[]>([]);
-  const [extLoading, setExtLoading] = useState(true);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [tab, setTab] = useState<"all" | "unread" | "read">("all");
 
   useEffect(() => {
     let cancelled = false;
-
-    // Fetch dashboard data
-    startTransition(() => setLoading(true));
     api
       .get<DashboardData>("/admin")
       .then((res) => {
-        if (!cancelled && res.flag) {
-          startTransition(() => setData(res.data));
-        }
+        if (!cancelled && res.flag) setData(res.data);
       })
+      .catch(() => {})
       .finally(() => {
-        if (!cancelled) startTransition(() => setLoading(false));
+        if (!cancelled) setLoading(false);
       });
-
-    // Fetch extended data
-    startTransition(() => setExtLoading(true));
-    api
-      .get<{ records: TopArticle[] }>("/admin/articles?page=1&size=5&sort=viewCount,desc")
-      .then((res) => {
-        if (!cancelled && res.flag && res.data?.records) {
-          startTransition(() => setTopArticles(res.data.records));
-        }
-      })
-      .catch((err) => {
-        console.warn("Failed to fetch top articles:", err);
-      });
-
-    Promise.all([
-      api.get<{ records: { id: number; status: number }[] }>("/admin/articles?page=1&size=1&status=3"),
-      api.get<{ records: { id: number }[] }>("/admin/comments?page=1&size=1"),
-      api.get<{ records: { id: number }[] }>("/admin/messages?page=1&size=1"),
-    ])
-      .then(([draftRes, commentRes, messageRes]) => {
-        if (cancelled) return;
-        const items: TodoItem[] = [];
-        if (draftRes.flag && draftRes.data?.records) {
-          items.push({
-            type: "draft",
-            count: draftRes.data.records.length,
-            label: "草稿文章",
-            link: "/admin/articles?status=3",
-          });
-        }
-        if (commentRes.flag && commentRes.data?.records) {
-          items.push({
-            type: "comment",
-            count: commentRes.data.records.length,
-            label: "待审核评论",
-            link: "/admin/comments",
-          });
-        }
-        if (messageRes.flag && messageRes.data?.records) {
-          items.push({
-            type: "message",
-            count: messageRes.data.records.length,
-            label: "未读留言",
-            link: "/admin/messages",
-          });
-        }
-        startTransition(() => setTodos(items));
-      })
-      .catch((err) => {
-        console.warn("Failed to fetch todo data:", err);
-      })
-      .finally(() => {
-        if (!cancelled) startTransition(() => setExtLoading(false));
-      });
-
     return () => {
       cancelled = true;
     };
   }, []);
 
+  // 占位通知
+  useEffect(() => {
+    setNotifications([
+      {
+        id: 1,
+        title: "欢迎使用博客后台",
+        content: "在这里你可以管理文章、评论、用户等所有内容",
+        read: false,
+        createTime: new Date().toISOString(),
+      },
+    ]);
+  }, []);
+
   const stats = [
-    { title: "文章数", value: data?.articleCount ?? 0, icon: FileText },
-    { title: "用户数", value: data?.userCount ?? 0, icon: Users },
-    { title: "留言数", value: data?.messageCount ?? 0, icon: MessageSquare },
-    { title: "访问量", value: data?.viewCount ?? 0, icon: Eye },
+    { label: "总文章数", value: data?.articleCount ?? 0, icon: FileText },
+    { label: "总用户数", value: data?.userCount ?? 0, icon: Users },
+    { label: "总评论数", value: data?.messageCount ?? 0, icon: MessageSquare },
+    { label: "总访问量", value: data?.viewCount ?? 0, icon: Eye },
   ];
 
-  const viewTrend =
-    data?.viewList && data.viewList.length >= 2
-      ? (() => {
-          const mid = Math.floor(data.viewList.length / 2);
-          const recent = data.viewList.slice(mid).reduce((s, v) => s + v.count, 0);
-          const previous = data.viewList.slice(0, mid).reduce((s, v) => s + v.count, 0);
-          return previous > 0 ? (recent - previous) / previous : undefined;
-        })()
-      : undefined;
+  const quickActions = [
+    { title: "发布文章", description: "写一篇新文章", icon: Plus, href: "/admin/articles/editor" },
+    { title: "文章列表", description: "管理现有文章", icon: List, href: "/admin/articles" },
+    { title: "分类管理", description: "管理文章分类", icon: FolderTree, href: "/admin/categories" },
+    { title: "标签管理", description: "管理文章标签", icon: Tags, href: "/admin/tags" },
+    { title: "评论管理", description: "审核评论", icon: MessageCircle, href: "/admin/comments" },
+    { title: "留言管理", description: "查看留言", icon: Mail, href: "/admin/messages" },
+  ];
 
-  const filteredViewList = data?.viewList?.slice(-timeRange) ?? [];
+  const filteredNotifications = notifications.filter((n) => {
+    if (tab === "unread") return !n.read;
+    if (tab === "read") return n.read;
+    return true;
+  });
 
   return (
     <div className="space-y-6">
-      {/* 统计卡片 */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {stats.map((stat, index) => (
-          <StatsCard
-            key={stat.title}
-            title={stat.title}
-            value={stat.value}
-            icon={stat.icon}
-            loading={loading}
-            trend={index === 3 ? viewTrend : undefined}
-            trendLabel={index === 3 && viewTrend !== undefined ? "较上周" : undefined}
-          />
+      {/* 统计卡片（spec §5.4.1） */}
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+        {stats.map((stat) => (
+          <div
+            key={stat.label}
+            className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm transition-shadow duration-200 hover:shadow-md dark:border-gray-700 dark:bg-gray-800"
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-500">{stat.label}</p>
+                <p className="mt-1 text-2xl font-bold text-gray-900 dark:text-gray-100">
+                  {loading ? "—" : stat.value}
+                </p>
+              </div>
+              <div className="rounded-lg bg-blue-50 p-3 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400">
+                <stat.icon className="h-5 w-5" />
+              </div>
+            </div>
+          </div>
         ))}
       </div>
 
-      {/* 快捷操作 */}
-      <QuickActions />
-
-      {/* 双栏：最近动态 + 热门文章 */}
-      {/* TODO: 接入真实的最近活动数据（如操作日志 API） */}
-      <div className="grid gap-4 lg:grid-cols-2">
-        {/* <ErrorBoundary>
-          <RecentActivities activities={[]} loading={extLoading} />
-        </ErrorBoundary> */}
-        <ErrorBoundary>
-          <TopArticles articles={topArticles} loading={extLoading} />
-        </ErrorBoundary>
+      {/* 快捷操作（spec §5.4.2） */}
+      <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+        <h2 className="mb-4 text-xl font-semibold text-gray-900 dark:text-gray-100">
+          快捷操作
+        </h2>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
+          {quickActions.map((a) => (
+            <Link
+              key={a.title}
+              href={a.href}
+              className="group flex items-start gap-3 rounded-lg border border-gray-200 p-4 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-700"
+            >
+              <div className="rounded-lg bg-blue-100 p-2 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400">
+                <a.icon className="h-5 w-5" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-medium text-gray-900 dark:text-gray-100">{a.title}</h3>
+                <p className="mt-1 text-sm text-gray-500">{a.description}</p>
+              </div>
+              <ArrowRight className="h-5 w-5 text-gray-400 transition-transform group-hover:translate-x-0.5 group-hover:text-blue-500" />
+            </Link>
+          ))}
+        </div>
       </div>
 
-      {/* 访问趋势 + 时间范围 */}
-      <ErrorBoundary>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="text-base">访问趋势</CardTitle>
-            <div className="flex gap-1">
-              {TIME_RANGES.map((range) => (
-                <Button
-                  key={range.value}
-                  variant={timeRange === range.value ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setTimeRange(range.value)}
-                >
-                  {range.label}
-                </Button>
-              ))}
-            </div>
-          </CardHeader>
-          <CardContent>
-            {loading ? (
-              <SkeletonChart height={300} />
-            ) : filteredViewList.length > 0 ? (
-              <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={filteredViewList}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="date" fontSize={12} />
-                  <YAxis fontSize={12} />
-                  <Tooltip />
-                  <Legend />
-                  <Line
-                    type="monotone"
-                    dataKey="count"
-                    name="访问量"
-                    stroke="var(--color-chart-1)"
-                    strokeWidth={2}
-                    dot={{ r: 4 }}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            ) : (
-              <EmptyState
-                icon={Eye}
-                title="暂无数据"
-                description="暂无访问记录"
-                size="sm"
-              />
-            )}
-          </CardContent>
-        </Card>
-      </ErrorBoundary>
+      {/* 通知面板（spec §5.4.3） */}
+      <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="flex items-center gap-2 text-xl font-semibold text-gray-900 dark:text-gray-100">
+            <Bell className="h-5 w-5" />
+            通知
+          </h2>
+          <div className="flex gap-1">
+            {[
+              { key: "all" as const, label: "全部" },
+              { key: "unread" as const, label: "未读" },
+              { key: "read" as const, label: "已读" },
+            ].map((t) => (
+              <button
+                key={t.key}
+                type="button"
+                onClick={() => setTab(t.key)}
+                className={cn(
+                  "rounded px-3 py-1 text-sm transition-colors",
+                  tab === t.key
+                    ? "bg-blue-500 text-white"
+                    : "bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600",
+                )}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+        </div>
 
-      {/* 分类统计 */}
-      <ErrorBoundary>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">分类文章统计</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {loading ? (
-              <SkeletonChart height={300} />
-            ) : data?.categoryList && data.categoryList.length > 0 ? (
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                  <Pie
-                    data={data.categoryList}
-                    dataKey="value"
-                    nameKey="name"
-                    cx="50%"
-                    cy="50%"
-                    outerRadius={100}
-                    label={({ name, percent }) =>
-                      `${name ?? ""} ${((percent ?? 0) * 100).toFixed(0)}%`
-                    }
-                  >
-                    {data.categoryList.map((_, index) => (
-                      <Cell
-                        key={index}
-                        fill={CHART_COLORS[index % CHART_COLORS.length]}
-                      />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
-            ) : (
-              <EmptyState
-                icon={FileText}
-                title="暂无分类"
-                description="还没有创建任何分类"
-                size="sm"
-              />
-            )}
-          </CardContent>
-        </Card>
-      </ErrorBoundary>
-
-      {/* 待办提醒 */}
-      <ErrorBoundary>
-        <TodoList items={todos} loading={extLoading} />
-      </ErrorBoundary>
+        <ul className="space-y-3">
+          {filteredNotifications.length === 0 ? (
+            <li className="py-8 text-center text-sm text-gray-400">暂无通知</li>
+          ) : (
+            filteredNotifications.map((n) => (
+              <li
+                key={n.id}
+                className={cn(
+                  "rounded-lg border border-gray-200 p-4 transition-colors",
+                  n.read
+                    ? "bg-white hover:bg-gray-50 dark:bg-gray-800 dark:hover:bg-gray-700"
+                    : "bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/20 dark:hover:bg-blue-900/30",
+                )}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <h3 className="font-medium text-gray-900 dark:text-gray-100">
+                      {n.title}
+                    </h3>
+                    <p className="mt-1 text-sm text-gray-500">{n.content}</p>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-2 text-xs">
+                    {!n.read && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setNotifications((prev) =>
+                            prev.map((nn) => (nn.id === n.id ? { ...nn, read: true } : nn)),
+                          );
+                          toast.success("已标为已读");
+                        }}
+                        className="text-blue-600 hover:text-blue-800"
+                      >
+                        <Check className="h-3 w-3" />
+                        标为已读
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setNotifications((prev) => prev.filter((nn) => nn.id !== n.id))
+                      }
+                      className="text-red-600 hover:text-red-800"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                      删除
+                    </button>
+                  </div>
+                </div>
+              </li>
+            ))
+          )}
+        </ul>
+      </div>
     </div>
   );
 }

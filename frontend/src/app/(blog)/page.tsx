@@ -1,20 +1,14 @@
 import { Suspense } from "react";
 import ArticleList from "./ArticleList";
 import { Hero, type HeroPinned } from "@/components/blog/Hero";
-import { FeaturedCard } from "@/components/blog/FeaturedCard";
-import { CategoryList } from "@/components/blog/CategoryList";
-import { TagCloud } from "@/components/blog/TagCloud";
-import { Skeleton } from "@/components/ui/skeleton";
 
 interface HomePageProps {
-  searchParams: Promise<{ categoryId?: string; tagId?: string }>;
+  searchParams: Promise<{ category?: string; tag?: string }>;
 }
 
 export default async function HomePage({ searchParams }: HomePageProps) {
   const params = await searchParams;
-  const categoryId = params.categoryId ?? null;
-  const tagId = params.tagId ?? null;
-  const hasFilter = !!(categoryId || tagId);
+  const hasFilter = !!(params.category || params.tag);
 
   // 仅在无筛选时拉侧边数据（服务端组件）
   const [config, featured] = hasFilter
@@ -30,41 +24,15 @@ export default async function HomePage({ searchParams }: HomePageProps) {
         hasFilter={hasFilter}
       />
 
-      <div id="articles" className="grid gap-8 lg:grid-cols-[1fr_300px]">
-        {/* 左栏：文章列表 */}
-        <main className="min-w-0">
-          <Suspense
-            fallback={
-              <div className="space-y-6">
-                <Skeleton className="h-6 w-32" />
-                <div className="space-y-5">
-                  {Array.from({ length: 5 }).map((_, i) => (
-                    <div key={i} className="flex gap-4">
-                      <Skeleton className="h-32 w-44 shrink-0 rounded-lg" />
-                      <div className="flex-1 space-y-2">
-                        <Skeleton className="h-4 w-20" />
-                        <Skeleton className="h-6 w-3/4" />
-                        <Skeleton className="h-4 w-full" />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            }
-          >
-            <ArticleList categoryId={categoryId} tagId={tagId} />
-          </Suspense>
-        </main>
-
-        {/* 右栏：3 块卡片 */}
-        {!hasFilter && (
-          <aside className="space-y-6">
-            <FeaturedCard article={featured} />
-            <CategoryList />
-            <TagCloud />
-          </aside>
-        )}
-      </div>
+      <Suspense
+        fallback={
+          <div className="flex items-center justify-center py-20 text-sm text-gray-500">
+            加载中...
+          </div>
+        }
+      >
+        <ArticleList />
+      </Suspense>
     </div>
   );
 }
@@ -115,7 +83,6 @@ async function fetchFeatured(): Promise<FeaturedArticle | null> {
     const json = await res.json();
     type Row = FeaturedArticle & { isTop?: boolean };
     const list: Row[] = json?.data?.records ?? [];
-    // 优先取 isTop=true 的；否则取第一条
     const picked = list.find((a) => a.isTop) ?? list[0];
     return picked ?? null;
   } catch {
