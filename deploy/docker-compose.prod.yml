@@ -114,6 +114,8 @@ services:
       - REDIS_DB=0
       - RABBITMQ_URL=amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@rabbitmq:5672/
       - ELASTICSEARCH_URL=http://elasticsearch:9200
+      - SEED_ADMIN_EMAIL=${SEED_ADMIN_EMAIL}
+      - SEED_ADMIN_PASSWORD=${SEED_ADMIN_PASSWORD}
     volumes:
       - backend_uploads:/app/uploads
     depends_on:
