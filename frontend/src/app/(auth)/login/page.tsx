@@ -1,16 +1,14 @@
 "use client";
 
-import { AuthCard, LoginForm } from "@/components/forms/AuthCard";
 import { useRouter } from "next/navigation";
+import { LoginForm } from "@/components/auth/LoginForm";
 
 export default function LoginPage() {
   const router = useRouter();
   return (
-    <AuthCard title="登录账号" subtitle="使用邮箱和密码登录">
-      <LoginForm
-        onSwitchToRegister={() => router.push("/register")}
-        onSwitchToForgot={() => router.push("/forgot-password")}
-      />
-    </AuthCard>
+    <LoginForm
+      onSwitchToRegister={() => router.push("/register")}
+      onSwitchToForgot={() => router.push("/forgot-password")}
+    />
   );
 }

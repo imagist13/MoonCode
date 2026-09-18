@@ -96,7 +96,7 @@ export function MusicPlayer({ playlist, autoPlay = false }: MusicPlayerProps) {
         width: panelWidth,
         height: playlistOpen ? "auto" : panelHeight,
         left: `calc(2rem + ${offsetX})`,
-      )}
+      }}
       onMouseEnter={() => setExpanded(true)}
       onMouseLeave={() => setExpanded(false)}
     >

@@ -68,7 +68,7 @@ function useTheme() {
 
 /** 测量并决定可见菜单项数（spec §4.1 菜单溢出策略） */
 function useVisibleNavCount(containerRef: React.RefObject<HTMLElement | null>) {
-  const [count, setCount] = useState(NAV_LINKS.length);
+  const [count, setCount] = useState<number>(NAV_LINKS.length);
 
   useLayoutEffect(() => {
     const measure = () => {

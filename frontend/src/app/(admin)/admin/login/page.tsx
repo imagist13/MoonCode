@@ -2,14 +2,12 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Lock, Mail, Sparkles } from "lucide-react";
+import Link from "next/link";
+import { toast } from "sonner";
 import { api } from "@/lib/api";
 import { useAuthStore } from "@/stores/auth";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { toast } from "sonner";
+import { FieldInput } from "@/components/auth/FieldInput";
+import { ErrorBar } from "@/components/auth/ErrorBar";
 
 interface LoginResponse {
   token: string;
@@ -23,118 +21,100 @@ interface LoginResponse {
   };
 }
 
-export default function LoginPage() {
+export default function AdminLoginPage() {
   const router = useRouter();
   const setAuth = useAuthStore((s) => s.setAuth);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
     if (!email.trim() || !password.trim()) {
-      toast.error("请输入邮箱和密码");
+      setError("请输入邮箱和密码");
       return;
     }
 
     setLoading(true);
+    setError(null);
     try {
       const res = await api.post<LoginResponse>("/login", {
         username: email,
         password,
       });
-
       if (res.flag) {
         setAuth(res.data.token, res.data.userInfo);
         toast.success("登录成功");
         router.replace("/admin");
       } else {
-        toast.error(res.message || "登录失败");
+        setError(res.message || "登录失败");
       }
-    } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "网络错误，请稍后重试");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "网络错误");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden
-                    bg-linear-to-br from-brand-50 via-background to-purple-50/40
-                    dark:from-brand-950/30 dark:via-background dark:to-purple-950/20
-                    px-4 py-10">
-      {/* 装饰光斑 */}
-      <div className="pointer-events-none absolute -top-32 -left-32 h-96 w-96 rounded-full
-                      bg-brand-400/25 blur-3xl dark:bg-brand-500/15" />
-      <div className="pointer-events-none absolute -bottom-32 -right-32 h-112 w-md
-                      rounded-full bg-purple-400/20 blur-3xl" />
-      <div className="pointer-events-none absolute top-1/2 left-1/2 h-64 w-64 -translate-x-1/2 -translate-y-1/2
-                      rounded-full bg-brand-500/8 blur-3xl animate-pulse" />
+    <div className="flex min-h-screen flex-col bg-white text-gray-900 dark:bg-gray-950 dark:text-gray-100">
+      <header className="flex h-16 items-center justify-between px-6">
+        <Link
+          href="/"
+          className="text-base font-medium tracking-tight text-gray-900 transition-opacity hover:opacity-60 dark:text-gray-100"
+        >
+          ← 返回首页
+        </Link>
+      </header>
 
-      <Card className="relative w-full max-w-sm border-border/60 bg-background/80 backdrop-blur-xl
-                       shadow-(--shadow-card-hover)">
-        <CardHeader className="text-center">
-          <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl
-                          bg-linear-to-br from-brand-500 via-brand-600 to-purple-500
-                          text-white shadow-lg shadow-brand-500/30">
-            <Sparkles className="h-6 w-6" />
-          </div>
-          <CardTitle className="text-2xl">
-            <span className="bg-linear-to-r from-brand-500 via-brand-600 to-purple-500
-                             bg-clip-text text-transparent">
-              博客后台管理
-            </span>
-          </CardTitle>
-          <p className="text-sm text-muted-foreground">请登录以继续</p>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleLogin} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="email">邮箱</Label>
-              <div className="relative">
-                <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2
-                                 text-muted-foreground" />
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="admin@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  autoComplete="email"
-                  className="pl-9 transition-all
-                             focus-visible:border-brand-400 focus-visible:shadow-(--shadow-brand-glow)"
-                />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">密码</Label>
-              <div className="relative">
-                <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2
-                                 text-muted-foreground" />
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="请输入密码"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  autoComplete="current-password"
-                  className="pl-9 transition-all
-                             focus-visible:border-brand-400 focus-visible:shadow-(--shadow-brand-glow)"
-                />
-              </div>
-            </div>
-            <Button
-              type="submit"
-              className="w-full"
+      <main className="flex flex-1 items-start justify-center px-6 pb-16 pt-12 sm:pt-24">
+        <div className="w-full max-w-[360px] space-y-8">
+          <header className="space-y-1">
+            <h1 className="text-2xl font-semibold tracking-tight">后台管理登录</h1>
+            <p className="text-sm text-gray-500 dark:text-gray-400">仅限管理员访问</p>
+          </header>
+
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <ErrorBar message={error} onDismiss={() => setError(null)} />
+
+            <FieldInput
+              label="邮箱"
+              type="email"
+              autoComplete="email"
+              placeholder="admin@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               disabled={loading}
-              size="lg"
+            />
+
+            <FieldInput
+              label="密码"
+              type="password"
+              autoComplete="current-password"
+              placeholder="••••••••"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              disabled={loading}
+            />
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="flex w-full items-center justify-center gap-2 rounded-md bg-gray-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-gray-700 disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
             >
-              {loading ? "登录中..." : "登录"}
-            </Button>
+              {loading ? (
+                <>
+                  <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                  登录中
+                </>
+              ) : (
+                "登录"
+              )}
+            </button>
           </form>
-        </CardContent>
-      </Card>
+        </div>
+      </main>
     </div>
   );
 }
