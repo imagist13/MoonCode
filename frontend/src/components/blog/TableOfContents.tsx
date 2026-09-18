@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { cn } from "@/lib/utils";
 
 interface Heading {
   level: number;
@@ -8,15 +9,10 @@ interface Heading {
   id: string;
 }
 
-/**
- * 文章右侧 sticky 目录
- * - IntersectionObserver 监听 h2/h3 进入视口，高亮当前章节
- * - 点击平滑滚动 + offsetTop 修正（避免被 sticky header 遮挡）
- */
+/** 目录组件（spec §4.6 TOC） */
 export function TableOfContents({ headings }: { headings: Heading[] }) {
-  const [activeId, setActiveId] = useState<string | null>(
-    headings[0]?.id ?? null,
-  );
+  const [activeId, setActiveId] = useState<string | null>(headings[0]?.id ?? null);
+  const [collapsed, setCollapsed] = useState(false);
 
   useEffect(() => {
     if (headings.length === 0) return;
@@ -36,14 +32,9 @@ export function TableOfContents({ headings }: { headings: Heading[] }) {
               a.target.getBoundingClientRect().top -
               b.target.getBoundingClientRect().top,
           );
-        if (visible[0]) {
-          setActiveId(visible[0].target.id);
-        }
+        if (visible[0]) setActiveId(visible[0].target.id);
       },
-      {
-        rootMargin: "-80px 0px -70% 0px",
-        threshold: [0, 1],
-      },
+      { rootMargin: "-80px 0px -70% 0px", threshold: [0, 1] },
     );
 
     elements.forEach((el) => observer.observe(el));
@@ -53,48 +44,66 @@ export function TableOfContents({ headings }: { headings: Heading[] }) {
   if (headings.length === 0) return null;
 
   return (
-    <aside className="hidden w-56 shrink-0 lg:block">
-      <nav className="sticky top-24 max-h-[calc(100vh-7rem)] overflow-y-auto pr-2">
-        <h4 className="mb-3 flex items-center gap-2 text-sm font-semibold">
-          <span className="inline-block h-4 w-0.5 rounded-full bg-linear-to-b from-brand-400 to-brand-600" />
+    <aside className="hidden w-full lg:block">
+      <div className="sticky top-28 rounded-lg border border-gray-200 bg-white p-5 shadow-md dark:border-gray-700 dark:bg-gray-800">
+        <button
+          type="button"
+          onClick={() => setCollapsed((v) => !v)}
+          className="mb-3 flex w-full items-center justify-between text-sm font-bold text-gray-900 dark:text-gray-100"
+        >
           目录
-        </h4>
-        <ul className="space-y-1 text-sm">
-          {headings.map((h) => {
-            const isActive = h.id === activeId;
-            return (
-              <li
-                key={h.id}
-                className={`relative ${h.level === 3 ? "pl-4" : ""}`}
-              >
-                <a
-                  href={`#${h.id}`}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    const el = document.getElementById(h.id);
-                    if (el) {
-                      const offset = 80;
-                      const y =
-                        el.getBoundingClientRect().top +
-                        window.scrollY -
-                        offset;
-                      window.scrollTo({ top: y, behavior: "smooth" });
-                      setActiveId(h.id);
-                    }
-                  }}
-                  className={`block truncate border-l-2 py-1 pl-3 transition-all ${
-                    isActive
-                      ? "border-brand-500 font-medium text-brand-600 dark:text-brand-400"
-                      : "border-transparent text-muted-foreground hover:border-brand-200 hover:text-foreground dark:hover:border-brand-800"
-                  }`}
+          <span
+            className={cn(
+              "inline-block transition-transform",
+              collapsed ? "" : "rotate-90",
+            )}
+          >
+            ▸
+          </span>
+        </button>
+        <div
+          className={cn(
+            "overflow-hidden transition-all duration-300",
+            collapsed ? "max-h-0" : "max-h-[60vh]",
+          )}
+        >
+          <ul className="hide-scrollbar max-h-[280px] space-y-1 overflow-y-auto pr-1 text-sm">
+            {headings.map((h) => {
+              const isActive = h.id === activeId;
+              return (
+                <li
+                  key={h.id}
+                  className={cn(h.level === 3 && "pl-4")}
                 >
-                  {h.text}
-                </a>
-              </li>
-            );
-          })}
-        </ul>
-      </nav>
+                  <a
+                    href={`#${h.id}`}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      const el = document.getElementById(h.id);
+                      if (el) {
+                        const y =
+                          el.getBoundingClientRect().top +
+                          window.scrollY -
+                          80;
+                        window.scrollTo({ top: y, behavior: "smooth" });
+                        setActiveId(h.id);
+                      }
+                    }}
+                    className={cn(
+                      "block truncate border-l-2 py-1 pl-3 transition-all",
+                      isActive
+                        ? "border-blue-500 font-medium text-blue-600 dark:text-blue-400"
+                        : "border-transparent text-gray-600 hover:border-blue-200 hover:text-gray-900 dark:text-gray-400 dark:hover:border-blue-800 dark:hover:text-gray-100",
+                    )}
+                  >
+                    {h.text}
+                  </a>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      </div>
     </aside>
   );
 }

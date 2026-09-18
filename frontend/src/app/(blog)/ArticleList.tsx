@@ -1,296 +1,230 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import Link from "next/link";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Button } from "@/components/ui/button";
-import Image from "next/image";
-import { Calendar, Tag, Folder } from "lucide-react";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
+import { ArticleCard, ArticleListPagination, ArticleListSkeleton, ArticleEmpty, ArticleError, type ArticleCardData } from "@/components/blog/ArticleCard";
+import { CategorySidebar, TagSidebar, RecommendedArticles } from "@/components/blog/Sidebars";
 import { api } from "@/lib/api";
+import { cn, stripMarkdown } from "@/lib/utils";
 
-interface TagBrief {
-  id: number;
-  tagName: string;
-}
-
-interface Article {
-  id: number;
-  articleCover: string;
-  articleTitle: string;
-  articleContent: string;
-  isTop: boolean;
-  type: number;
-  createTime: string;
-  categoryName: string;
-  tagVOList: TagBrief[];
-}
-
-interface PageResult {
-  records: Article[];
+interface PageData {
+  records: {
+    id: number;
+    articleTitle: string;
+    articleCover?: string;
+    articleContent?: string;
+    isTop?: boolean;
+    createTime?: string;
+    categoryName?: string;
+    viewCount?: number;
+    tagVOList?: { id: number; tagName: string }[];
+  }[];
   count: number;
-}
-
-interface ArticleListProps {
-  categoryId?: string | null;
-  tagId?: string | null;
 }
 
 const PAGE_SIZE = 10;
 
-function stripMarkdown(s: string): string {
-  return (s || "")
-    .replace(/[#*`>\-\[\]()_~]/g, "")
-    .replace(/\s+/g, " ")
-    .trim();
-}
+export default function ArticleList() {
+  const params = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+  const categoryId = params.get("category");
+  const tagId = params.get("tag");
+  const hasFilter = !!(categoryId || tagId);
 
-export default function ArticleList({
-  categoryId,
-  tagId,
-}: ArticleListProps = {}) {
-  const [articles, setArticles] = useState<Article[]>([]);
+  const [articles, setArticles] = useState<ArticleCardData[]>([]);
   const [total, setTotal] = useState(0);
   const [current, setCurrent] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [showCover, setShowCover] = useState(true);
+  const [showImages, setShowImages] = useState(true);
   const requestIdRef = useRef(0);
+  const holdHeightRef = useRef<number | null>(null);
 
   useEffect(() => {
     setCurrent(1);
-    fetchArticles(1);
+    // 记录旧高度，避免布局抖动
+    holdHeightRef.current = document.getElementById("article-list-wrap")?.offsetHeight ?? null;
+    fetch(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [categoryId, tagId]);
 
-  function fetchArticles(page: number) {
-    const thisRequest = ++requestIdRef.current;
-
+  function fetch(page: number) {
+    const thisReq = ++requestIdRef.current;
     setLoading(true);
     setError("");
 
-    const hasFilter = categoryId || tagId;
-    const params = new URLSearchParams({
+    const qs = new URLSearchParams({
       current: String(page),
       size: String(PAGE_SIZE),
     });
-    if (categoryId) params.set("categoryId", categoryId);
-    if (tagId) params.set("tagId", tagId);
+    if (categoryId) qs.set("categoryId", categoryId);
+    if (tagId) qs.set("tagId", tagId);
 
     const endpoint = hasFilter
-      ? `/articles/condition?${params.toString()}`
-      : `/articles?${params.toString()}`;
+      ? `/articles/condition?${qs.toString()}`
+      : `/articles?${qs.toString()}`;
 
     api
-      .get<PageResult>(endpoint)
+      .get<PageData>(endpoint)
       .then((res) => {
-        if (thisRequest !== requestIdRef.current) return;
+        if (thisReq !== requestIdRef.current) return;
         if (res.flag && res.data) {
-          setArticles(res.data.records || []);
+          const list = (res.data.records || []).map((a) => ({
+            id: a.id,
+            title: a.articleTitle,
+            cover: a.articleCover,
+            content: a.articleContent,
+            isTop: a.isTop,
+            categoryName: a.categoryName,
+            publishTime: a.createTime,
+            viewCount: a.viewCount,
+            tags: a.tagVOList?.map((t) => ({ id: t.id, name: t.tagName })),
+          }));
+          setArticles(list);
           setTotal(res.data.count ?? 0);
         }
       })
       .catch((err: unknown) => {
-        if (thisRequest !== requestIdRef.current) return;
+        if (thisReq !== requestIdRef.current) return;
         setError(err instanceof Error ? err.message : "加载失败");
       })
       .finally(() => {
-        if (thisRequest === requestIdRef.current) {
+        if (thisReq === requestIdRef.current) {
           setLoading(false);
+          holdHeightRef.current = null;
         }
       });
   }
 
-  if (loading) {
-    return (
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <Skeleton className="h-6 w-32" />
-          <Skeleton className="h-4 w-24" />
-        </div>
-        <div className="space-y-5">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="flex gap-4">
-              <Skeleton className="h-32 w-44 shrink-0 rounded-lg" />
-              <div className="flex-1 space-y-2">
-                <Skeleton className="h-4 w-20" />
-                <Skeleton className="h-6 w-3/4" />
-                <Skeleton className="h-4 w-full" />
-                <Skeleton className="h-4 w-1/2" />
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
-        <p>加载失败: {error}</p>
-      </div>
-    );
-  }
-
-  if (articles.length === 0) {
-    return (
-      <p className="text-center text-muted-foreground">暂无文章</p>
-    );
+  function setFilter(key: "category" | "tag", id: number | null) {
+    const next = new URLSearchParams(params.toString());
+    if (id === null) next.delete(key);
+    else next.set(key, String(id));
+    router.replace(`${pathname}?${next.toString()}`);
   }
 
   const totalPages = Math.ceil(total / PAGE_SIZE);
 
   return (
-    <div>
-      {/* 列表头：标题 + 显示图片开关 */}
-      <div className="mb-6 flex items-center justify-between border-b border-border/60 pb-3">
-        <h2 className="text-base font-semibold tracking-tight">
-          {categoryId || tagId ? "文章筛选" : "最新推荐"}
-        </h2>
-        <label className="flex cursor-pointer items-center gap-2 text-xs text-muted-foreground">
-          <span>显示图片</span>
-          <span
-            role="switch"
-            aria-checked={showCover}
-            tabIndex={0}
-            onClick={() => setShowCover((v) => !v)}
-            onKeyDown={(e) => {
-              if (e.key === " " || e.key === "Enter") {
-                e.preventDefault();
-                setShowCover((v) => !v);
-              }
-            }}
-            className={`relative inline-block h-4 w-7 rounded-full transition-colors ${
-              showCover ? "bg-brand-500" : "bg-muted-foreground/40"
-            }`}
-          >
-            <span
-              className={`absolute top-0.5 h-3 w-3 rounded-full bg-white shadow-sm
-                          transition-all duration-200 ${
-                            showCover ? "left-3.5" : "left-0.5"
-                          }`}
-            />
-          </span>
-        </label>
-      </div>
-
-      <div className="space-y-6">
-        {articles.map((article) => {
-          const coverUrl = showCover ? article.articleCover : "";
-          return (
-            <Link
-              key={article.id}
-              href={`/articles/${article.id}`}
-              className="group block"
-            >
-              <article
-                className={`group flex gap-5 rounded-lg border border-transparent
-                            px-3 py-3 transition-all duration-200
-                            hover:-translate-y-0.5 hover:border-border/60 hover:bg-card
-                            hover:shadow-(--shadow-card)
-                            dark:hover:bg-card/40`}
-              >
-                {/* 左侧封面 */}
-                {coverUrl ? (
-                  <div className="relative aspect-video w-44 shrink-0 overflow-hidden
-                                  rounded-lg bg-muted">
-                    <Image
-                      src={coverUrl}
-                      alt={article.articleTitle}
-                      fill
-                      sizes="176px"
-                      className="object-cover transition-transform duration-500
-                                 group-hover:scale-105"
-                      loading="lazy"
-                    />
-                  </div>
-                ) : (
-                  <div className="hidden w-44 shrink-0 sm:block" />
+    <div id="articles" className="grid gap-8 lg:grid-cols-[1fr_310px]">
+      {/* 主列表 */}
+      <main className="min-w-0">
+        {/* 工具栏 */}
+        <div className="mb-6 flex items-center justify-between border-b border-gray-200 pb-3 dark:border-gray-700">
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+            {hasFilter ? "文章筛选" : "最新推荐"}
+          </h2>
+          <div className="flex items-center gap-3">
+            {/* 图片开关 */}
+            <label className="hidden cursor-pointer items-center gap-3 md:flex">
+              <span className="text-sm font-medium text-gray-600 select-none dark:text-gray-300">
+                显示图片
+              </span>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={showImages}
+                onClick={() => setShowImages((v) => !v)}
+                onKeyDown={(e) => {
+                  if (e.key === " " || e.key === "Enter") {
+                    e.preventDefault();
+                    setShowImages((v) => !v);
+                  }
+                }}
+                className={cn(
+                  "relative h-6 w-11 rounded-full border transition-colors duration-300",
+                  showImages
+                    ? "border-blue-600 bg-blue-500"
+                    : "border-gray-300 bg-gray-200 dark:border-gray-600 dark:bg-gray-700",
                 )}
-
-                {/* 右侧内容 */}
-                <div className="flex min-w-0 flex-1 flex-col">
-                  {/* 顶部小标签 */}
-                  <div className="mb-1.5 flex flex-wrap items-center gap-2 text-xs">
-                    {article.isTop && (
-                      <span className="rounded bg-brand-500 px-1.5 py-0.5 font-medium text-white">
-                        置顶
-                      </span>
-                    )}
-                    {article.categoryName && (
-                      <span className="rounded bg-brand-50 px-1.5 py-0.5 font-medium text-brand-700
-                                       dark:bg-brand-900/30 dark:text-brand-300">
-                        {article.categoryName}
-                      </span>
-                    )}
-                    <span className="inline-flex items-center gap-1 text-muted-foreground">
-                      <Calendar className="h-3 w-3" />
-                      {article.createTime}
-                    </span>
-                  </div>
-
-                  {/* 标题 */}
-                  <h3 className="line-clamp-2 text-base font-semibold leading-snug
-                                 transition-colors group-hover:text-brand-600
-                                 dark:group-hover:text-brand-400">
-                    {article.articleTitle}
-                  </h3>
-
-                  {/* 摘要 */}
-                  <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-muted-foreground">
-                    {stripMarkdown(article.articleContent).slice(0, 140)}
-                  </p>
-
-                  {/* 底部：标签 */}
-                  {article.tagVOList && article.tagVOList.length > 0 && (
-                    <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                      <Tag className="h-3 w-3" />
-                      {article.tagVOList.slice(0, 3).map((t) => (
-                        <span key={t.id} className="hover:text-brand-600">
-                          {t.tagName}
-                        </span>
-                      ))}
-                    </div>
+              >
+                <span
+                  className={cn(
+                    "absolute top-1 h-4 w-4 rounded-full bg-white shadow-sm transition-transform duration-300",
+                    showImages ? "left-6" : "left-1",
                   )}
-                </div>
-              </article>
-            </Link>
-          );
-        })}
-      </div>
+                />
+              </button>
+            </label>
 
-      {/* 分页 */}
-      {totalPages > 1 && (
-        <div className="mt-10 flex items-center justify-center gap-3">
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={current === 1}
-            onClick={() => {
-              const p = current - 1;
-              setCurrent(p);
-              fetchArticles(p);
-            }}
-          >
-            上一页
-          </Button>
-          <span className="text-sm text-muted-foreground">
-            {current} / {totalPages}
-          </span>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={current === totalPages}
-            onClick={() => {
-              const p = current + 1;
-              setCurrent(p);
-              fetchArticles(p);
-            }}
-          >
-            下一页
-          </Button>
+            {(categoryId || tagId) && (
+              <button
+                type="button"
+                onClick={() => router.replace(pathname)}
+                className="text-sm text-blue-600 transition-colors hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+              >
+                清除筛选
+              </button>
+            )}
+          </div>
         </div>
-      )}
+
+        {/* 内容区 */}
+        <div
+          id="article-list-wrap"
+          style={loading && holdHeightRef.current ? { minHeight: holdHeightRef.current } : undefined}
+        >
+          {loading ? (
+            <div className="flex items-center justify-center text-sm text-gray-500" style={{ minHeight: holdHeightRef.current ?? 600 }}>
+              <ArticleListSkeleton count={5} />
+            </div>
+          ) : error ? (
+            <ArticleError message={`加载失败: ${error}`} onRetry={() => fetch(current)} />
+          ) : articles.length === 0 ? (
+            <ArticleEmpty hint="暂无文章" />
+          ) : (
+            <>
+              {/* 桌面 3 列网格 / 移动横排 */}
+              <div className="hidden gap-4 md:grid md:grid-cols-2 xl:grid-cols-3">
+                {articles.map((a) => (
+                  <ArticleCard key={a.id} article={a} hideCover={!showImages} />
+                ))}
+              </div>
+              <div className="space-y-4 md:hidden">
+                {articles.map((a) => (
+                  <ArticleCard key={a.id} article={a} forceMobile hideCover={!showImages} />
+                ))}
+              </div>
+
+              <ArticleListPagination
+                current={current}
+                totalPages={totalPages}
+                onChange={(p) => {
+                  setCurrent(p);
+                  fetch(p);
+                }}
+              />
+            </>
+          )}
+        </div>
+      </main>
+
+      {/* 侧栏 */}
+      <aside className="sticky top-28 hidden self-start space-y-0 lg:block">
+        <RecommendedArticles />
+        <CategorySidebar
+          activeId={categoryId}
+          onSelect={(id) => setFilter("category", id)}
+        />
+        <TagSidebar
+          activeId={tagId}
+          onSelect={(id) => setFilter("tag", id)}
+        />
+      </aside>
+
+      {/* 移动端：筛选在底部 */}
+      <aside className="space-y-0 lg:hidden">
+        <RecommendedArticles />
+        <CategorySidebar
+          activeId={categoryId}
+          onSelect={(id) => setFilter("category", id)}
+        />
+        <TagSidebar
+          activeId={tagId}
+          onSelect={(id) => setFilter("tag", id)}
+        />
+      </aside>
     </div>
   );
 }
