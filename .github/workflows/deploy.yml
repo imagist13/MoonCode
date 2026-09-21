@@ -4,7 +4,7 @@ name: Deploy
 # 触发后：
 #   1. 校验 Secrets
 #   2. SSH 到服务器 → 备份 .env → git reset --hard
-#   3. 用 deploy/docker-compose.prod.yml 构建 + 迁移 + 重启
+#   3. 用 deploy/docker-compose.prod.yml 构建 + 迁移 + seed + 重启
 #   4. 通过 docker exec 做容器内健康检查
 #
 # 必须在仓库 Settings → Secrets 配置以下 Secrets：
@@ -17,7 +17,10 @@ name: Deploy
 # 服务器侧首次部署需手动：
 #   cd $DEPLOY_PATH
 #   cp .env.example .env
-#   vim .env        # 必须填 JWT_SECRET / POSTGRES_PASSWORD / RABBITMQ_PASSWORD 等
+#   vim .env        # 必须填 JWT_SECRET / POSTGRES_PASSWORD / RABBITMQ_PASSWORD
+#                   # 以及 SEED_ADMIN_EMAIL / SEED_ADMIN_PASSWORD（≥8 位）
+#                   # 后者用于 ./seed 创建/重置管理员密码 —— 部署流水线会自动跑 seed，
+#                   # 所以务必与想登录用的账号保持一致；密码变更 = 改 .env + 重新部署。
 #   chmod 600 .env
 
 on:
@@ -134,6 +137,22 @@ jobs:
               echo "::error::迁移失败，请看 postgres 日志"
               $COMPOSE logs --tail=80 postgres
               exit 1
+            fi
+
+            echo ">>> 创建/重置管理员（依赖 .env 中的 SEED_ADMIN_EMAIL / SEED_ADMIN_PASSWORD）"
+            # 缺失任一变量则跳过：保留"手工管理管理员"的部署模式不被强制覆盖。
+            # 已存在同名账号时 ./seed 仅重置密码 + bump token_version，旧 JWT 立即失效。
+            if [ -n "${SEED_ADMIN_EMAIL:-}" ] && [ -n "${SEED_ADMIN_PASSWORD:-}" ]; then
+              if $COMPOSE run --rm backend /app/seed; then
+                echo "✅ 管理员账号已同步（创建 / 密码重置 / admin 角色补绑）"
+              else
+                echo "::error::管理员种子失败，请看下方日志"
+                $COMPOSE logs --tail=80 backend
+                exit 1
+              fi
+            else
+              echo "⚠️  SEED_ADMIN_EMAIL / SEED_ADMIN_PASSWORD 未在 .env 中设置，跳过 ./seed。"
+              echo "    若 /admin/login 返回\"用户名或密码错误\"，请在 .env 中填好这两个变量后重新部署。"
             fi
 
             echo ">>> 启动 backend / frontend / nginx（强制用新镜像）"
