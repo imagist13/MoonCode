@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { Calendar, Eye, ChevronRight } from "lucide-react";
+import { Calendar, Eye, FolderTree, Tag as TagIcon, ChevronRight } from "lucide-react";
 import { cn, formatViews, safeTruncate, stripMarkdown } from "@/lib/utils";
 
 export interface ArticleCardData {
@@ -98,11 +98,21 @@ export function ArticleCard({
             {summary}
           </p>
 
-          {/* 标签 */}
-          {article.tags && article.tags.length > 0 && (
-            <div className="mt-1 flex flex-wrap items-center gap-1.5">
-              {article.tags.slice(0, 3).map((t) => (
-                <span key={t.id} className="article-tag">
+          {/* 分类 + 标签 徽章 */}
+          {(article.categoryName || (article.tags && article.tags.length > 0)) && (
+            <div className="hide-scrollbar -mx-1 mt-1 flex items-center gap-1.5 overflow-x-auto whitespace-nowrap text-xs">
+              {article.categoryName && (
+                <span className="inline-flex shrink-0 items-center gap-1 rounded-md bg-blue-50 px-2 py-0.5 font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
+                  <FolderTree className="h-3 w-3" />
+                  {article.categoryName}
+                </span>
+              )}
+              {article.tags?.slice(0, 2).map((t) => (
+                <span
+                  key={t.id}
+                  className="inline-flex shrink-0 items-center gap-1 rounded-md bg-gray-100 px-2 py-0.5 text-gray-700 dark:bg-gray-700 dark:text-gray-300"
+                >
+                  <TagIcon className="h-3 w-3" />
                   {t.name}
                 </span>
               ))}
@@ -111,36 +121,36 @@ export function ArticleCard({
 
           {/* meta */}
           <div className="mt-auto flex items-center justify-between border-t border-gray-100 pt-3 text-xs text-gray-500 dark:border-gray-700 dark:text-gray-400">
-            <div className="flex items-center gap-2">
+            <div className="flex min-w-0 items-center gap-2">
               {article.author?.avatar ? (
                 <Image
                   src={article.author.avatar}
                   alt={article.author.name}
                   width={28}
                   height={28}
-                  className="h-7 w-7 rounded-full object-cover"
+                  className="h-7 w-7 shrink-0 rounded-full object-cover"
                 />
               ) : (
-                <div className="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-blue-400 to-blue-600 text-xs font-medium text-white">
+                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-blue-400 to-blue-600 text-xs font-medium text-white">
                   {article.author?.name?.[0] || "U"}
                 </div>
               )}
-              <div className="flex flex-col">
+              <div className="flex min-w-0 flex-col">
                 {article.author?.name && (
-                  <span className="font-medium text-gray-700 dark:text-gray-300">
+                  <span className="truncate font-medium text-gray-700 dark:text-gray-300">
                     {article.author.name}
                   </span>
                 )}
                 {article.publishTime && (
-                  <span className="inline-flex items-center gap-1">
-                    <Calendar className="h-3 w-3" />
-                    {article.publishTime}
+                  <span className="inline-flex items-center gap-1 truncate">
+                    <Calendar className="h-3 w-3 shrink-0" />
+                    <span className="truncate">{article.publishTime}</span>
                   </span>
                 )}
               </div>
             </div>
             {article.viewCount !== undefined && (
-              <span className="inline-flex items-center gap-1">
+              <span className="inline-flex shrink-0 items-center gap-1">
                 <Eye className="h-3 w-3" />
                 {formatViews(article.viewCount)}
               </span>

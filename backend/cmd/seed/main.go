@@ -42,11 +42,13 @@ func main() {
 	email := os.Getenv("SEED_ADMIN_EMAIL")
 	password := os.Getenv("SEED_ADMIN_PASSWORD")
 
-	if email == "" {
-		log.Fatal("SEED_ADMIN_EMAIL 未设置")
-	}
-	if password == "" {
-		log.Fatal("SEED_ADMIN_PASSWORD 未设置")
+	// 缺失任一变量时优雅退出（exit 0）而非 log.Fatal：
+	//   - 让 CI/CD 流水线可以在不强制配置 seed 的情况下安全地调用 ./seed
+	//   - 仍打印醒目日志，运维一看就知道为什么没建账号
+	if email == "" || password == "" {
+		log.Println("ℹ️  SEED_ADMIN_EMAIL / SEED_ADMIN_PASSWORD 未设置，跳过 seed。" +
+			"如需创建/重置管理员，请在 .env 或当前 shell 中设置后重跑。")
+		return
 	}
 	if len(password) < minPasswordLen {
 		log.Fatalf("SEED_ADMIN_PASSWORD 至少需要 %d 个字符", minPasswordLen)
