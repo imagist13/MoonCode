@@ -39,19 +39,19 @@ export function Hero({
   const bgCover = "/Hero.jpg";
 
   return (
-    <section className="relative mb-8 overflow-hidden bg-gray-900">
+    <section className="full-bleed relative mb-8 -mt-8 overflow-hidden bg-gray-900">
       <div className="absolute inset-0">
         <Image
           src={bgCover}
           alt={title}
           fill
-          sizes="(min-width: 1024px) 1024px, 100vw"
+          sizes="100vw"
           priority
           className="object-cover"
         />
         <div className="absolute inset-0 bg-gradient-to-b from-black/30 to-black/70" />
       </div>
-      <div className="relative container mx-auto px-4 py-24 md:py-32">
+      <div className="relative mx-auto w-full max-w-[1240px] px-4 py-24 md:py-32">
         <div className="max-w-2xl">
           {pinned?.categoryName && (
             <span className="mb-4 inline-flex items-center gap-1.5 rounded-full bg-blue-500/20 px-3 py-1 text-xs font-medium text-blue-200 backdrop-blur-md">

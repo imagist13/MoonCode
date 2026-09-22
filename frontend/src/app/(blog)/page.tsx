@@ -16,7 +16,8 @@ export default async function HomePage({ searchParams }: HomePageProps) {
     : await Promise.all([fetchSiteConfig(), fetchFeatured()]);
 
   return (
-    <div>
+    <div className="flex flex-col">
+      {/* 图片 div：全宽铺满视口 */}
       <Hero
         siteName={config?.name}
         slogan={config?.slogan as string | undefined}
@@ -24,15 +25,18 @@ export default async function HomePage({ searchParams }: HomePageProps) {
         hasFilter={hasFilter}
       />
 
-      <Suspense
-        fallback={
-          <div className="flex items-center justify-center py-20 text-sm text-gray-500">
-            加载中...
-          </div>
-        }
-      >
-        <ArticleList />
-      </Suspense>
+      {/* 内容 div：居中对齐浏览器 */}
+      <div className="flex w-full flex-col">
+        <Suspense
+          fallback={
+            <div className="flex items-center justify-center py-20 text-sm text-gray-500">
+              加载中...
+            </div>
+          }
+        >
+          <ArticleList />
+        </Suspense>
+      </div>
     </div>
   );
 }
