@@ -191,9 +191,9 @@ export default function ArticleDetailPage() {
 
   return (
     <div className="relative">
-      {/* 封面（spec §4.6） */}
+      {/* 封面（full-bleed 全宽铺满视口） */}
       {article.articleCover && (
-        <div className="relative h-72 w-full overflow-hidden md:h-96">
+        <div className="full-bleed relative h-72 w-full overflow-hidden bg-gray-900 md:h-[420px]">
           <Image
             src={article.articleCover}
             alt={article.articleTitle}
@@ -203,8 +203,8 @@ export default function ArticleDetailPage() {
             className="object-cover"
           />
           <div className="absolute inset-0 bg-gradient-to-b from-black/30 to-black/70" />
-          <div className="absolute inset-x-0 bottom-0 px-4 pb-8 md:px-8">
-            <div className="mx-auto max-w-4xl">
+          <div className="absolute inset-x-0 bottom-0 px-4 pb-10 md:px-8 md:pb-14">
+            <div className="mx-auto max-w-[1240px]">
               {article.categoryName && (
                 <Link
                   href={`/?category=${article.categoryId ?? ""}`}
@@ -216,7 +216,7 @@ export default function ArticleDetailPage() {
               <h1 className="text-3xl font-bold text-white md:text-5xl">
                 {article.articleTitle}
               </h1>
-              <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-gray-200">
+              <div className="mt-4 flex flex-wrap items-center gap-4 text-xs text-gray-200">
                 <span className="inline-flex items-center gap-1">
                   <Calendar className="h-3 w-3" />
                   {article.createTime}
@@ -233,13 +233,8 @@ export default function ArticleDetailPage() {
         </div>
       )}
 
-      {/* 三栏布局 */}
-      <div
-        className={cn(
-          "mx-auto grid max-w-[1240px] gap-8 px-4 py-8 lg:grid-cols-[1fr_4fr_1fr]",
-          article.articleCover && "-mt-20 relative z-10",
-        )}
-      >
+      {/* 三栏布局：自然衔接封面，不做 -mt-20 覆盖以免 TOC 卡粘性时盖住标题 */}
+      <div className="mx-auto grid max-w-[1240px] gap-8 px-4 py-8 lg:grid-cols-[1fr_4fr_1fr]">
         {/* 左侧 TOC */}
         <TableOfContents headings={headings} />
 
