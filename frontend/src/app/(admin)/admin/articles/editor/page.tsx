@@ -8,7 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Save, ArrowLeft } from "lucide-react";
+import { Save, ArrowLeft, X } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import { MarkdownToolbar, CoverImageUploader, SmartTagInput, ImageUploader } from "@/components/editor";
 import { useAutoSave } from "@/hooks/use-auto-save";
 import { useMarkdownEditor } from "@/hooks/use-markdown-editor";
@@ -58,6 +59,7 @@ function EditorContent() {
   const [showDraftDialog, setShowDraftDialog] = useState(false);
   const [draftData, setDraftData] = useState<ArticleFormData | null>(null);
   const [isDirty, setIsDirty] = useState(false);
+  const [syncScroll, setSyncScroll] = useState(true);
   const { wrapSelection, insertAtCursor } = useMarkdownEditor();
 
   // Auto save
@@ -83,6 +85,34 @@ function EditorContent() {
       setShowDraftDialog(true);
     }
   }, [loadDraft, articleId]);
+
+  // 读取从「导入文章」传递过来的 .md 文件内容（仅在新建且无草稿时生效）
+  useEffect(() => {
+    if (articleId) return;
+    if (loadDraft()) return; // 有草稿优先用草稿
+    try {
+      const raw = sessionStorage.getItem("import_article");
+      if (!raw) return;
+      sessionStorage.removeItem("import_article");
+      const { fileName, content } = JSON.parse(raw) as {
+        fileName?: string;
+        content?: string;
+      };
+      if (!content) return;
+      // 提取首个 H1 作为标题（找不到则用文件名）
+      const h1Match = content.match(/^\s*#\s+(.+)\s*$/m);
+      const title = h1Match?.[1] ?? fileName ?? "";
+      setForm((prev) => ({
+        ...prev,
+        articleTitle: title,
+        articleContent: content,
+      }));
+      setIsDirty(true);
+      toast.success(`已导入：${fileName ?? "Markdown 文件"}`);
+    } catch {
+      // 静默失败
+    }
+  }, [articleId, loadDraft]);
 
   // Warn on unsaved changes
   useEffect(() => {
@@ -295,30 +325,46 @@ function EditorContent() {
   };
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto">
-      {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon" onClick={() => router.back()}>
-            <ArrowLeft className="size-4" />
-          </Button>
-          <h1 className="text-xl font-semibold">
-            {articleId ? "编辑文章" : "发布文章"}
-          </h1>
+    <div className="flex h-full flex-col gap-4">
+      {/* 顶部工具栏：标题 + 同步滚动 + 取消/保存 */}
+      <div className="flex items-center gap-3 border-b pb-3">
+        <Button variant="ghost" size="icon" onClick={() => router.back()}>
+          <ArrowLeft className="size-4" />
+        </Button>
+        <Input
+          id="title"
+          placeholder="请输入文章标题"
+          value={form.articleTitle}
+          onChange={(e) => updateField("articleTitle", e.target.value)}
+          onBlur={() => validateField("articleTitle")}
+          className={`h-10 flex-1 border-transparent bg-transparent text-lg font-semibold shadow-none focus-visible:border-input focus-visible:ring-0 ${
+            errors.articleTitle ? "border-destructive" : ""
+          }`}
+        />
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Switch
+            id="sync-scroll"
+            checked={syncScroll}
+            onCheckedChange={setSyncScroll}
+          />
+          <label htmlFor="sync-scroll" className="cursor-pointer select-none">
+            同步滚动
+          </label>
         </div>
-        <div className="flex flex-col gap-2 sm:flex-row">
-          <Button variant="outline" onClick={() => {
-            saveDraft();
-            toast.success("草稿已保存");
-          }}>
-            <Save className="mr-1 size-4" />
-            保存草稿
-          </Button>
-          <Button onClick={handleSave} disabled={saving}>
-            {saving ? "保存中..." : "发布文章"}
-          </Button>
-        </div>
+        <Button variant="ghost" onClick={() => router.push("/admin/articles")}>
+          <X className="size-4" />
+          取消
+        </Button>
+        <Button onClick={handleSave} disabled={saving}>
+          <Save className="mr-1 size-4" />
+          {saving ? "保存中..." : "保存"}
+        </Button>
       </div>
+
+      {/* 错误提示 */}
+      {errors.articleTitle && (
+        <p className="text-sm text-destructive">{errors.articleTitle}</p>
+      )}
 
       {/* Draft Recovery Dialog */}
       {showDraftDialog && (
@@ -336,22 +382,6 @@ function EditorContent() {
           </div>
         </div>
       )}
-
-      {/* Title */}
-      <div className="space-y-2">
-        <Label htmlFor="title">文章标题 *</Label>
-        <Input
-          id="title"
-          placeholder="请输入文章标题"
-          value={form.articleTitle}
-          onChange={(e) => updateField("articleTitle", e.target.value)}
-          onBlur={() => validateField("articleTitle")}
-          className={errors.articleTitle ? "border-destructive" : ""}
-        />
-        {errors.articleTitle && (
-          <p className="text-sm text-destructive">{errors.articleTitle}</p>
-        )}
-      </div>
 
       {/* Category & Type & Status */}
       <div className="grid gap-4 sm:grid-cols-3">
@@ -451,7 +481,9 @@ function EditorContent() {
             onChange={(val) => {
               updateField("articleContent", val || "");
             }}
-            height={500}
+            height={typeof window !== "undefined" && window.innerWidth < 768 ? 420 : 620}
+            preview={syncScroll ? "live" : "edit"}
+            visibleDragbar={false}
           />
         </div>
         {errors.articleContent && (

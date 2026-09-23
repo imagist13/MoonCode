@@ -140,19 +140,17 @@ jobs:
             fi
 
             echo ">>> 创建/重置管理员（依赖 .env 中的 SEED_ADMIN_EMAIL / SEED_ADMIN_PASSWORD）"
-            # 缺失任一变量则跳过：保留"手工管理管理员"的部署模式不被强制覆盖。
+            # 无条件调用 ./seed：seed 命令自身已具备"未设置则优雅跳过"的逻辑，
+            # 这里不再做 shell 层的 env 检查 —— docker compose --env-file .env
+            # 只把变量喂给 compose 插值，不会 export 到 SSH shell，
+            # 此前用 ${SEED_ADMIN_EMAIL:-} 判断会始终为假，导致有 .env 也会被误判。
             # 已存在同名账号时 ./seed 仅重置密码 + bump token_version，旧 JWT 立即失效。
-            if [ -n "${SEED_ADMIN_EMAIL:-}" ] && [ -n "${SEED_ADMIN_PASSWORD:-}" ]; then
-              if $COMPOSE run --rm backend /app/seed; then
-                echo "✅ 管理员账号已同步（创建 / 密码重置 / admin 角色补绑）"
-              else
-                echo "::error::管理员种子失败，请看下方日志"
-                $COMPOSE logs --tail=80 backend
-                exit 1
-              fi
+            if $COMPOSE run --rm backend /app/seed; then
+              echo "✅ 管理员账号已同步（创建 / 密码重置 / admin 角色补绑，或因未配置 seed 而跳过）"
             else
-              echo "⚠️  SEED_ADMIN_EMAIL / SEED_ADMIN_PASSWORD 未在 .env 中设置，跳过 ./seed。"
-              echo "    若 /admin/login 返回\"用户名或密码错误\"，请在 .env 中填好这两个变量后重新部署。"
+              echo "::error::管理员种子失败，请看下方日志"
+              $COMPOSE logs --tail=80 backend
+              exit 1
             fi
 
             echo ">>> 启动 backend / frontend / nginx（强制用新镜像）"

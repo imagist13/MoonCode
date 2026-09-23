@@ -214,6 +214,14 @@
   scrollbar-width: none;
   -ms-overflow-style: none;
 }
+
+/* ===== 全宽铺满（突破父级 max-width 限制） ===== */
+.full-bleed {
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+  margin-right: calc(50% - 50vw);
+  position: relative;
+}
 .hide-scrollbar::-webkit-scrollbar {
   display: none;
 }

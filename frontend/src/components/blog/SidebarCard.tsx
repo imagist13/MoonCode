@@ -18,7 +18,7 @@ export function SidebarCard({
   return (
     <section
       className={cn(
-        "mb-6 rounded-lg border border-gray-200 bg-white p-5 shadow-md dark:border-gray-700 dark:bg-gray-800",
+        "mb-5 rounded-xl border border-gray-200/80 bg-white p-5 shadow-sm dark:border-gray-700/80 dark:bg-gray-800",
         className,
       )}
     >

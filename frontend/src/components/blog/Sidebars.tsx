@@ -44,12 +44,7 @@ export function CategorySidebar({
               <button
                 type="button"
                 onClick={() => onSelect?.(null)}
-                className={cn(
-                  "flex w-full items-center justify-between rounded px-2 py-1 text-left text-sm transition-colors",
-                  !activeId
-                    ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300"
-                    : "text-gray-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-700",
-                )}
+                className="flex w-full items-center justify-between rounded px-2 py-1 text-left text-sm text-gray-600 transition-colors hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-700"
               >
                 <span>全部分类</span>
                 <ChevronRight className="h-3 w-3" />

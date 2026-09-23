@@ -107,13 +107,13 @@ export default function ArticleList() {
   const totalPages = Math.ceil(total / PAGE_SIZE);
 
   return (
-    <div id="articles" className="grid gap-8 lg:grid-cols-[1fr_310px]">
+    <div id="articles" className="grid gap-6 lg:grid-cols-[1fr_310px]">
       {/* 主列表 */}
       <main className="min-w-0">
         {/* 工具栏 */}
         <div className="mb-6 flex items-center justify-between border-b border-gray-200 pb-3 dark:border-gray-700">
           <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-            {hasFilter ? "文章筛选" : "最新推荐"}
+            {hasFilter ? "文章筛选" : "最新文章"}
           </h2>
           <div className="flex items-center gap-3">
             {/* 图片开关 */}
@@ -202,7 +202,6 @@ export default function ArticleList() {
 
       {/* 侧栏 */}
       <aside className="sticky top-28 hidden self-start space-y-0 lg:block">
-        <RecommendedArticles />
         <CategorySidebar
           activeId={categoryId}
           onSelect={(id) => setFilter("category", id)}
@@ -211,11 +210,11 @@ export default function ArticleList() {
           activeId={tagId}
           onSelect={(id) => setFilter("tag", id)}
         />
+        <RecommendedArticles />
       </aside>
 
       {/* 移动端：筛选在底部 */}
       <aside className="space-y-0 lg:hidden">
-        <RecommendedArticles />
         <CategorySidebar
           activeId={categoryId}
           onSelect={(id) => setFilter("category", id)}
@@ -224,6 +223,7 @@ export default function ArticleList() {
           activeId={tagId}
           onSelect={(id) => setFilter("tag", id)}
         />
+        <RecommendedArticles />
       </aside>
     </div>
   );
