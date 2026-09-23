@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { flushSync } from "react-dom";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
@@ -44,6 +45,12 @@ type ErrorKind = "notFound" | "server" | "network";
 
 const BACKEND_CODE_NOT_FOUND = 40004;
 
+/** 骨架屏随机宽度（静态生成，避免在渲染时调用 Math.random()） */
+const SKELETON_WIDTHS = Array.from(
+  { length: 8 },
+  () => `${60 + Math.random() * 30}%`,
+);
+
 /** 标题转 id */
 function headingId(text: string): string {
   return text
@@ -69,8 +76,11 @@ export default function ArticleDetailPage() {
 
   useEffect(() => {
     if (!id) return;
-    setLoading(true);
-    setErrorKind(null);
+    // 使用 flushSync 批量同步更新初始状态，避免多次渲染
+    flushSync(() => {
+      setLoading(true);
+      setErrorKind(null);
+    });
     api
       .get<ArticleDetail>(`/articles/${id}`)
       .then(async (res) => {
@@ -102,7 +112,7 @@ export default function ArticleDetailPage() {
         setErrorMessage(err instanceof Error ? err.message : "网络异常");
       })
       .finally(() => setLoading(false));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [id, reloadTick]);
 
   // 回到顶部按钮
@@ -136,7 +146,7 @@ export default function ArticleDetailPage() {
             <div
               key={i}
               className="skeleton-shimmer h-4 rounded bg-gray-200 dark:bg-gray-700"
-              style={{ width: `${60 + Math.random() * 30}%` }}
+              style={{ width: SKELETON_WIDTHS[i] }}
             />
           ))}
         </div>
