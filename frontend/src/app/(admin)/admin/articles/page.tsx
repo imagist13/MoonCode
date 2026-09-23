@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { type ColumnDef } from "@tanstack/react-table";
 import { api } from "@/lib/api";
@@ -8,7 +8,7 @@ import type { PageResult } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Pencil, Pin, Trash2, Plus, Filter } from "lucide-react";
+import { Pencil, Pin, Trash2, Plus, Filter, Upload, FileText } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -403,14 +403,59 @@ export default function ArticlesPage() {
     [handleDelete],
   );
 
+  // 导入 .md 文件
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const handleImportClick = () => fileInputRef.current?.click();
+  const handleImportFile = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      // 清空 input，允许重复导入同一文件
+      e.target.value = "";
+      if (!file) return;
+      if (!file.name.toLowerCase().endsWith(".md") && !file.name.toLowerCase().endsWith(".markdown")) {
+        toast.error("请选择 Markdown 文件 (.md)");
+        return;
+      }
+      try {
+        const text = await file.text();
+        // 通过 sessionStorage 传递给编辑器（带文件名做标题兜底）
+        sessionStorage.setItem(
+          "import_article",
+          JSON.stringify({
+            fileName: file.name.replace(/\.(md|markdown)$/i, ""),
+            content: text,
+          }),
+        );
+        router.push("/admin/articles/editor");
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : "读取文件失败");
+      }
+    },
+    [router],
+  );
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold">文章列表</h1>
-        <Button onClick={() => router.push("/admin/articles/editor")}>
-          <Plus className="mr-1 size-4" />
-          发布文章
-        </Button>
+        <div className="flex items-center gap-2">
+          {/* 隐藏的 file input */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".md,.markdown,text/markdown"
+            className="hidden"
+            onChange={handleImportFile}
+          />
+          <Button variant="outline" onClick={handleImportClick}>
+            <Upload className="mr-1 size-4" />
+            导入文章
+          </Button>
+          <Button onClick={() => router.push("/admin/articles/editor")}>
+            <Plus className="mr-1 size-4" />
+            新建文章
+          </Button>
+        </div>
       </div>
 
       {loading ? (
