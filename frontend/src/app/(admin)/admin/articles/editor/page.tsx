@@ -2,33 +2,17 @@
 
 import { useEffect, useState, Suspense, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import dynamic from "next/dynamic";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Save, ArrowLeft, X, Eye, EyeOff, Columns2, FileText } from "lucide-react";
-import { Switch } from "@/components/ui/switch";
+import { Save, ArrowLeft, X, FileText } from "lucide-react";
 import { SmartTagInput, CoverImageUploader } from "@/components/editor";
 import { useAutoSave } from "@/hooks/use-auto-save";
-import { useMarkdownEditor } from "@/hooks/use-markdown-editor";
 import { articleSchema, type ArticleFormData } from "@/lib/validations/article";
 import { ZodError } from "zod";
 import { cn } from "@/lib/utils";
-
-const MDEditor = dynamic(() => import("@uiw/react-md-editor"), { ssr: false });
-
-/* ==============================
- * 常量
- * ============================== */
-
-const TOOLBAR_GROUPS = [
-  { label: "格式", items: ["bold", "italic", "strikethrough"] },
-  { label: "标题", items: ["heading", "quote", "code"] },
-  { label: "媒体", items: ["link", "image", "hr"] },
-  { label: "列表", items: ["unorderedList", "orderedList"] },
-] as const;
 
 /* ==============================
  * 数据类型
@@ -71,8 +55,6 @@ function EditorContent() {
   const [showDraftDialog, setShowDraftDialog] = useState(false);
   const [draftData, setDraftData] = useState<ArticleFormData | null>(null);
   const [isDirty, setIsDirty] = useState(false);
-  const [viewMode, setViewMode] = useState<"edit" | "preview">("edit");
-  const { wrapSelection, insertAtCursor } = useMarkdownEditor();
 
   // Auto save
   const { loadDraft, clearDraft } = useAutoSave({
@@ -98,11 +80,10 @@ function EditorContent() {
     }
   }, [loadDraft, articleId]);
 
-  // 读取从「导入文章」传递过来的 .md 文件内容
+  // 读取从写作页面传来的文章内容
   useEffect(() => {
     if (articleId) return;
     if (loadDraft()) return;
-    // 也检查从 write 页面传来的草稿
     try {
       const draftRaw = sessionStorage.getItem("article_draft");
       if (draftRaw) {
@@ -114,13 +95,14 @@ function EditorContent() {
           articleContent: articleContent || prev.articleContent,
         }));
         setIsDirty(true);
-        toast.success("已加载文章草稿");
+        toast.success("已加载文章内容");
         return;
       }
     } catch {
       // 静默失败
     }
 
+    // 也检查从导入文章传来的内容
     try {
       const raw = sessionStorage.getItem("import_article");
       if (!raw) return;
@@ -274,66 +256,6 @@ function EditorContent() {
     }
   };
 
-  const handleToolbarCommand = useCallback((command: string) => {
-    switch (command) {
-      case "bold":
-        wrapSelection("**");
-        break;
-      case "italic":
-        wrapSelection("*");
-        break;
-      case "strikethrough":
-        wrapSelection("~~");
-        break;
-      case "heading": {
-        const textarea = document.querySelector('.w-md-editor-text-input') as HTMLTextAreaElement | null;
-        if (!textarea) return;
-        const start = textarea.selectionStart;
-        const text = textarea.value;
-        const lineStart = text.lastIndexOf("\n", start - 1) + 1;
-        const line = text.slice(lineStart, start);
-        const match = line.match(/^(#{0,5})\s/);
-        if (match) {
-          const newText = text.slice(0, lineStart) + text.slice(lineStart + match[0].length);
-          textarea.value = newText;
-          textarea.setSelectionRange(start - match[0].length, start - match[0].length);
-          textarea.dispatchEvent(new Event("input", { bubbles: true }));
-        } else {
-          const before = text.slice(0, lineStart);
-          const after = text.slice(lineStart);
-          textarea.value = before + "# " + after;
-          textarea.setSelectionRange(start + 2, start + 2);
-          textarea.dispatchEvent(new Event("input", { bubbles: true }));
-        }
-        break;
-      }
-      case "quote":
-        insertAtCursor("> ");
-        break;
-      case "code":
-        wrapSelection("`");
-        break;
-      case "codeBlock":
-        insertAtCursor("\n```\n\n```\n");
-        break;
-      case "link":
-        insertAtCursor("[链接文字](url)");
-        break;
-      case "image":
-        insertAtCursor("![图片描述](url)");
-        break;
-      case "hr":
-        insertAtCursor("\n---\n");
-        break;
-      case "unorderedList":
-        insertAtCursor("- ");
-        break;
-      case "orderedList":
-        insertAtCursor("1. ");
-        break;
-    }
-  }, [wrapSelection, insertAtCursor]);
-
   const handleCoverUpload = useCallback(async (file: File): Promise<string> => {
     const res = await api.upload<string>("/admin/articles/images", file);
     if (!res.flag) throw new Error(res.message);
@@ -370,31 +292,6 @@ function EditorContent() {
             errors.articleTitle && "border-destructive"
           )}
         />
-        {/* 视图切换 */}
-        <div className="flex items-center gap-2 rounded-md border bg-muted p-0.5">
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            className={cn("h-7 w-7", viewMode === "edit" && "bg-background shadow-sm")}
-            onClick={() => setViewMode("edit")}
-            title="编辑模式"
-          >
-            <Columns2 className="size-3.5" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            className={cn("h-7 w-7", viewMode === "preview" && "bg-background shadow-sm")}
-            onClick={() => setViewMode("preview")}
-            title="预览模式"
-          >
-            {viewMode === "preview" ? (
-              <Eye className="size-3.5" />
-            ) : (
-              <EyeOff className="size-3.5" />
-            )}
-          </Button>
-        </div>
         <Button variant="ghost" onClick={() => router.push("/admin/articles")}>
           <X className="size-4" />
           取消
@@ -518,60 +415,24 @@ function EditorContent() {
           />
         </div>
 
-        {/* 编辑器卡片 */}
-        <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
-          <div className="flex items-center justify-between border-b bg-muted/50 px-4 py-2">
-            <h3 className="text-sm font-medium text-muted-foreground">文章内容</h3>
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <Switch
-                id="live-preview"
-                checked={viewMode === "preview"}
-                onCheckedChange={(checked) => setViewMode(checked ? "preview" : "edit")}
-              />
-              <label htmlFor="live-preview" className="cursor-pointer select-none">
-                实时预览
-              </label>
-            </div>
+        {/* 文章内容预览 */}
+        <div className="rounded-xl border bg-card p-5 shadow-sm">
+          <h3 className="mb-4 text-sm font-medium text-muted-foreground">文章内容预览</h3>
+          <div className="max-h-96 overflow-y-auto rounded-md bg-muted/30 p-4">
+            {form.articleContent ? (
+              <pre className="whitespace-pre-wrap text-sm text-muted-foreground">
+                {form.articleContent.slice(0, 1000)}
+                {form.articleContent.length > 1000 && "..."}
+              </pre>
+            ) : (
+              <p className="text-sm text-muted-foreground/50">
+                暂无内容，请点击「写作」按钮编写文章
+              </p>
+            )}
           </div>
-
-          {/* 工具栏 */}
-          <div className="flex flex-wrap items-center gap-1 border-b bg-muted/30 px-3 py-2">
-            {TOOLBAR_GROUPS.map((group, groupIndex) => (
-              <div key={group.label} className="flex items-center">
-                {groupIndex > 0 && <div className="mx-1.5 h-4 w-px bg-border" />}
-                {group.items.map((item) => {
-                  const label = item.charAt(0).toUpperCase() + item.slice(1);
-                  return (
-                    <button
-                      key={item}
-                      type="button"
-                      onClick={() => handleToolbarCommand(item)}
-                      className="inline-flex h-8 w-8 items-center justify-center rounded-md text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
-                      title={label}
-                    >
-                      {label}
-                    </button>
-                  );
-                })}
-              </div>
-            ))}
-          </div>
-
-          {/* Markdown 编辑器 */}
-          <div data-color-mode="light">
-            <MDEditor
-              value={form.articleContent}
-              onChange={(val) => {
-                updateField("articleContent", val || "");
-              }}
-              height={typeof window !== "undefined" && window.innerWidth < 768 ? 420 : 520}
-              preview={viewMode === "preview" ? "preview" : "edit"}
-              visibleDragbar={false}
-            />
-          </div>
-          {errors.articleContent && (
-            <p className="px-4 py-2 text-sm text-destructive">{errors.articleContent}</p>
-          )}
+          <p className="mt-2 text-xs text-muted-foreground">
+            字数：{form.articleContent.length}
+          </p>
         </div>
       </div>
     </div>
