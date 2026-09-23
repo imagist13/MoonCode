@@ -493,40 +493,195 @@
   color: #f9fafb;
 }
 
-/* ===== 文章正文 prose 微调 ===== */
+/* ===== 文章正文 prose 样式（参考 Simon Willison 文章页） ===== */
 .prose {
   --tw-prose-links: #2563eb;
   --tw-prose-headings: #111827;
-  color: #1f2937;
+  --tw-prose-body: #374151;
+  --tw-prose-bold: #111827;
+  --tw-prose-quotes: #1f2937;
+  --tw-prose-quote-borders: #8b5cf6;
+  --tw-prose-counters: #6b7280;
+  --tw-prose-bullets: #9ca3af;
+  --tw-prose-hr: #e5e7eb;
+  --tw-prose-quote-borders: #8b5cf6;
+  --tw-prose-th-borders: #d1d5db;
+  --tw-prose-td-borders: #e5e7eb;
+  color: #374151;
+  line-height: 1.8;
+  font-size: 1rem;
 }
 .dark .prose {
-  --tw-prose-links: #60a5fa;
+  --tw-prose-links: #93c5fd;
   --tw-prose-headings: #f9fafb;
-  color: #e5e7eb;
+  --tw-prose-body: #d1d5db;
+  --tw-prose-bold: #f9fafb;
+  --tw-prose-quotes: #e5e7eb;
+  --tw-prose-quote-borders: #a78bfa;
+  --tw-prose-counters: #9ca3af;
+  --tw-prose-bullets: #6b7280;
+  --tw-prose-hr: #374151;
+  --tw-prose-th-borders: #4b5563;
+  --tw-prose-td-borders: #374151;
+  color: #d1d5db;
 }
+
+/* 段落 */
+.prose p {
+  margin: 1.25em 0;
+  line-height: 1.85;
+}
+.prose p:first-child {
+  margin-top: 0;
+}
+.prose p:last-child {
+  margin-bottom: 0;
+}
+
+/* 链接 */
 .prose a {
+  color: #2563eb;
+  text-decoration: underline;
   text-decoration-color: rgba(59, 130, 246, 0.4);
+  text-decoration-thickness: 1.5px;
   text-underline-offset: 3px;
+  font-weight: 500;
+  transition: all 200ms ease;
 }
 .prose a:hover {
+  color: #1d4ed8;
   text-decoration-color: #3b82f6;
 }
-.prose pre {
-  background: #1f2937 !important;
-  color: #f9fafb !important;
-  border-radius: 0.5rem;
-  padding: 1rem;
-  overflow-x: auto;
+.dark .prose a {
+  color: #93c5fd;
+  text-decoration-color: rgba(147, 197, 253, 0.4);
 }
-.dark .prose pre {
-  background: #111827 !important;
+.dark .prose a:hover {
+  color: #bfdbfe;
 }
+
+/* 标题 */
+.prose h1,
+.prose h2,
+.prose h3,
+.prose h4 {
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  color: #111827;
+}
+.dark .prose h1,
+.dark .prose h2,
+.dark .prose h3,
+.dark .prose h4 {
+  color: #f9fafb;
+}
+.prose h2 {
+  font-size: 1.625rem;
+  margin: 2.25em 0 1em;
+  padding-bottom: 0.5em;
+  border-bottom: 1px solid #e5e7eb;
+  line-height: 1.4;
+}
+.prose h2:first-child {
+  margin-top: 0.5em;
+}
+.dark .prose h2 {
+  border-bottom-color: #374151;
+}
+.prose h3 {
+  font-size: 1.25rem;
+  margin: 1.75em 0 0.75em;
+  line-height: 1.45;
+}
+.prose h4 {
+  font-size: 1.1rem;
+  margin: 1.5em 0 0.5em;
+}
+
+/* 加粗 / 强调 */
+.prose strong {
+  color: #111827;
+  font-weight: 700;
+}
+.dark .prose strong {
+  color: #f9fafb;
+}
+.prose em {
+  font-style: italic;
+  color: #4b5563;
+}
+.dark .prose em {
+  color: #d1d5db;
+}
+
+/* 列表 */
+.prose ul,
+.prose ol {
+  margin: 1.25em 0;
+  padding-left: 1.75em;
+}
+.prose ul > li,
+.prose ol > li {
+  margin: 0.5em 0;
+  padding-left: 0.4em;
+}
+.prose ul > li::marker {
+  color: #9ca3af;
+}
+.prose ol > li::marker {
+  color: #6b7280;
+  font-weight: 600;
+}
+.prose li > p {
+  margin: 0.6em 0;
+}
+.prose li > ul,
+.prose li > ol {
+  margin: 0.4em 0;
+}
+
+/* 引用块（blockquotes）：紫色左边线 */
+.prose blockquote {
+  margin: 1.75em 0;
+  padding: 0.4em 1.25em;
+  border-left: 3px solid #8b5cf6;
+  background: rgba(139, 92, 246, 0.04);
+  color: #1f2937;
+  font-style: normal;
+  border-radius: 0 0.375rem 0.375rem 0;
+}
+.prose blockquote p {
+  margin: 0.6em 0;
+}
+.prose blockquote p:first-child {
+  margin-top: 0;
+}
+.prose blockquote p:last-child {
+  margin-bottom: 0;
+}
+.prose blockquote strong {
+  color: #111827;
+}
+.dark .prose blockquote {
+  background: rgba(167, 139, 250, 0.08);
+  color: #e5e7eb;
+  border-left-color: #a78bfa;
+}
+
+/* 引用块中的引用块内嵌时不重复边线 */
+.prose blockquote blockquote {
+  margin: 0.75em 0;
+}
+
+/* 行内代码 */
 .prose code {
   background: rgba(59, 130, 246, 0.08);
   color: #1d4ed8;
-  padding: 0.125rem 0.375rem;
-  border-radius: 0.25rem;
+  padding: 0.15em 0.45em;
+  border-radius: 0.3rem;
   font-size: 0.875em;
+  font-weight: 500;
+  font-family: var(--font-mono, ui-monospace, monospace);
 }
 .dark .prose code {
   background: rgba(96, 165, 250, 0.15);
@@ -535,6 +690,132 @@
 .prose code::before,
 .prose code::after {
   content: none !important;
+}
+
+/* 代码块（pre code） */
+.prose pre {
+  background: #1f2937 !important;
+  color: #f9fafb !important;
+  border-radius: 0.625rem;
+  padding: 1.1rem 1.25rem;
+  margin: 1.75em 0;
+  overflow-x: auto;
+  font-size: 0.875rem;
+  line-height: 1.65;
+  border: 1px solid #374151;
+  font-family: var(--font-mono, ui-monospace, monospace);
+}
+.dark .prose pre {
+  background: #0f172a !important;
+  border-color: #1f2937;
+}
+.prose pre code {
+  background: transparent !important;
+  color: inherit;
+  padding: 0;
+  border-radius: 0;
+  font-size: inherit;
+  font-weight: 400;
+}
+
+/* 表格 */
+.prose table {
+  width: 100%;
+  margin: 1.75em 0;
+  border-collapse: collapse;
+  font-size: 0.9375rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+.dark .prose table {
+  border-color: #374151;
+}
+.prose thead {
+  background: #f3f4f6;
+}
+.dark .prose thead {
+  background: #1f2937;
+}
+.prose th {
+  padding: 0.75rem 1rem;
+  text-align: left;
+  font-weight: 600;
+  color: #1f2937;
+  border-bottom: 1px solid #e5e7eb;
+  font-size: 0.875rem;
+}
+.dark .prose th {
+  color: #f9fafb;
+  border-bottom-color: #374151;
+}
+.prose td {
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid #f3f4f6;
+  vertical-align: top;
+}
+.prose tbody tr:last-child td {
+  border-bottom: none;
+}
+.prose tbody tr:hover {
+  background: #f9fafb;
+}
+.dark .prose td {
+  border-bottom-color: #374151;
+}
+.dark .prose tbody tr:hover {
+  background: rgba(55, 65, 81, 0.4);
+}
+
+/* 图片 */
+.prose img {
+  border-radius: 0.625rem;
+  margin: 1.75em auto;
+  max-width: 100%;
+  height: auto;
+  box-shadow: 0 4px 12px -2px rgb(0 0 0 / 0.08);
+  display: block;
+}
+.prose figure {
+  margin: 2em 0;
+}
+.prose figcaption {
+  margin-top: 0.6em;
+  text-align: center;
+  font-size: 0.875rem;
+  color: #6b7280;
+}
+.dark .prose figcaption {
+  color: #9ca3af;
+}
+
+/* 分隔线 */
+.prose hr {
+  border: none;
+  border-top: 1px solid #e5e7eb;
+  margin: 2.5em 0;
+}
+.dark .prose hr {
+  border-top-color: #374151;
+}
+
+/* 键盘按键 kbd */
+.prose kbd {
+  display: inline-block;
+  padding: 0.1em 0.5em;
+  font-size: 0.85em;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  color: #1f2937;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-bottom-width: 2px;
+  border-radius: 0.3rem;
+  font-weight: 500;
+}
+.dark .prose kbd {
+  background: #1f2937;
+  color: #f9fafb;
+  border-color: #374151;
 }
 
 /* ===== 公告弹窗正文 ===== */
