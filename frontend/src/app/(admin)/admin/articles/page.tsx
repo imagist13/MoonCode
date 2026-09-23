@@ -8,7 +8,7 @@ import type { PageResult } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Pencil, Pin, Trash2, Plus, Filter, Upload, FileText } from "lucide-react";
+import { Pencil, Pin, Trash2, Plus, Filter, Upload } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -451,9 +451,9 @@ export default function ArticlesPage() {
             <Upload className="mr-1 size-4" />
             导入文章
           </Button>
-          <Button onClick={() => router.push("/admin/articles/editor")}>
+          <Button onClick={() => router.push("/admin/articles/write")}>
             <Plus className="mr-1 size-4" />
-            新建文章
+            写作
           </Button>
         </div>
       </div>
