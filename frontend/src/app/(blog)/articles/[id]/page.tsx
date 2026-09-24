@@ -234,7 +234,7 @@ export default function ArticleDetailPage() {
               {article.categoryName && (
                 <Link
                   href={`/?category=${article.categoryId ?? ""}`}
-                  className="mb-3 inline-block rounded-full bg-white/15 px-3 py-1 text-xs font-medium text-white backdrop-blur-sm transition-colors hover:bg-white/25"
+                  className="mb-3 inline-block rounded-full bg-blue-500/20 px-3 py-1 text-xs font-medium text-blue-200 backdrop-blur-sm transition-colors hover:bg-blue-500/30"
                 >
                   {article.categoryName}
                 </Link>
@@ -259,12 +259,12 @@ export default function ArticleDetailPage() {
         </div>
       )}
 
-      {/* 三栏布局：左侧 TOC + 中间正文 + 右侧 meta */}
-      <div className="mx-auto grid max-w-[1240px] gap-10 px-4 py-10 lg:grid-cols-[200px_minmax(0,1fr)_220px]">
+      {/* 双栏布局：左侧 TOC + 右侧正文 */}
+      <div className="mx-auto max-w-[1240px] gap-10 px-4 py-10 lg:grid lg:grid-cols-[220px_minmax(0,1fr)]">
         {/* 左侧 TOC */}
         <TableOfContents headings={headings} />
 
-        {/* 中间内容 */}
+        {/* 右侧内容 */}
         <article className="min-w-0">
           {/* 没有封面时显示标题区 */}
           {!article.articleCover && (
@@ -272,7 +272,7 @@ export default function ArticleDetailPage() {
               {article.categoryName && (
                 <Link
                   href={`/?category=${article.categoryId ?? ""}`}
-                  className="mb-3 inline-block rounded-full bg-violet-50 px-3 py-1 text-xs font-medium text-violet-700 transition-colors hover:bg-violet-100 dark:bg-violet-900/30 dark:text-violet-300 dark:hover:bg-violet-900/50"
+                  className="mb-3 inline-block rounded-full bg-blue-500/20 px-3 py-1 text-xs font-medium text-blue-600 transition-colors hover:bg-blue-500/30 dark:text-blue-300"
                 >
                   {article.categoryName}
                 </Link>
@@ -307,7 +307,7 @@ export default function ArticleDetailPage() {
                 <Link
                   key={t.id}
                   href={`/?tag=${t.id}`}
-                  className="rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
+                  className="rounded-full bg-blue-500/10 px-3 py-1 text-xs font-medium text-blue-600 transition-colors hover:bg-blue-500/20 dark:text-blue-300"
                 >
                   #{t.tagName}
                 </Link>
@@ -315,8 +315,28 @@ export default function ArticleDetailPage() {
             </div>
           )}
 
-          {/* Markdown 正文 */}
-          <div className="prose prose-neutral max-w-none dark:prose-invert">
+          {/* Markdown 正文 - 增强样式 */}
+          <div className="prose prose-slate max-w-none dark:prose-invert
+            prose-headings:font-semibold prose-headings:tracking-tight
+            prose-h1:text-3xl prose-h2:text-2xl prose-h3:text-xl prose-h4:text-lg
+            prose-h2:border-b prose-h2:border-gray-200 prose-h2:pb-2
+            prose-a:text-blue-600 prose-a:no-underline hover:prose-a:underline
+            dark:prose-a:text-blue-400
+            prose-code:bg-blue-50 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded
+            prose-code:text-sm prose-code:font-medium prose-code:text-blue-600
+            dark:prose-code:bg-blue-950 dark:prose-code:text-blue-300
+            prose-pre:bg-gray-900 prose-pre:rounded-lg
+            prose-blockquote:border-l-blue-400 prose-blockquote:bg-blue-50/50
+            prose-blockquote:py-1 prose-blockquote:not-italic
+            dark:prose-blockquote:bg-blue-950/50
+            prose-ul:marker:text-blue-500 prose-ol:marker:text-blue-500
+            prose-table:border-collapse prose-th:border prose-th:border-gray-200
+            prose-th:bg-blue-50 prose-th:px-4 prose-th:py-2
+            dark:prose-th:border-gray-700 dark:prose-th:bg-blue-950/50
+            prose-td:border prose-td:border-gray-200 prose-td:px-4 prose-td:py-2
+            dark:prose-td:border-gray-700
+            prose-img:rounded-lg prose-img:shadow-md
+            prose-hr:border-gray-200">
             <ReactMarkdown
               remarkPlugins={[remarkGfm]}
               rehypePlugins={[rehypeHighlight]}
@@ -325,11 +345,7 @@ export default function ArticleDetailPage() {
                   const text = String(children);
                   const id = headingId(text);
                   return (
-                    <h1
-                      id={id}
-                      className="scroll-mt-24 text-3xl font-bold tracking-tight"
-                      {...props}
-                    >
+                    <h1 id={id} className="scroll-mt-24" {...props}>
                       {children}
                     </h1>
                   );
@@ -365,38 +381,42 @@ export default function ArticleDetailPage() {
                   const isExternal = /^https?:\/\//.test(href ?? "");
                   if (isExternal) {
                     return (
-                      <a
-                        href={href}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        {...props}
-                      >
+                      <a href={href} target="_blank" rel="noopener noreferrer" {...props}>
                         {children}
                       </a>
                     );
                   }
-                  return (
-                    <a href={href} {...props}>
-                      {children}
-                    </a>
-                  );
+                  return <a href={href} {...props}>{children}</a>;
                 },
+                // 增强代码块样式
+                pre: ({ children, ...props }) => (
+                  <pre className="relative group" {...props}>
+                    {children}
+                  </pre>
+                ),
+                // 增强图片样式
+                img: ({ src, alt, ...props }) => (
+                  <figure className="my-6">
+                    <img src={src} alt={alt} className="rounded-lg shadow-md" {...props} />
+                    {alt && <figcaption className="mt-2 text-center text-sm text-gray-500">{alt}</figcaption>}
+                  </figure>
+                ),
               }}
             >
               {article.articleContent}
             </ReactMarkdown>
           </div>
 
-          {/* 上下篇（spec §4.6） */}
+          {/* 上下篇导航 */}
           <nav className="mt-16 grid gap-4 border-t border-gray-200 pt-8 md:grid-cols-2 dark:border-gray-700">
             {prev ? (
               <Link href={`/articles/${prev.id}`} className="group block">
-                <div className="rounded-lg border border-gray-200 p-4 transition-all hover:border-violet-300 hover:shadow-md dark:border-gray-700 dark:hover:border-violet-700">
+                <div className="rounded-lg border border-gray-200 p-4 transition-all hover:border-blue-300 hover:shadow-md dark:border-gray-700 dark:hover:border-blue-700">
                   <div className="mb-2 inline-flex items-center gap-1 text-xs text-gray-500">
                     <ChevronLeft className="h-3.5 w-3.5" />
                     上一篇
                   </div>
-                  <div className="line-clamp-2 text-sm font-medium transition-colors group-hover:text-violet-600 dark:group-hover:text-violet-400">
+                  <div className="line-clamp-2 text-sm font-medium transition-colors group-hover:text-blue-600 dark:group-hover:text-blue-400">
                     {prev.articleTitle}
                   </div>
                 </div>
@@ -405,16 +425,13 @@ export default function ArticleDetailPage() {
               <div />
             )}
             {next ? (
-              <Link
-                href={`/articles/${next.id}`}
-                className="group block md:text-right"
-              >
-                <div className="rounded-lg border border-gray-200 p-4 transition-all hover:border-violet-300 hover:shadow-md dark:border-gray-700 dark:hover:border-violet-700">
+              <Link href={`/articles/${next.id}`} className="group block md:text-right">
+                <div className="rounded-lg border border-gray-200 p-4 transition-all hover:border-blue-300 hover:shadow-md dark:border-gray-700 dark:hover:border-blue-700">
                   <div className="mb-2 inline-flex items-center gap-1 text-xs text-gray-500">
                     下一篇
                     <ChevronRight className="h-3.5 w-3.5" />
                   </div>
-                  <div className="line-clamp-2 text-sm font-medium transition-colors group-hover:text-violet-600 dark:group-hover:text-violet-400">
+                  <div className="line-clamp-2 text-sm font-medium transition-colors group-hover:text-blue-600 dark:group-hover:text-blue-400">
                     {next.articleTitle}
                   </div>
                 </div>
@@ -434,78 +451,15 @@ export default function ArticleDetailPage() {
             />
           </div>
         </article>
-
-        {/* 右侧 meta */}
-        <aside className="hidden lg:block">
-          <div className="sticky top-28 space-y-4">
-            <div className="rounded-lg border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
-              <h4 className="mb-3 text-sm font-semibold text-gray-900 dark:text-gray-100">
-                文章信息
-              </h4>
-              <dl className="space-y-2.5 text-xs">
-                {article.categoryName && (
-                  <div>
-                    <dt className="text-gray-400">分类</dt>
-                    <dd className="mt-0.5 text-gray-700 dark:text-gray-300">
-                      {article.categoryName}
-                    </dd>
-                  </div>
-                )}
-                <div>
-                  <dt className="text-gray-400">发布时间</dt>
-                  <dd className="mt-0.5 text-gray-700 dark:text-gray-300">
-                    {formatTime(article.createTime)}
-                  </dd>
-                </div>
-                {article.updateTime &&
-                  article.updateTime !== article.createTime && (
-                    <div>
-                      <dt className="text-gray-400">最后更新</dt>
-                      <dd className="mt-0.5 text-gray-700 dark:text-gray-300">
-                        {formatTime(article.updateTime)}
-                      </dd>
-                    </div>
-                  )}
-                {article.viewCount !== undefined && (
-                  <div>
-                    <dt className="text-gray-400">阅读量</dt>
-                    <dd className="mt-0.5 text-gray-700 dark:text-gray-300">
-                      {formatViews(article.viewCount)}
-                    </dd>
-                  </div>
-                )}
-              </dl>
-            </div>
-
-            {article.tagVOList && article.tagVOList.length > 0 && (
-              <div className="rounded-lg border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
-                <h4 className="mb-3 text-sm font-semibold text-gray-900 dark:text-gray-100">
-                  标签
-                </h4>
-                <div className="flex flex-wrap gap-1.5">
-                  {article.tagVOList.map((t) => (
-                    <Link
-                      key={t.id}
-                      href={`/?tag=${t.id}`}
-                      className="rounded-full bg-gray-100 px-2.5 py-1 text-[11px] text-gray-600 transition-colors hover:bg-violet-50 hover:text-violet-700 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-violet-900/30 dark:hover:text-violet-300"
-                    >
-                      #{t.tagName}
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        </aside>
       </div>
 
-      {/* 回到顶部（spec §4.6） */}
+      {/* 回到顶部 */}
       <button
         type="button"
         onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
         aria-label="回到顶部"
         className={cn(
-          "fixed bottom-8 right-8 z-50 rounded-full bg-white p-3 text-gray-700 shadow-lg ring-1 ring-gray-200 transition-all duration-300 hover:bg-gray-50 dark:bg-gray-800 dark:text-white dark:ring-gray-700 dark:hover:bg-gray-700",
+          "fixed bottom-8 right-8 z-50 rounded-full bg-white p-3 text-gray-700 shadow-lg ring-1 ring-gray-200 transition-all duration-300 hover:bg-blue-50 hover:text-blue-600 dark:bg-gray-800 dark:text-white dark:ring-gray-700 dark:hover:bg-blue-950 dark:hover:text-blue-400",
           showBackTop ? "opacity-100" : "pointer-events-none opacity-0",
         )}
       >
