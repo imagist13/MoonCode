@@ -23,7 +23,17 @@ import {
   X,
   Settings2,
   Send,
+  List,
+  FileEdit,
+  Trash2,
+  Loader2,
 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 /* ==============================
  * 常量
@@ -59,6 +69,17 @@ const TOOLBAR_COMMANDS: Record<
 /* ==============================
  * 类型
  * ============================== */
+
+interface Article {
+  id: number;
+  articleTitle: string;
+  categoryName: string;
+  tagNameList: string[];
+  type: number;
+  status: number;
+  isTop: boolean;
+  createTime: string;
+}
 
 interface Category {
   id: number;
@@ -148,6 +169,12 @@ function UnifiedEditorContent() {
     articleContent: string;
     savedAt: string;
   }>({ show: false, articleTitle: "", articleContent: "", savedAt: "" });
+
+  // 发布管理弹窗
+  const [showPublishDialog, setShowPublishDialog] = useState(false);
+  const [draftArticles, setDraftArticles] = useState<Article[]>([]);
+  const [loadingDrafts, setLoadingDrafts] = useState(false);
+  const [publishingId, setPublishingId] = useState<number | null>(null);
 
   /* ---------- Auto Save ---------- */
   const { saveDraft, loadDraft, clearDraft } = useAutoSave({
@@ -510,6 +537,61 @@ function UnifiedEditorContent() {
     toast.success("草稿已保存");
   };
 
+  // 获取草稿列表
+  const fetchDraftArticles = async () => {
+    setLoadingDrafts(true);
+    try {
+      const res = await api.get<{ records: Article[] }>("/admin/articles?current=1&size=100&status=1");
+      if (res.flag && res.data) {
+        setDraftArticles(res.data.records || []);
+      }
+    } catch {
+      toast.error("获取草稿列表失败");
+    } finally {
+      setLoadingDrafts(false);
+    }
+  };
+
+  // 打开发布弹窗
+  const handleOpenPublishDialog = () => {
+    fetchDraftArticles();
+    setShowPublishDialog(true);
+  };
+
+  // 一键发布草稿
+  const handleQuickPublish = async (id: number) => {
+    setPublishingId(id);
+    try {
+      const res = await api.put("/admin/articles/publish", { id });
+      if (res.flag) {
+        toast.success("发布成功");
+        fetchDraftArticles();
+      } else {
+        toast.error(res.message);
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "发布失败");
+    } finally {
+      setPublishingId(null);
+    }
+  };
+
+  // 删除草稿
+  const handleDeleteDraft = async (id: number) => {
+    if (!confirm("确定要删除这篇草稿吗？")) return;
+    try {
+      const res = await api.delete("/admin/articles", [id]);
+      if (res.flag) {
+        toast.success("删除成功");
+        fetchDraftArticles();
+      } else {
+        toast.error(res.message);
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "删除失败");
+    }
+  };
+
   const handleCoverUpload = useCallback(async (file: File): Promise<string> => {
     const res = await api.upload<string>("/admin/articles/images", file);
     if (!res.flag) throw new Error(res.message);
@@ -593,6 +675,15 @@ function UnifiedEditorContent() {
           >
             <Settings2 className="mr-1 size-3.5" />
             摘要/设置
+          </Button>
+
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={handleOpenPublishDialog}
+          >
+            <List className="mr-1 size-3.5" />
+            已保存
           </Button>
 
           <Button
@@ -959,6 +1050,81 @@ console.log(greeting);
           </div>
         </aside>
       </div>
+
+      {/* 发布管理弹窗 */}
+      <Dialog open={showPublishDialog} onOpenChange={setShowPublishDialog}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <List className="size-5" />
+              已保存的文章
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="max-h-[60vh] overflow-y-auto">
+            {loadingDrafts ? (
+              <div className="flex items-center justify-center py-12 text-muted-foreground">
+                <Loader2 className="mr-2 size-5 animate-spin" />
+                加载中...
+              </div>
+            ) : draftArticles.length === 0 ? (
+              <div className="py-12 text-center text-muted-foreground">
+                暂无已保存的文章
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {draftArticles.map((article) => (
+                  <div
+                    key={article.id}
+                    className="flex items-center justify-between rounded-lg border p-3 hover:bg-muted/50"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <p className="truncate font-medium">{article.articleTitle || "无标题"}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {article.categoryName && `分类: ${article.categoryName}`}
+                        {article.createTime && ` · ${new Date(article.createTime).toLocaleDateString()}`}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-1 ml-4">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => router.push(`/admin/articles/create?id=${article.id}`)}
+                        title="编辑"
+                      >
+                        <FileEdit className="size-4" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                        onClick={() => handleQuickPublish(article.id)}
+                        disabled={publishingId === article.id}
+                        title="发布"
+                      >
+                        {publishingId === article.id ? (
+                          <Loader2 className="size-4 animate-spin" />
+                        ) : (
+                          <Send className="size-4" />
+                        )}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="text-red-500 hover:text-red-600 hover:bg-red-50"
+                        onClick={() => handleDeleteDraft(article.id)}
+                        title="删除"
+                      >
+                        <Trash2 className="size-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
