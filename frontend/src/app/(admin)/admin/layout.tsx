@@ -12,6 +12,8 @@ function titleForPath(pathname: string): string {
     "/admin": "仪表盘",
     "/admin/articles": "文章管理",
     "/admin/articles/editor": "编辑文章",
+    "/admin/articles/write": "写文章",
+    "/admin/articles/create": "写文章",
     "/admin/categories": "分类管理",
     "/admin/tags": "标签管理",
     "/admin/comments": "评论管理",

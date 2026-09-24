@@ -359,7 +359,7 @@ export default function ArticlesPage() {
                 variant="ghost"
                 size="icon-sm"
                 onClick={() =>
-                  router.push(`/admin/articles/editor?id=${article.id}`)
+                  router.push(`/admin/articles/create?id=${article.id}`)
                 }
               >
                 <Pencil className="size-4" />
@@ -426,7 +426,7 @@ export default function ArticlesPage() {
             content: text,
           }),
         );
-        router.push("/admin/articles/editor");
+        router.push("/admin/articles/create");
       } catch (err) {
         toast.error(err instanceof Error ? err.message : "读取文件失败");
       }
@@ -451,7 +451,7 @@ export default function ArticlesPage() {
             <Upload className="mr-1 size-4" />
             导入文章
           </Button>
-          <Button onClick={() => router.push("/admin/articles/write")}>
+          <Button onClick={() => router.push("/admin/articles/create")}>
             <Plus className="mr-1 size-4" />
             写作
           </Button>
