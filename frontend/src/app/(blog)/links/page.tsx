@@ -1,14 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
+import { PageHeader } from "@/components/ui/page-header";
 import { api } from "@/lib/api";
 
 interface FriendLink {
@@ -39,10 +34,17 @@ export default function LinksPage() {
   if (loading) {
     return (
       <div className="space-y-6">
-        <h1 className="text-3xl font-bold">友情链接</h1>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mb-10 border-b border-gray-200 pb-6 dark:border-gray-700">
+          <h1 className="text-2xl font-bold tracking-tight text-gray-900 md:text-3xl dark:text-gray-100">
+            友情链接
+          </h1>
+          <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+            感谢各位朋友的支持
+          </p>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {Array.from({ length: 6 }).map((_, i) => (
-            <Skeleton key={i} className="h-32 rounded-xl" />
+            <Skeleton key={i} className="h-24 rounded-lg" />
           ))}
         </div>
       </div>
@@ -51,7 +53,7 @@ export default function LinksPage() {
 
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
+      <div className="flex flex-col items-center justify-center py-20 text-gray-400">
         <p>加载失败: {error}</p>
       </div>
     );
@@ -59,71 +61,45 @@ export default function LinksPage() {
 
   return (
     <div>
-      <div className="relative mb-10 overflow-hidden rounded-2xl border border-border/60
-                      bg-linear-to-br from-brand-50 via-background to-purple-50/30
-                      dark:from-brand-900/20 dark:via-background dark:to-purple-900/10
-                      px-6 py-8 md:px-10 md:py-10">
-        <div className="pointer-events-none absolute -top-12 -right-12 h-48 w-48
-                        rounded-full bg-brand-400/20 blur-3xl" />
-        <div className="relative">
-          <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
-            <span className="bg-linear-to-r from-brand-500 via-brand-600 to-purple-500
-                             bg-clip-text text-transparent">
-              友情链接
-            </span>
-          </h1>
-          <p className="mt-2 text-muted-foreground">
-            感谢各位朋友的支持
-          </p>
-        </div>
-      </div>
+      <PageHeader title="友情链接" description="感谢各位朋友的支持" />
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {links.map((link) => (
-          <a
-            key={link.id}
-            href={
-              /^https?:\/\//i.test(link.linkAddress)
-                ? link.linkAddress
-                : /^javascript:/i.test(link.linkAddress)
-                  ? "#"
-                  : `https://${link.linkAddress}`
-            }
-            target="_blank"
-            rel="noopener noreferrer"
-            className="group"
-          >
-            <Card className="h-full">
-              <CardHeader className="flex-row items-center gap-3">
-                <Avatar className="h-12 w-12 ring-2 ring-brand-100 transition-all
-                                   group-hover:ring-brand-300 group-hover:scale-105
-                                   dark:ring-brand-900/40 dark:group-hover:ring-brand-700/60">
+      {links.length === 0 ? (
+        <p className="text-center text-gray-400">暂无友链</p>
+      ) : (
+        <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {links.map((link) => (
+            <li key={link.id}>
+              <a
+                href={
+                  /^https?:\/\//i.test(link.linkAddress)
+                    ? link.linkAddress
+                    : /^javascript:/i.test(link.linkAddress)
+                      ? "#"
+                      : `https://${link.linkAddress}`
+                }
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group flex items-start gap-3 rounded-lg border border-transparent p-3 transition-colors hover:border-gray-200 hover:bg-gray-50 dark:hover:border-gray-700 dark:hover:bg-gray-800/50"
+              >
+                <Avatar className="h-10 w-10 shrink-0">
                   <AvatarImage src={link.linkAvatar} alt={link.linkName} />
-                  <AvatarFallback>
-                    {link.linkName.slice(0, 2)}
-                  </AvatarFallback>
+                  <AvatarFallback>{link.linkName.slice(0, 2)}</AvatarFallback>
                 </Avatar>
                 <div className="min-w-0 flex-1">
-                  <CardTitle className="truncate text-base transition-colors
-                                         group-hover:text-brand-600
-                                         dark:group-hover:text-brand-400">
+                  <div className="truncate text-sm font-medium text-gray-800 group-hover:text-gray-900 dark:text-gray-200 dark:group-hover:text-gray-100">
                     {link.linkName}
-                  </CardTitle>
-                  <CardDescription className="line-clamp-2 text-xs">
-                    {link.linkIntro}
-                  </CardDescription>
+                  </div>
+                  {link.linkIntro && (
+                    <div className="mt-1 line-clamp-2 text-xs text-gray-500 dark:text-gray-400">
+                      {link.linkIntro}
+                    </div>
+                  )}
                 </div>
-              </CardHeader>
-            </Card>
-          </a>
-        ))}
-
-        {links.length === 0 && (
-          <p className="col-span-full text-center text-muted-foreground">
-            暂无友链
-          </p>
-        )}
-      </div>
+              </a>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }
