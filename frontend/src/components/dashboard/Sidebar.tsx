@@ -53,7 +53,7 @@ export const NAV_ITEMS: NavItem[] = [
     title: "文章管理",
     icon: FileText,
     children: [
-      { title: "新建文章", href: "/admin/articles/editor", icon: PenSquare },
+      { title: "新建文章", href: "/admin/articles/create", icon: PenSquare },
       { title: "文章列表", href: "/admin/articles", icon: List },
       { title: "分类管理", href: "/admin/categories", icon: FolderTree },
       { title: "标签管理", href: "/admin/tags", icon: Tags },

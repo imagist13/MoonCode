@@ -81,7 +81,7 @@ export default function DashboardPage() {
   ];
 
   const quickActions = [
-    { title: "发布文章", description: "写一篇新文章", icon: Plus, href: "/admin/articles/editor" },
+    { title: "发布文章", description: "写一篇新文章", icon: Plus, href: "/admin/articles/create" },
     { title: "文章列表", description: "管理现有文章", icon: List, href: "/admin/articles" },
     { title: "分类管理", description: "管理文章分类", icon: FolderTree, href: "/admin/categories" },
     { title: "标签管理", description: "管理文章标签", icon: Tags, href: "/admin/tags" },

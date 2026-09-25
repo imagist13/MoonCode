@@ -92,7 +92,7 @@ export const EmptyStates = {
     icon: FileText,
     title: "暂无文章",
     description: "还没有发布任何文章",
-    action: { label: "写文章", href: "/admin/articles/editor" } as const,
+    action: { label: "写文章", href: "/admin/articles/create" } as const,
   },
   comments: {
     icon: MessageSquare,
