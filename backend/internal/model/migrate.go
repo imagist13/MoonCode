@@ -32,6 +32,7 @@ var AllModels = []interface{}{
 	&WebsiteConfig{},
 	&OperationLog{},
 	&UniqueView{},
+	&About{},
 }
 
 // AutoMigrate 自动迁移所有表

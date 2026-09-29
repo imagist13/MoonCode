@@ -88,3 +88,24 @@ type UniqueView struct {
 }
 
 func (UniqueView) TableName() string { return "tb_unique_view" }
+
+// About 个人信息（用于「关于」页面，由管理员维护后展示给访客）
+//
+// 单行表设计：整站只有一份「关于我」，用 First/Init 取第一行；不存在时 Init 一条空记录，
+// 这样无需在前端处理「配置尚未初始化」的分支，简化读写语义。
+type About struct {
+	BaseModel
+	Avatar        string `gorm:"type:varchar(1024);not null;default:''" json:"avatar"`
+	Nickname      string `gorm:"type:varchar(50);not null" json:"nickname"`
+	Intro         string `gorm:"type:varchar(255)" json:"intro"`
+	Bio           string `gorm:"type:text" json:"bio"`
+	Email         string `gorm:"type:varchar(100)" json:"email"`
+	Website       string `gorm:"type:varchar(255)" json:"website"`
+	Github        string `gorm:"type:varchar(255)" json:"github"`
+	TechStack     string `gorm:"type:text" json:"techStack"`
+	BackendSkills string `gorm:"type:text" json:"backendSkills"`
+	FrontendSkills string `gorm:"type:text" json:"frontendSkills"`
+	OtherSkills   string `gorm:"type:text" json:"otherSkills"`
+}
+
+func (About) TableName() string { return "tb_about" }
