@@ -24,6 +24,7 @@ type Deps struct {
 	AlbumHandler    *AlbumHandler
 	LinkHandler     *LinkHandler
 	BlogInfoHandler *BlogInfoHandler
+	AboutHandler    *AboutHandler
 	UploadHandler   *UploadHandler
 	UploadPath      string // 本地上传文件根目录，用于静态文件服务
 
@@ -122,6 +123,9 @@ func setupPublicRoutes(rg *gin.RouterGroup, deps *Deps, rdb *redis.Client) {
 
 	// 站点信息
 	rg.GET("/website/config", deps.BlogInfoHandler.GetWebsiteConfig)
+
+	// 关于我（公开）
+	rg.GET("/about", deps.AboutHandler.GetAbout)
 
 	// 认证（真实 handler，带限流防爆破/发信滥用）
 	rg.POST("/register", middleware.RateLimit(rdb, 3, time.Minute), deps.AuthHandler.Register)
@@ -230,7 +234,8 @@ func setupAdminRoutes(rg *gin.RouterGroup, deps *Deps) {
 
 	// 站点配置
 	rg.PUT("/website/config", deps.BlogInfoHandler.UpdateWebsiteConfig)
-	rg.PUT("/about", deps.BlogInfoHandler.UpdateAbout)
+	rg.PUT("/about", deps.AboutHandler.UpdateAbout)
+	rg.GET("/about", deps.AboutHandler.GetAbout)
 
 	// 操作日志
 	rg.GET("/operation/logs", deps.BlogInfoHandler.ListLogs)
