@@ -95,17 +95,39 @@ func (UniqueView) TableName() string { return "tb_unique_view" }
 // 这样无需在前端处理「配置尚未初始化」的分支，简化读写语义。
 type About struct {
 	BaseModel
-	Avatar        string `gorm:"type:varchar(1024);not null;default:''" json:"avatar"`
-	Nickname      string `gorm:"type:varchar(50);not null" json:"nickname"`
-	Intro         string `gorm:"type:varchar(255)" json:"intro"`
-	Bio           string `gorm:"type:text" json:"bio"`
-	Email         string `gorm:"type:varchar(100)" json:"email"`
-	Website       string `gorm:"type:varchar(255)" json:"website"`
-	Github        string `gorm:"type:varchar(255)" json:"github"`
-	TechStack     string `gorm:"type:text" json:"techStack"`
-	BackendSkills string `gorm:"type:text" json:"backendSkills"`
+	// 顶部 banner 大图（关于页右上方的展示图）
+	Banner string `gorm:"type:varchar(1024);not null;default:''" json:"banner"`
+	// 头像
+	Avatar string `gorm:"type:varchar(1024);not null;default:''" json:"avatar"`
+	// 昵称（侧边栏和 "Hi, I'm X" 主标题共用）
+	Nickname string `gorm:"type:varchar(50);not null" json:"nickname"`
+	// 代词 / pronouns（昵称下方一行，如 he/him、she/her）
+	Pronouns string `gorm:"type:varchar(50);not null;default:''" json:"pronouns"`
+	// 简短一句话介绍（昵称下方 + 邮箱前的 bio）
+	Intro string `gorm:"type:varchar(255);not null;default:''" json:"intro"`
+	// 主标题下方的副标题（红字显示，如 "AI Agent"）
+	Subtitle string `gorm:"type:varchar(100);not null;default:''" json:"subtitle"`
+	// 详细 bio / markdown 文本（用于 About Me 区域）
+	Bio string `gorm:"type:text" json:"bio"`
+	// About Me 区域的项目列表（JSON：[{emoji, text}]）
+	AboutPoints string `gorm:"type:text;not null;default:'[]'" json:"aboutPoints"`
+	// 邮箱
+	Email string `gorm:"type:varchar(100)" json:"email"`
+	// 个人网站链接
+	Website string `gorm:"type:varchar(255)" json:"website"`
+	// Github 链接
+	Github string `gorm:"type:varchar(255)" json:"github"`
+	// 关注的粉丝数 / 关注数（仅展示用，由管理员手填）
+	Followers int `gorm:"not null;default:0" json:"followers"`
+	Following int `gorm:"not null;default:0" json:"following"`
+	// 技术栈展示（icon + 名称的 JSON 字符串：[{"name","icon","color"}]）
+	TechStack string `gorm:"type:text;not null;default:'[]'" json:"techStack"`
+	// 后端 / 前端 / 其他技能列表（每项一个字符串，简单换行展示）
+	BackendSkills  string `gorm:"type:text" json:"backendSkills"`
 	FrontendSkills string `gorm:"type:text" json:"frontendSkills"`
-	OtherSkills   string `gorm:"type:text" json:"otherSkills"`
+	OtherSkills    string `gorm:"type:text" json:"otherSkills"`
+	// 成就 / 徽章（JSON：[{"name","icon","color"}]）
+	Achievements string `gorm:"type:text;not null;default:'[]'" json:"achievements"`
 }
 
 func (About) TableName() string { return "tb_about" }

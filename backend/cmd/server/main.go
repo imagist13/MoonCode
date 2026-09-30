@@ -60,6 +60,7 @@ func main() {
 	albumService := service.NewAlbumService(config.DB)
 	linkService := service.NewLinkService(config.DB)
 	blogInfoService := service.NewBlogInfoService(config.DB)
+	aboutService := service.NewAboutService(config.DB)
 	logService := service.NewLogService(config.DB)
 	uploadService := service.NewUploadService(cfg.Upload.Mode, cfg.Upload.LocalPath, cfg.Upload.MaxSize)
 
@@ -76,6 +77,7 @@ func main() {
 	albumHandler := handler.NewAlbumHandler(albumService)
 	linkHandler := handler.NewLinkHandler(linkService)
 	blogInfoHandler := handler.NewBlogInfoHandler(blogInfoService, logService)
+	aboutHandler := handler.NewAboutHandler(aboutService)
 	uploadHandler := handler.NewUploadHandler(uploadService)
 
 	deps := &handler.Deps{
@@ -90,6 +92,7 @@ func main() {
 		AlbumHandler:    albumHandler,
 		LinkHandler:     linkHandler,
 		BlogInfoHandler: blogInfoHandler,
+		AboutHandler:    aboutHandler,
 		UploadHandler:   uploadHandler,
 		UploadPath:      cfg.Upload.LocalPath,
 		DB:              config.DB,
