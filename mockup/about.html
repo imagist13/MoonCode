@@ -1,0 +1,287 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>About · Moon 博客 — 紧凑预览</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  :root {
+    --brand-50:  #eff6ff;  --brand-100: #dbeafe; --brand-200: #bfdbfe;
+    --brand-500: #3b82f6;  --brand-600: #2563eb; --brand-700: #1d4ed8;
+    --brand-800: #1e40af;  --brand-900: #1e3a8a;
+
+    --slate-50:  #f8fafc;  --slate-100: #f1f5f9; --slate-200: #e2e8f0;
+    --slate-400: #94a3b8;  --slate-500: #64748b; --slate-600: #475569;
+    --slate-700: #334155;  --slate-800: #1e293b; --slate-900: #0f172a;
+
+    --shadow-card: 0 1px 3px 0 rgb(0 0 0 / .06), 0 1px 2px -1px rgb(0 0 0 / .04);
+    --shadow-card-hover: 0 10px 25px -3px rgb(0 0 0 / .08), 0 4px 10px -4px rgb(0 0 0 / .04);
+    --shadow-brand-glow: 0 0 0 3px rgb(59 130 246 / .18);
+  }
+  html, body {
+    background: var(--slate-50);
+    color: var(--slate-900);
+    font-family: "Geist", -apple-system, "PingFang SC", "Microsoft YaHei", ui-sans-serif, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .mono { font-family: "Geist Mono", ui-monospace, monospace; }
+
+  /* Banner：纯蓝调 mesh */
+  .banner-mesh {
+    background-color: #1e3a8a;
+    background-image:
+      radial-gradient(at 18% 24%, rgba(59,130,246,.85) 0px, transparent 55%),
+      radial-gradient(at 82% 18%, rgba(99,102,241,.7) 0px, transparent 55%),
+      radial-gradient(at 72% 78%, rgba(96,165,250,.6) 0px, transparent 55%),
+      linear-gradient(135deg, #1e3a8a 0%, #2563eb 50%, #1e40af 100%);
+  }
+  .banner-grid {
+    position: absolute; inset: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,.04) 1px, transparent 1px);
+    background-size: 60px 60px;
+    mask-image: radial-gradient(ellipse at center, black 25%, transparent 75%);
+    -webkit-mask-image: radial-gradient(ellipse at center, black 25%, transparent 75%);
+    pointer-events: none;
+  }
+  .banner-grid::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,.5), transparent);
+  }
+
+  @keyframes drift { 0%,100%{transform:translateY(0);opacity:.5} 50%{transform:translateY(-10px);opacity:1} }
+  .particle { animation: drift 6s ease-in-out infinite; }
+
+  .card {
+    background: #fff;
+    border: 1px solid var(--slate-200);
+    border-radius: 0.625rem;
+    box-shadow: var(--shadow-card);
+  }
+
+  .side-title {
+    font-size: .875rem; font-weight: 600; color: var(--slate-900);
+    display: flex; align-items: center; gap: .5rem;
+  }
+  .side-title::before {
+    content: ''; width: .25rem; height: 1rem; border-radius: 9999px;
+    background: var(--brand-500); flex-shrink: 0;
+  }
+
+  .link-brand { color: var(--slate-500); transition: color 150ms; }
+  .link-brand:hover { color: var(--brand-600); }
+
+  .btn-outline {
+    background: #fff; color: var(--slate-700);
+    border: 1px solid var(--slate-200); border-radius: 9999px;
+    transition: background-color 150ms;
+  }
+  .btn-outline:hover { background: var(--slate-50); }
+
+  .avatar-ring {
+    box-shadow: 0 0 0 4px #fff, 0 0 0 6px var(--brand-500), 0 8px 24px -6px rgba(0,0,0,.18);
+  }
+  /* 默认头像占位：品牌色渐变 + 首字母，没拿到图时也能看到清晰人形 */
+  .avatar-placeholder {
+    background: linear-gradient(135deg, #60a5fa 0%, #2563eb 50%, #1e3a8a 100%);
+    color: #fff;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    text-transform: lowercase;
+  }
+
+  .tech-icon {
+    width: 32px; height: 32px;
+    display: inline-flex; align-items: center; justify-content: center;
+    border-radius: 8px; color: #fff;
+    font-weight: 700; font-size: 11px;
+    font-family: "Geist Mono", monospace;
+    box-shadow: 0 4px 10px -3px rgba(0,0,0,.18);
+    transition: transform .15s ease;
+  }
+  .tech-icon:hover { transform: translateY(-2px); }
+
+  @keyframes rise { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:none} }
+  .reveal-up { animation: rise .5s cubic-bezier(.16,1,.3,1) both; }
+</style>
+</head>
+
+<body class="text-slate-900">
+
+  <header class="sticky top-0 z-40 backdrop-blur-xl bg-white/80 border-b border-slate-200/60">
+    <div class="mx-auto max-w-5xl flex items-center justify-between px-6 h-16">
+      <span class="text-lg font-bold tracking-tight text-brand-500">Blogs</span>
+      <nav class="hidden md:flex items-center gap-1 text-sm">
+        <a class="px-3 py-2 rounded-md text-slate-500 hover:bg-slate-100 hover:text-slate-900" href="#">首页</a>
+        <a class="px-3 py-2 rounded-md text-slate-500 hover:bg-slate-100 hover:text-slate-900" href="#">归档</a>
+        <a class="px-3 py-2 rounded-md text-slate-500 hover:bg-slate-100 hover:text-slate-900" href="#">友链</a>
+        <a class="px-3 py-2 rounded-md text-brand-700 bg-brand-50" href="#">关于</a>
+      </nav>
+      <button class="h-8 px-3 rounded-full bg-brand-500 text-white text-sm font-medium shadow-sm shadow-brand-500/30 hover:bg-brand-600">登录</button>
+    </div>
+  </header>
+
+  <main class="mx-auto max-w-5xl px-6 py-8 space-y-6">
+
+    <!-- Hero：只放 banner -->
+    <section class="relative overflow-hidden rounded-2xl border border-slate-200/60 shadow-[var(--shadow-card-hover)] banner-mesh">
+      <div class="banner-grid"></div>
+      <span class="particle absolute top-10 left-16 w-1.5 h-1.5 rounded-full bg-blue-200/80"></span>
+      <span class="particle absolute top-20 right-1/3 w-1 h-1 rounded-full bg-white/80" style="animation-delay:-1s"></span>
+      <span class="particle absolute bottom-10 right-1/4 w-2 h-2 rounded-full bg-blue-300/60" style="animation-delay:-3s"></span>
+      <span class="particle absolute bottom-6 left-1/3 w-1 h-1 rounded-full bg-indigo-200/70" style="animation-delay:-2s"></span>
+      <div class="absolute bottom-3 right-5 mono text-[10px] text-white/50 uppercase tracking-widest hidden md:block">// dim-stack · v0.1</div>
+
+      <!-- 标签条 -->
+      <div class="absolute top-4 right-4 flex flex-wrap gap-1.5 justify-end max-w-[60%]">
+        <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] bg-white/10 backdrop-blur-md ring-1 ring-white/20 text-white/90">📍 上海</span>
+        <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] bg-brand-500/80 ring-1 ring-brand-300/40 text-white">🌙 2024 加入</span>
+      </div>
+
+      <div class="h-[180px] md:h-[200px]"></div>
+    </section>
+
+    <!-- 两栏：-mt-4 让身份卡轻微叠到 banner 下沿 -->
+    <section class="grid lg:grid-cols-[280px_1fr] gap-6 items-start -mt-4 relative z-10">
+
+      <!-- Sidebar -->
+      <aside class="space-y-6 reveal-up">
+
+        <!-- Identity：头像 + 资料 在同一张卡片里，flex 列排版 -->
+        <div class="card pt-0">
+          <!-- 头像：水平居中，-mt-12 拉出卡顶一半 -->
+          <div class="flex justify-center -mt-12">
+            <div class="relative">
+              <div class="avatar-ring avatar-placeholder h-24 w-24 md:h-28 md:w-28 rounded-full flex items-center justify-center text-5xl md:text-6xl select-none">i</div>
+              <span class="absolute bottom-1 right-1 h-3.5 w-3.5 rounded-full bg-emerald-500 ring-2 ring-white" title="在线"></span>
+            </div>
+          </div>
+          <!-- 资料 -->
+          <div class="px-5 pt-3 pb-5 text-center">
+            <h1 class="text-xl font-bold text-slate-900">ideast</h1>
+            <p class="mt-0.5 text-sm text-slate-500">ideast · he / him</p>
+            <p class="mt-3 text-sm leading-relaxed text-slate-700">
+              开发者 / AI Agent & 全栈
+              <br/>正在学 Rust 与大数据。
+            </p>
+            <a href="#" class="mt-4 inline-flex w-full max-w-[200px] items-center justify-center gap-1.5 px-4 py-2 text-sm font-medium text-slate-700 btn-outline">
+              <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+              编辑资料
+            </a>
+          </div>
+        </div>
+
+        <div class="card p-5">
+          <h3 class="side-title">联系方式</h3>
+          <ul class="mt-3 space-y-2 text-sm">
+            <li>
+              <a class="link-brand inline-flex items-center gap-2" href="mailto:ideast2025@gmail.com">
+                <span class="inline-flex h-6 w-6 items-center justify-center rounded-md bg-slate-100 text-slate-500">
+                  <svg class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="16" height="16" rx="2"/><path d="m22 6-10 7L2 6"/></svg>
+                </span>
+                ideast2025@gmail.com
+              </a>
+            </li>
+            <li>
+              <a class="link-brand inline-flex items-center gap-2" href="https://ideast.top" target="_blank" rel="noreferrer noopener">
+                <span class="inline-flex h-6 w-6 items-center justify-center rounded-md bg-brand-50 text-brand-600">
+                  <svg class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                </span>
+                ideast.top
+              </a>
+            </li>
+          </ul>
+        </div>
+
+        <div class="card p-5">
+          <div class="flex items-center justify-between">
+            <h3 class="side-title">Tech Stack</h3>
+            <span class="text-xs text-slate-400 font-mono">13</span>
+          </div>
+          <div class="mt-3 grid grid-cols-5 gap-1.5">
+            <span class="tech-icon" style="background:#00add8" title="Go">GO</span>
+            <span class="tech-icon" style="background:#3776ab" title="Python">PY</span>
+            <span class="tech-icon" style="background:#3178c6" title="TypeScript">TS</span>
+            <span class="tech-icon" style="background:#f7df1e; color:#111" title="JavaScript">JS</span>
+            <span class="tech-icon" style="background:#339933" title="Node.js">ND</span>
+            <span class="tech-icon" style="background:#61dafb; color:#111" title="React">RC</span>
+            <span class="tech-icon" style="background:#111" title="Next.js">NX</span>
+            <span class="tech-icon" style="background:#336791" title="PostgreSQL">PG</span>
+            <span class="tech-icon" style="background:#dc382d" title="Redis">RD</span>
+            <span class="tech-icon" style="background:#2496ed" title="Docker">DK</span>
+            <span class="tech-icon" style="background:#f05032" title="Git">GT</span>
+            <span class="tech-icon" style="background:#009688" title="FastAPI">⚡</span>
+            <span class="tech-icon" style="background:#dea584; color:#111" title="Rust">RS</span>
+          </div>
+        </div>
+
+        </div>
+      </aside>
+
+      <!-- Main -->
+      <div class="space-y-6 reveal-up" style="animation-delay:.05s">
+
+        <section class="card p-6">
+          <h2 class="flex items-center gap-2 text-base font-semibold text-slate-900">
+            <span aria-hidden>🌱</span> About Me
+          </h2>
+          <ul class="mt-3 space-y-2 text-sm leading-relaxed text-slate-700">
+            <li class="flex items-start gap-2"><span class="mt-0.5 shrink-0">🤖</span><span>Interested in AI Agent &amp; Full-stack development, currently diving deep into both fields.</span></li>
+            <li class="flex items-start gap-2"><span class="mt-0.5 shrink-0">🌿</span><span>Love open source, keep learning and building practical projects.</span></li>
+            <li class="flex items-start gap-2"><span class="mt-0.5 shrink-0">⚙️</span><span>Exploring systems programming &amp; big data ecosystem.</span></li>
+            <li class="flex items-start gap-2"><span class="mt-0.5 shrink-0">🌙</span><span>Enjoy anime in spare time.</span></li>
+            <li class="flex items-start gap-2"><span class="mt-0.5 shrink-0">📮</span><span>Contact: ideast2025@gmail.com</span></li>
+          </ul>
+        </section>
+
+        <section class="card p-6">
+          <h2 class="flex items-center gap-2 text-base font-semibold text-slate-900">
+            <span aria-hidden>💻</span> Skills
+          </h2>
+          <div class="mt-3 space-y-3 text-sm leading-relaxed text-slate-700">
+            <div>
+              <div class="text-xs font-semibold uppercase tracking-wider text-slate-500">Backend</div>
+              <div class="mt-1 whitespace-pre-line">Go / Python / FastAPI
+PostgreSQL / Redis
+Docker
+分布式 / 大数据生态</div>
+            </div>
+            <div>
+              <div class="text-xs font-semibold uppercase tracking-wider text-slate-500">Frontend</div>
+              <div class="mt-1 whitespace-pre-line">TypeScript / JavaScript
+React / Next.js
+Node.js
+Tailwind / Radix</div>
+            </div>
+            <div>
+              <div class="text-xs font-semibold uppercase tracking-wider text-slate-500">Other</div>
+              <div class="mt-1 whitespace-pre-line">Rust (学习中)
+Git / GitHub
+AI Agent / LLM
+二次元</div>
+            </div>
+          </div>
+        </section>
+
+        <section class="card p-6">
+          <h2 class="flex items-center gap-2 text-base font-semibold text-slate-900">
+            <span aria-hidden>📝</span> Bio
+          </h2>
+          <p class="mt-3 whitespace-pre-line text-sm leading-relaxed text-slate-700">
+一个对 AI Agent 和系统编程充满好奇的全栈开发者。
+喜欢用代码把模糊的想法变成能用的东西，
+也愿意把踩过的坑写成笔记分享给同样在路上的人。
+
+持续学习，持续输出，欢迎一起交流。🌙</p>
+        </section>
+      </div>
+    </section>
+
+    <footer class="pt-2 text-center text-xs text-slate-400">
+      Designed for Dim Stack · © ideast
+    </footer>
+  </main>
+</body>
+</html>
