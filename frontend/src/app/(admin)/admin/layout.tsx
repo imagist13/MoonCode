@@ -11,8 +11,6 @@ function titleForPath(pathname: string): string {
   const map: Record<string, string> = {
     "/admin": "仪表盘",
     "/admin/articles": "文章管理",
-    "/admin/articles/editor": "编辑文章",
-    "/admin/articles/write": "写文章",
     "/admin/articles/create": "写文章",
     "/admin/categories": "分类管理",
     "/admin/tags": "标签管理",
@@ -20,13 +18,6 @@ function titleForPath(pathname: string): string {
     "/admin/messages": "留言管理",
     "/admin/talks": "说说管理",
     "/admin/albums": "相册管理",
-    "/admin/notifications": "通知",
-    "/admin/users": "用户管理",
-    "/admin/themes": "主题商店",
-    "/admin/friend-links": "友情链接",
-    "/admin/rbac": "角色权限",
-    "/admin/attachments": "附件管理",
-    "/admin/update": "更新管理",
     "/admin/settings": "站点设置",
     "/admin/logs": "操作日志",
   };
