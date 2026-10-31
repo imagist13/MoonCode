@@ -1,0 +1,188 @@
+package xyz.lingview.dimstack.controller;
+
+import lombok.extern.slf4j.Slf4j;
+import xyz.lingview.dimstack.annotation.RequiresPermission;
+import xyz.lingview.dimstack.common.ApiResponse;
+import xyz.lingview.dimstack.config.ThemeProperties;
+import xyz.lingview.dimstack.service.SiteConfigService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.*;
+
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+@Slf4j
+@RestController
+@RequestMapping("/api/theme")
+public class ThemeController {
+
+    private static final String DEFAULT_THEME = "default";
+
+    @Autowired
+    private ThemeProperties themeProperties;
+
+    @Autowired
+    private SiteConfigService siteConfigService;
+
+    @PostMapping("/switch")
+    @RequiresPermission("system:theme:management")
+    public ApiResponse<String> switchTheme(@RequestParam String themeName) {
+        String themesPath = themeProperties.getThemesPath();
+        Path themeDir = Path.of(themesPath, themeName);
+
+        if (!Files.exists(themeDir) || !Files.isDirectory(themeDir)) {
+            return ApiResponse.error(400, "主题目录不存在: " + themeName);
+        }
+
+        themeProperties.setActiveTheme(themeName);
+        boolean success = siteConfigService.updateSiteTheme(themeName);
+
+        if (!success) {
+            return ApiResponse.error(500, "主题保存到数据库失败");
+        }
+
+        String currentTheme = themeProperties.getActiveTheme();
+        if (currentTheme.equals(themeName)) {
+            return ApiResponse.success("主题已切换至: " + themeName, themeName);
+        } else {
+            return ApiResponse.error(500, "主题切换失败: " + themeName);
+        }
+    }
+
+    @PostMapping("/deactivate")
+    @RequiresPermission("system:theme:management")
+    public ApiResponse<String> deactivateTheme() {
+        String activeTheme = themeProperties.getActiveTheme();
+        if (DEFAULT_THEME.equals(activeTheme)) {
+            return ApiResponse.error(400, "默认主题为系统内置主题，无需取消激活");
+        }
+
+        themeProperties.setActiveTheme(DEFAULT_THEME);
+        boolean success = siteConfigService.updateSiteTheme(DEFAULT_THEME);
+
+        if (!success) {
+            return ApiResponse.error(500, "Failed to save theme to database");
+        }
+
+        return ApiResponse.success("已取消激活，已切换回默认主题", DEFAULT_THEME);
+    }
+
+    @GetMapping("/current")
+    @RequiresPermission("system:theme:management")
+    public ApiResponse<String> getCurrentTheme() {
+        String activeTheme = themeProperties.getActiveTheme();
+        return ApiResponse.success("", activeTheme);
+    }
+
+    @GetMapping("/list")
+    @RequiresPermission("system:theme:management")
+    public ApiResponse<String> listAvailableThemes() {
+        try {
+            StringBuilder result = new StringBuilder("Available themes:\n");
+            String themesPath = themeProperties.getThemesPath();
+            Path themesDir = Path.of(themesPath);
+
+            if (Files.exists(themesDir) && Files.isDirectory(themesDir)) {
+                Files.list(themesDir)
+                    .filter(Files::isDirectory)
+                    .forEach(dir -> {
+                        String themeName = dir.getFileName().toString();
+                        String currentMarker = themeName.equals(themeProperties.getActiveTheme()) ? " (current)" : "";
+                        result.append("- ").append(themeName).append(currentMarker).append("\n");
+                    });
+            } else {
+                result.append("Themes directory not found: ").append(themesPath);
+            }
+
+            return ApiResponse.success("", result.toString());
+        } catch (Exception e) {
+            log.error("主题读取失败", e);
+            return ApiResponse.error(500, "主题读取失败");
+        }
+    }
+
+    @PostMapping("/validate")
+    @RequiresPermission("system:theme:management")
+    public ApiResponse<String> validateTheme(@RequestParam String themeName) {
+        try {
+            String themesPath = themeProperties.getThemesPath();
+            Path themeDir = Path.of(themesPath, themeName);
+
+            if (!Files.exists(themeDir)) {
+                return ApiResponse.error(400, "Theme '" + themeName + "' does not exist");
+            }
+
+            if (!Files.isDirectory(themeDir)) {
+                return ApiResponse.error(400, "Path '" + themeName + "' is not a directory");
+            }
+
+            Path indexFile = themeDir.resolve("index.html");
+            if (Files.exists(indexFile)) {
+                return ApiResponse.success("", "Theme '" + themeName + "' is valid and has index.html");
+            } else {
+                return ApiResponse.success("", "Theme '" + themeName + "' is valid but does not have index.html");
+            }
+        } catch (Exception e) {
+            log.error("主题验证出错", e);
+            return ApiResponse.error(500, "Error 验证主题出错");
+        }
+    }
+
+    private String readThemeVersion(Path themeDir) {
+        try {
+            Path configFile = themeDir.resolve("config.ini");
+            if (!Files.exists(configFile) || !Files.isRegularFile(configFile)) {
+                return null;
+            }
+            for (String rawLine : Files.readAllLines(configFile)) {
+                String line = rawLine.replace("\uFEFF", "").trim();
+                if (line.isEmpty() || line.startsWith("#") || line.startsWith(";") || line.startsWith("[")) {
+                    continue;
+                }
+                int eq = line.indexOf('=');
+                if (eq > 0 && line.substring(0, eq).trim().equalsIgnoreCase("version")) {
+                    String value = line.substring(eq + 1).trim();
+                    return value.isEmpty() ? null : value;
+                }
+            }
+        } catch (Exception e) {
+            log.warn("读取主题版本失败: {}", e.getMessage());
+        }
+        return null;
+    }
+
+    @GetMapping("/list/json")
+    @RequiresPermission("system:theme:management")
+    public ApiResponse<List<Map<String, Object>>> listAvailableThemesJson() {
+        try {
+            List<Map<String, Object>> themes = new ArrayList<>();
+            String themesPath = themeProperties.getThemesPath();
+            Path themesDir = Path.of(themesPath);
+            String activeTheme = themeProperties.getActiveTheme();
+
+            if (Files.exists(themesDir) && Files.isDirectory(themesDir)) {
+                Files.list(themesDir)
+                        .filter(Files::isDirectory)
+                        .forEach(dir -> {
+                            String themeName = dir.getFileName().toString();
+                            Map<String, Object> themeInfo = new HashMap<>();
+                            themeInfo.put("name", themeName);
+                            themeInfo.put("slug", themeName);
+                            themeInfo.put("isCurrent", themeName.equals(activeTheme));
+                            themeInfo.put("version", readThemeVersion(dir));
+                            themes.add(themeInfo);
+                        });
+            }
+
+            return ApiResponse.success(themes);
+        } catch (Exception e) {
+            log.error("获取主题列表失败", e);
+            return ApiResponse.error(500, "Error listing themes");
+        }
+    }
+
+}

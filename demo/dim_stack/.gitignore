@@ -1,0 +1,39 @@
+backend/dimstack-app/target/
+backend/dimstack-app/docs/
+backend/dimstack-app/src/main/resources/static/
+backend/dimstack-plugin-api/target/
+dimstack_expansion_server/target/
+dimstack_expansion_server/docs/
+frontend/node_modules/
+frontend/dist/
+.idea/
+upload/
+logs/
+systemconfig/target/
+.vscode/
+application-setup.properties
+/systemconfig/dependency-reduced-pom.xml
+qodana.yaml
+cli/.vscode
+cli/src/o
+cli/src/nuitka-crash-report.xml
+firefly-theme/
+examples/plugins/**/target/
+plugin_example/**/target/
+/plugins/
+plugin-startup.log
+
+# 初始化生成的配置(含数据库密码等敏感信息)与运行期数据目录
+/config/
+/data/
+# 根目录游离的构建产物与 IDE 文件
+/BOOT-INF/
+/*.jar
+*.iml
+# 前端共享依赖 vendor 产物(npm prebuild/predev 自动生成)
+frontend/public/vendor/
+
+# 开发测试用的主题与示例插件(不入库)
+/themes/
+/enterprise-theme/
+/examples/

@@ -1,0 +1,27 @@
+package xyz.lingview.dimstack.domain;
+
+import lombok.Data;
+import java.util.Date;
+
+@Data
+public class ReadArticle {
+    private Integer id;
+    private String uuid;
+    private String article_id;
+    private String article_name;
+    private String article_cover;
+    private String excerpt;
+    private String article_content;
+    private Long page_views;
+    private Long like_count;
+    private Long favorite_count;
+    private String password;
+    private String tag;
+    private String category;
+    private String alias;
+    private String author;
+    private String avatar;
+    private Date create_time;
+    private Integer status;
+    private Integer enable_comment;
+}

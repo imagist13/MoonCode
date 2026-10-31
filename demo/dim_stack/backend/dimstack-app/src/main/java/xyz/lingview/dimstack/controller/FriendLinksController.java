@@ -1,0 +1,215 @@
+package xyz.lingview.dimstack.controller;
+
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+import xyz.lingview.dimstack.annotation.RequiresPermission;
+import xyz.lingview.dimstack.common.ApiResponse;
+import xyz.lingview.dimstack.domain.FriendLinks;
+import xyz.lingview.dimstack.domain.FriendLinksConfig;
+import xyz.lingview.dimstack.dto.request.FriendLinksRequestDTO;
+import xyz.lingview.dimstack.service.FriendLinksService;
+import xyz.lingview.dimstack.service.FriendLinksConfigService;
+
+import jakarta.validation.Valid;
+import java.util.List;
+import java.util.Map;
+/**
+ * @Author: lingview
+ * @Date: 2025/12/04 19:52:09
+ * @Description: 友链控制器
+ * @Version: 1.0
+ */
+@RestController
+@RequestMapping("/api/friend-links")
+@Slf4j
+public class FriendLinksController {
+
+    @Autowired
+    private FriendLinksService friendLinkService;
+
+    @Autowired
+    private FriendLinksConfigService friendLinksConfigService;
+
+
+    @PostMapping("/apply")
+    public ApiResponse<Void> applyFriendLink(@RequestBody @Valid FriendLinksRequestDTO requestDTO) {
+        try {
+            log.info("收到友链申请: {}", requestDTO.getSiteName());
+            boolean result = friendLinkService.applyFriendLink(requestDTO);
+
+            if (result) {
+                return ApiResponse.success("友链申请已提交，等待管理员审核");
+            } else {
+                return ApiResponse.error(500, "友链申请失败");
+            }
+        } catch (Exception e) {
+            log.error("友链申请失败", e);
+            return ApiResponse.error(500, "友链申请时发生错误: " + e.getMessage());
+        }
+    }
+
+
+//    @GetMapping("/approved")
+//    public ResponseEntity<Map<String, Object>> getApprovedFriendLinks() {
+//        try {
+//            List<FriendLinks> friendLinks = friendLinkService.getApprovedFriendLinks();
+//            return ResponseEntity.ok(Map.of(
+//                    "success", true,
+//                    "data", friendLinks
+//            ));
+//        } catch (Exception e) {
+//            log.error("获取友链列表失败", e);
+//            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+//                    .body(Map.of(
+//                            "success", false,
+//                            "message", "获取友链列表失败: " + e.getMessage()
+//                    ));
+//        }
+//    }
+
+
+    @GetMapping("/approved/page")
+    public ApiResponse<Map<String, Object>> getApprovedFriendLinksByPage(
+            @RequestParam(defaultValue = "1") Integer page,
+            @RequestParam(defaultValue = "12") Integer size) {
+        try {
+            Map<String, Object> result = friendLinkService.getFriendLinksByPage(page, size, 1);
+            return ApiResponse.success(result);
+        } catch (Exception e) {
+            log.error("获取友链列表失败", e);
+            return ApiResponse.error(500, "获取友链列表失败: " + e.getMessage());
+        }
+    }
+
+
+
+    @PostMapping
+    @RequiresPermission("system:friendlinks:management")
+    public ApiResponse<Void> addFriendLink(@RequestBody @Valid FriendLinksRequestDTO requestDTO) {
+        try {
+            boolean result = friendLinkService.addFriendLink(requestDTO);
+            if (result) {
+                return ApiResponse.success("友链添加成功");
+            } else {
+                return ApiResponse.error(500, "友链添加失败");
+            }
+        } catch (Exception e) {
+            log.error("后台添加友链失败", e);
+            return ApiResponse.error(500, "添加友链时发生错误: " + e.getMessage());
+        }
+    }
+
+    @GetMapping
+    @RequiresPermission("system:friendlinks:management")
+    public ApiResponse<Map<String, Object>> getFriendLinks(
+            @RequestParam(defaultValue = "1") Integer page,
+            @RequestParam(defaultValue = "10") Integer size,
+            @RequestParam(required = false) Integer status) {
+        try {
+            Map<String, Object> result = friendLinkService.getFriendLinksByPage(page, size, status);
+            return ApiResponse.success(result);
+        } catch (Exception e) {
+            log.error("获取友链列表失败", e);
+            return ApiResponse.error(500, "获取友链列表失败: " + e.getMessage());
+        }
+    }
+
+
+    @PutMapping("/{id}/status")
+    @RequiresPermission("system:friendlinks:management")
+    public ApiResponse<Void> updateFriendLinkStatus(
+            @PathVariable Integer id,
+            @RequestParam Integer status) {
+        try {
+            boolean result = friendLinkService.updateFriendLinkStatus(id, status);
+            if (result) {
+                return ApiResponse.success("友链状态更新成功");
+            } else {
+                return ApiResponse.error(404, "未找到该友链");
+            }
+        } catch (Exception e) {
+            log.error("更新友链状态失败", e);
+            return ApiResponse.error(500, "更新友链状态失败: " + e.getMessage());
+        }
+    }
+
+
+    @DeleteMapping("/{id}")
+    @RequiresPermission("system:friendlinks:management")
+    public ApiResponse<Void> deleteFriendLink(@PathVariable Integer id) {
+        try {
+            boolean result = friendLinkService.deleteFriendLink(id);
+            if (result) {
+                return ApiResponse.success("友链删除成功");
+            } else {
+                return ApiResponse.error(404, "未找到该友链");
+            }
+        } catch (Exception e) {
+            log.error("删除友链失败", e);
+            return ApiResponse.error(500, "删除友链失败: " + e.getMessage());
+        }
+    }
+
+    @DeleteMapping("/{id}/permanent")
+    @RequiresPermission("system:friendlinks:management")
+    public ApiResponse<Void> deleteFriendLinkPermanent(@PathVariable Integer id) {
+        try {
+            boolean result = friendLinkService.deleteFriendLinkPermanent(id);
+            if (result) {
+                return ApiResponse.success("友链彻底删除成功");
+            } else {
+                return ApiResponse.error(404, "未找到该友链");
+            }
+        } catch (Exception e) {
+            log.error("彻底删除友链失败", e);
+            return ApiResponse.error(500, "彻底删除友链失败: " + e.getMessage());
+        }
+    }
+
+    @GetMapping("/site-info")
+    public ApiResponse<FriendLinksConfig> getSiteFriendLinkInfo() {
+        try {
+            FriendLinksConfig config = friendLinksConfigService.getActiveConfig();
+            return ApiResponse.success(config);
+        } catch (Exception e) {
+            log.error("获取本站友链信息失败", e);
+            return ApiResponse.error(500, "获取本站友链信息失败: " + e.getMessage());
+        }
+    }
+
+    @PutMapping("/site-info")
+    @RequiresPermission("system:friendlinks:management")
+    public ApiResponse<Void> updateSiteFriendLinkInfo(@RequestBody FriendLinksConfig config) {
+        try {
+            boolean result = friendLinksConfigService.updateConfig(config);
+            if (result) {
+                return ApiResponse.success("本站友链信息更新成功");
+            } else {
+                return ApiResponse.error(500, "本站友链信息更新失败");
+            }
+        } catch (Exception e) {
+            log.error("更新本站友链信息失败", e);
+            return ApiResponse.error(500, "更新本站友链信息失败: " + e.getMessage());
+        }
+    }
+
+    // 友链后台编辑
+    @PutMapping("/{id}")
+    @RequiresPermission("system:friendlinks:management")
+    public ApiResponse<Void> updateFriendLink(@PathVariable Integer id, @RequestBody @Valid FriendLinksRequestDTO requestDTO) {
+        try {
+            boolean result = friendLinkService.updateFriendLink(id, requestDTO);
+            if (result) {
+                return ApiResponse.success("友链信息更新成功");
+            } else {
+                return ApiResponse.error(404, "未找到该友链");
+            }
+        } catch (Exception e) {
+            log.error("更新友链失败", e);
+            return ApiResponse.error(500, "更新友链失败: " + e.getMessage());
+        }
+    }
+
+}

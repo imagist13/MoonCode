@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="xyz.lingview.dimstack.mapper.ArticleReviewMapper">
+
+    <!-- 获取未审核文章列表 -->
+    <select id="selectUnreviewedArticles" resultType="xyz.lingview.dimstack.dto.request.ArticleReviewDTO">
+        SELECT
+            a.article_id,
+            a.article_name,
+            a.article_cover,
+            a.uuid,
+            a.excerpt,
+            a.create_time,
+            t.tag,
+            CASE 
+                WHEN p.article_categories IS NULL THEN c.article_categories
+                ELSE CONCAT(p.article_categories, '/', c.article_categories)
+            END AS category,
+            a.status
+        FROM (
+                 SELECT article_id, category_id
+                 FROM article
+                 WHERE status = 3
+                 ORDER BY create_time DESC
+                 LIMIT #{offset}, #{size}
+             ) page
+                 JOIN article a ON page.article_id = a.article_id
+                 LEFT JOIN article_categories c ON a.category_id = c.id
+                 LEFT JOIN article_categories p ON c.parent_id = p.id
+                 LEFT JOIN (
+            SELECT article_id, GROUP_CONCAT(article_tag) AS tag
+            FROM article_tag_relation
+            GROUP BY article_id
+        ) t ON a.article_id = t.article_id
+    </select>
+
+
+    <!-- 统计未审核文章数量 -->
+    <select id="countUnreviewedArticles" resultType="int">
+        SELECT COUNT(*)
+        FROM article
+        WHERE status = 3
+    </select>
+
+    <!-- 根据文章id获取文章详情 -->
+    <select id="selectArticleById" parameterType="string" resultType="xyz.lingview.dimstack.domain.Article">
+        SELECT *
+        FROM article
+        WHERE article_id = #{article_id}
+    </select>
+
+    <!-- 根据文章id获取文章名 -->
+    <select id="getArticleNameByArticleId" resultType="string">
+        SELECT article_name
+        FROM article
+        WHERE article_id = #{article_id}
+    </select>
+
+    <!-- 更新文章状态 -->
+    <update id="updateArticleStatus">
+        UPDATE article
+        SET status = #{status}
+        WHERE article_id = #{article_id}
+    </update>
+
+    <!-- 获取所有文章列表（用于审核全部文章） -->
+    <select id="selectAllArticles" resultType="xyz.lingview.dimstack.dto.request.ArticleReviewDTO">
+        SELECT
+            a.article_id,
+            a.article_name,
+            a.article_cover,
+            a.uuid,
+            a.excerpt,
+            a.create_time,
+            t.tag,
+            CASE 
+                WHEN p.article_categories IS NULL THEN c.article_categories
+                ELSE CONCAT(p.article_categories, '/', c.article_categories)
+            END AS category,
+            a.status
+        FROM (
+                 SELECT article_id, category_id
+                 FROM article
+                 WHERE status IN (1, 2, 3, 4)
+                 ORDER BY create_time DESC
+                 LIMIT #{offset}, #{size}
+             ) page
+                 JOIN article a ON page.article_id = a.article_id
+                 LEFT JOIN article_categories c ON a.category_id = c.id
+                 LEFT JOIN article_categories p ON c.parent_id = p.id
+                 LEFT JOIN (
+            SELECT article_id, GROUP_CONCAT(article_tag) AS tag
+            FROM article_tag_relation
+            GROUP BY article_id
+        ) t ON a.article_id = t.article_id
+    </select>
+
+
+    <!-- 统计所有可审核文章数量 -->
+    <select id="countAllArticles" resultType="int">
+        SELECT COUNT(*)
+        FROM article
+        WHERE status IN (1, 2, 3, 4)
+    </select>
+</mapper>

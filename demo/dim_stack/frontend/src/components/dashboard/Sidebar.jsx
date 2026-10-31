@@ -1,0 +1,238 @@
+import { useState, useEffect } from 'react';
+import { getIcon } from '../../utils/IconUtils';
+import { fetchSiteName } from '../../Api.jsx';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { getConfig } from '../../utils/config.jsx';
+
+export default function Sidebar({ activeTab, onTabChange, isOpen, onToggle, onClose, username, avatar, menuItems }) {
+    const [expandedItems, setExpandedItems] = useState({});
+    const [siteName, setSiteName] = useState('');
+    const [isVisible, setIsVisible] = useState(false);
+    const [showOverlay, setShowOverlay] = useState(false);
+    const avatarUrl = getConfig().getFullUrl(avatar);
+    useEffect(() => {
+        const loadSiteName = async () => {
+            const name = await fetchSiteName();
+            if (name) {
+                setSiteName(name);
+            } else {
+                setSiteName("");
+            }
+        };
+        loadSiteName();
+    }, []);
+
+    useEffect(() => {
+        const timer = requestAnimationFrame(() => {
+            setIsVisible(true);
+        });
+        return () => cancelAnimationFrame(timer);
+    }, []);
+
+    useEffect(() => {
+        if (isOpen) {
+            setShowOverlay(true);
+        } else {
+            const timer = setTimeout(() => {
+                setShowOverlay(false);
+            }, 300);
+            return () => clearTimeout(timer);
+        }
+    }, [isOpen]);
+
+    const location = useLocation();
+    const navigate = useNavigate();
+
+    const matchesPath = (link) => {
+        if (!link) return false;
+        const path = location.pathname;
+        return path === link || (link !== '/dashboard' && path.startsWith(link + '/'));
+    };
+
+    const collectMenuLinks = (items, acc) => {
+        for (const item of items || []) {
+            if (!item) continue;
+            if (item.link) acc.push(item.link);
+            if (item.children) collectMenuLinks(item.children, acc);
+        }
+        return acc;
+    };
+
+    const activeLink = collectMenuLinks(menuItems, [])
+        .filter(matchesPath)
+        .sort((a, b) => b.length - a.length)[0] || null;
+
+    const handleMenuClick = (item) => {
+        if (item.link) {
+            navigate(item.link);
+        }
+        if (item.children) {
+            if (isOpen) {
+                toggleExpanded(item.id);
+            } else {
+                onToggle();
+            }
+        }
+        if (window.innerWidth < 768) {
+            onClose();
+        }
+    };
+
+    const renderMenuItems = (items, depth) => (
+        <ul className={depth === 0 ? 'space-y-1 px-2' : 'mt-1 space-y-1'}>
+            {items.map((item) => item && (
+                <li key={item.id}>
+                    <button
+                        onClick={() => handleMenuClick(item)}
+                        className={`w-full flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 ${
+                            activeLink === item.link
+                                ? 'bg-blue-100 text-blue-700 sidebar-nav-item-active'
+                                : 'text-gray-700 hover:bg-gray-100 sidebar-nav-item-default'
+                        }`}
+                        style={depth > 0 ? { paddingLeft: `${24 * depth + 12}px` } : undefined}
+                    >
+                        <span className={depth === 0 ? 'text-lg' : 'text-base'}>{getIcon(item.icon)}</span>
+                        {isOpen && (
+                            <>
+                                <span className="ml-3">{item.title}</span>
+                                {item.children && (
+                                    <svg
+                                        xmlns="http://www.w3.org/2000/svg"
+                                        className={`ml-auto h-4 w-4 transition-transform duration-200 ${
+                                            expandedItems[item.id] ? 'rotate-180' : ''
+                                        }`}
+                                        viewBox="0 0 20 20"
+                                        fill="currentColor"
+                                    >
+                                        <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+                                    </svg>
+                                )}
+                            </>
+                        )}
+                    </button>
+                    {item.children && isOpen && expandedItems[item.id] && renderMenuItems(item.children, depth + 1)}
+                </li>
+            ))}
+        </ul>
+    );
+
+    const toggleExpanded = (itemId) => {
+        setExpandedItems(prev => ({
+            ...prev,
+            [itemId]: !prev[itemId]
+        }));
+    };
+
+    const handleClick = () => {
+        navigate('/dashboard/profile');
+    };
+
+    const handleSiteNameClick = () => {
+        // navigate('/');
+        window.location.href = '/';
+    };
+    return (
+        <>
+            {/* 移动端遮罩层 */}
+            {showOverlay && (
+                <div
+                    className="fixed inset-0 z-40 md:hidden backdrop-blur-sm transition-all duration-300"
+                    onClick={onClose}
+                    style={{
+                        backdropFilter: isOpen ? 'blur(4px)' : 'blur(0px)',
+                        pointerEvents: isOpen ? 'auto' : 'none'
+                    }}
+                />
+            )}
+
+            <div
+                className={`
+                    group
+                    ${isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
+                    w-64 md:w-auto
+                    ${!isOpen && 'md:w-16'}
+                    bg-white border-r border-gray-200
+                    flex flex-col
+                    fixed md:relative
+                    h-full
+                    z-50
+                    transition-all duration-300 ease-in-out
+                    sidebar-bg
+                `}
+                style={{
+                    opacity: isVisible ? 1 : 0,
+                    transitionProperty: 'opacity, transform, width',
+                    transitionDuration: '200ms, 300ms, 300ms',
+                    transitionTimingFunction: 'ease-in-out'
+                }}
+            >
+                <button
+                    onClick={onToggle}
+                    className="hidden md:flex items-center justify-center absolute top-20 -right-3 h-6 w-6 rounded-full bg-white border border-gray-200 shadow-md text-gray-500 hover:text-blue-600 hover:border-blue-300 hover:shadow-lg opacity-0 group-hover:opacity-100 transition-all duration-200 z-50 sidebar-toggle-btn"
+                    aria-label={isOpen ? '收起侧边栏' : '展开侧边栏'}
+                    title={isOpen ? '收起侧边栏' : '展开侧边栏'}
+                >
+                    <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-4 w-4"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth={2}
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                    >
+                        {isOpen ? (
+                            <path d="M15 18l-6-6 6-6" />
+                        ) : (
+                            <path d="M9 18l6-6-6-6" />
+                        )}
+                    </svg>
+                </button>
+
+                <div className="h-16 px-4 flex items-center border-b border-gray-200 sidebar-header-border">
+                    <div className="flex items-center justify-between w-full">
+                        <div className="flex items-center space-x-3">
+                            <div
+                                onClick={handleSiteNameClick}
+                                className="text-2xl font-bold text-blue-600 sidebar-site-name cursor-pointer hover:opacity-80 transition-opacity duration-200"
+                            >
+                                {isOpen ? siteName : (siteName?.charAt(0) || 'D')}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* 导航菜单 */}
+                <nav className="mt-4 flex-1 overflow-y-auto overflow-x-hidden hide-scrollbar">
+                    {renderMenuItems(menuItems, 0)}
+                </nav>
+
+                {/* 底部用户信息 */}
+                <div className="mt-auto p-4 border-t border-gray-200 sidebar-user-info-border">
+                    <div className="flex items-center space-x-3">
+                        <div className="w-8 h-8 rounded-full flex items-center justify-center text-white font-semibold">
+                            <img src={avatarUrl} alt="Avatar" className="w-8 h-8 rounded-full" />
+                        </div>
+                        {isOpen && (
+                            <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium text-gray-900 sidebar-user-name truncate">{username}</p>
+                            </div>
+                        )}
+                        {isOpen && (
+                            <button
+                                onClick={handleClick}
+                                className="text-gray-500 hover:text-gray-700 p-1 rounded-md hover:bg-gray-100 transition-colors duration-200 sidebar-icon-button"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                </svg>
+                            </button>
+                        )}
+                    </div>
+                </div>
+            </div>
+        </>
+    );
+}
