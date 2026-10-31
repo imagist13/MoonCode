@@ -1,41 +1,51 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getAbout, type AboutInfo } from "@/lib/about";
+import { getAbout, updateAbout, type AboutInfo } from "@/lib/about";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { AboutSidebar } from "@/components/about/AboutSidebar";
 import { AboutMain } from "@/components/about/AboutMain";
-import { BannerUploader } from "@/components/about/BannerUploader";
 import { Skeleton } from "@/components/ui/skeleton";
 
 /**
- * 关于页：
- *   ┌────────────────────────────────────────────┐
- *   │            Hero Banner（mesh + 粒子）        │
- *   ├──────────────┬─────────────────────────────┤
- *   │  Sidebar      │  Main（About Me / Skills /  │
- *   │  - Identity  │         Bio）                │
- *   │  - 联系方式   │                              │
- *   │  - Tech Stack│                             │
+ * 关于页（极简两栏，对齐文章页）：
+ *   ┌──────────────┬─────────────────────────────┐
+ *   │  左栏 300px   │  右栏（介绍 Markdown）       │
+ *   │  - 身份卡     │  - bio 正文                  │
+ *   │  - 联系方式   │  - About Me / 成就 / 技能     │
+ *   │  - Tech Stack │                             │
  *   └──────────────┴─────────────────────────────┘
  *
- * 两栏 grid 用 -mt-16 上移，让身份卡里的 -mt-12 头像正好叠到 banner 下沿，
- * 跟 mockup 的「头像压住两块」视觉一致。
- *
- * - 公共部分（昵称、bio、tech stack 等）所有人都能看到；
- * - 头像 / Banner hover 上传、「编辑资料」按钮仅对管理员暴露。
- *
- * 注意：头像/Banner 上传后只更新本地预览，不会自动落库——落库需要
- * 管理员在「站点设置」页点击「保存」按钮（avatar/banner 已合并进表单）。
+ * - 左栏 sticky 跟随滚动，右栏 min-w-0 自适应；
+ * - 头像 hover 上传、「编辑资料」入口仅对管理员暴露；
+ * - 头像上传后立即落库（updateAbout），换完刷新也在。
  */
 export default function AboutPage() {
   const isAdmin = useIsAdmin();
   const [data, setData] = useState<AboutInfo | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // 头像 / Banner 走受控本地状态，保存时才一起写入接口
+  // 头像受控本地状态，上传后立即落库
   const [avatarDraft, setAvatarDraft] = useState("");
-  const [bannerDraft, setBannerDraft] = useState("");
+
+  // 头像上传后立即落库，实现「换完刷新也在」
+  const handleAvatarChange = async (url: string) => {
+    if (!data) {
+      setAvatarDraft(url);
+      return;
+    }
+    const prevAvatar = data.avatar;
+    const next = { ...data, avatar: url };
+    setData(next);
+    setAvatarDraft(url);
+    try {
+      await updateAbout(next);
+    } catch {
+      // 落库失败回滚；错误提示已由 api 层 toast
+      setData({ ...data, avatar: prevAvatar });
+      setAvatarDraft(prevAvatar);
+    }
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -44,7 +54,6 @@ export default function AboutPage() {
         if (cancelled) return;
         setData(info);
         setAvatarDraft(info.avatar);
-        setBannerDraft(info.banner);
       })
       .catch(() => {
         if (!cancelled) setData(null);
@@ -59,21 +68,16 @@ export default function AboutPage() {
 
   if (loading) {
     return (
-      <div className="space-y-6">
-        {/* Banner 骨架 */}
-        <Skeleton className="h-[180px] w-full rounded-2xl md:h-[200px]" />
-        {/* 两栏骨架 */}
-        <div className="grid gap-6 lg:grid-cols-[280px_1fr]">
-          <div className="space-y-4">
-            <Skeleton className="h-44 w-full rounded-xl" />
-            <Skeleton className="h-24 w-full rounded-xl" />
-            <Skeleton className="h-32 w-full rounded-xl" />
-          </div>
-          <div className="space-y-4">
-            <Skeleton className="h-40 w-full rounded-xl" />
-            <Skeleton className="h-56 w-full rounded-xl" />
-            <Skeleton className="h-32 w-full rounded-xl" />
-          </div>
+      <div className="grid gap-8 lg:grid-cols-[300px_1fr]">
+        <div className="space-y-5">
+          <Skeleton className="h-48 w-full rounded-xl" />
+          <Skeleton className="h-28 w-full rounded-xl" />
+          <Skeleton className="h-32 w-full rounded-xl" />
+        </div>
+        <div className="space-y-4">
+          <Skeleton className="h-40 w-full rounded-xl" />
+          <Skeleton className="h-56 w-full rounded-xl" />
+          <Skeleton className="h-32 w-full rounded-xl" />
         </div>
       </div>
     );
@@ -88,24 +92,18 @@ export default function AboutPage() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Hero Banner */}
-      <BannerUploader
-        value={bannerDraft}
-        onChange={setBannerDraft}
-        editable={isAdmin}
-      />
-
-      {/* 两栏：-mt-16 让身份卡里的头像（-mt-12）正好叠到 banner 下沿 */}
-      <section className="relative z-10 grid items-start gap-6 lg:-mt-16 lg:grid-cols-[280px_1fr]">
+    <div className="grid items-start gap-8 lg:grid-cols-[300px_1fr]">
+      <aside className="lg:sticky lg:top-28 lg:self-start">
         <AboutSidebar
           data={data}
           editable={isAdmin}
           avatarValue={avatarDraft}
-          onAvatarChange={setAvatarDraft}
+          onAvatarChange={handleAvatarChange}
         />
+      </aside>
+      <div className="min-w-0">
         <AboutMain data={data} />
-      </section>
+      </div>
     </div>
   );
 }
