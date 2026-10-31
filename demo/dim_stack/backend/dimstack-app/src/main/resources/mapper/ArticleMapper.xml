@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="xyz.lingview.dimstack.mapper.ArticleMapper">
+
+    <resultMap id="articleDtoMap" type="xyz.lingview.dimstack.dto.request.ArticleDTO">
+        <id property="id" column="id"/>
+        <result property="article_id" column="article_id"/>
+        <result property="title" column="title"/>
+        <result property="excerpt" column="excerpt"/>
+        <result property="image" column="image"/>
+        <result property="date" column="date"/>
+        <result property="author" column="author"/>
+        <result property="category" column="category"/>
+        <result property="tag" column="tag"/>
+        <result property="alias" column="alias"/>
+        <result property="password" column="password"/>
+    </resultMap>
+
+    <!-- 查询首页文章列表 -->
+    <select id="selectArticlesForHomePage" resultMap="articleDtoMap">
+        SELECT
+        a.id,
+        a.uuid,
+        a.article_id,
+        a.article_name AS title,
+        a.excerpt,
+        a.article_cover AS image,
+        a.create_time AS date,
+        u.username AS author,
+        u.avatar AS author_avatar,
+        CASE
+        WHEN p.article_categories IS NULL THEN c.article_categories
+        ELSE CONCAT(p.article_categories, '/', c.article_categories)
+        END AS category,
+        a.alias,
+        t.tag,
+        CASE WHEN a.password IS NOT NULL AND a.password != '' THEN true ELSE false END AS password
+        FROM (
+        SELECT id, category_id
+        FROM article
+        WHERE status = 1
+        <if test="category != null and category != ''">
+            AND category_id = (
+            SELECT c.id
+            FROM article_categories c
+            LEFT JOIN article_categories p ON c.parent_id = p.id
+            WHERE c.article_categories = #{childCategory}
+            <if test="parentCategory != null and parentCategory != ''">
+                AND p.article_categories = #{parentCategory}
+            </if>
+            )
+        </if>
+        ORDER BY create_time DESC
+        LIMIT #{param1}, #{param2}
+        ) page
+        JOIN article a ON page.id = a.id
+        JOIN user_information u ON a.uuid = u.uuid
+        LEFT JOIN article_categories c ON a.category_id = c.id
+        LEFT JOIN article_categories p ON c.parent_id = p.id
+        LEFT JOIN (
+        SELECT article_id, GROUP_CONCAT(article_tag) AS tag
+        FROM article_tag_relation
+        GROUP BY article_id
+        ) t ON a.article_id = t.article_id
+        ORDER BY a.create_time DESC
+    </select>
+
+    <!-- 统计文章总数 -->
+    <select id="countArticles" resultType="int">
+        SELECT COUNT(*)
+        FROM article a
+        WHERE a.status = 1
+        <if test="category != null and category != ''">
+            AND a.category_id = (
+                SELECT c.id 
+                FROM article_categories c 
+                LEFT JOIN article_categories p ON c.parent_id = p.id 
+                WHERE c.article_categories = #{childCategory}
+                <if test="parentCategory != null and parentCategory != ''">
+                    AND p.article_categories = #{parentCategory}
+                </if>
+            )
+        </if>
+    </select>
+
+    <!-- 评论区 -->
+    <select id="selectArticleByAlias" parameterType="string" resultType="xyz.lingview.dimstack.domain.Article">
+        SELECT * FROM article WHERE alias = #{alias} AND status IN (1, 2)
+    </select>
+    <select id="selectArticleByArticleId" parameterType="string" resultType="xyz.lingview.dimstack.domain.Article">
+        SELECT * FROM article WHERE article_id = #{articleId} AND status IN (1, 2)
+    </select>
+
+    <!-- 根据文章uuid查询文章所有者uuid -->
+    <select id="selectUserUuidByArticleId" parameterType="string" resultType="string">
+        SELECT uuid FROM article WHERE article_id = #{articleId}
+    </select>
+
+    <!-- 更新文章点赞数 -->
+    <update id="updateArticleLikeCount">
+        UPDATE article 
+        SET like_count = #{likeCount}
+        WHERE article_id = #{articleId}
+    </update>
+
+</mapper>

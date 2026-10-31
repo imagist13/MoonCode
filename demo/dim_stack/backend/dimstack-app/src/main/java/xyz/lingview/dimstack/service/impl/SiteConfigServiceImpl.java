@@ -1,0 +1,263 @@
+package xyz.lingview.dimstack.service.impl;
+
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
+import org.springframework.stereotype.Service;
+import xyz.lingview.dimstack.config.ThemeProperties;
+import xyz.lingview.dimstack.domain.SiteConfig;
+import xyz.lingview.dimstack.dto.request.HeroDTO;
+import xyz.lingview.dimstack.mapper.SiteConfigMapper;
+import xyz.lingview.dimstack.service.CacheService;
+import xyz.lingview.dimstack.service.SiteConfigService;
+
+@Service
+@Slf4j
+public class SiteConfigServiceImpl implements SiteConfigService {
+
+    @Autowired
+    private SiteConfigMapper siteConfigMapper;
+
+    @Autowired
+    private CacheService cacheService;
+
+    /** @Lazy 避免与 ThemeProperties(依赖 SiteConfigService) 循环依赖 */
+    @Autowired
+    @Lazy
+    private ThemeProperties themeProperties;
+
+    @Override
+    public SiteConfig getSiteConfig() {
+        try {
+            SiteConfig siteConfig = cacheService.get("dimstack:site_config", SiteConfig.class);
+            if (siteConfig != null) {
+                return siteConfig;
+            }
+        } catch (Exception e) {
+            log.warn("从缓存读取站点配置失败，回退到数据库查询", e);
+        }
+        return siteConfigMapper.getSiteConfig();
+    }
+
+    @Override
+    public HeroDTO getHeroConfig() {
+        SiteConfig config = getSiteConfig();
+        if (config != null) {
+            HeroDTO heroDTO = new HeroDTO();
+            heroDTO.setTitle(config.getHero_title());
+            heroDTO.setSubtitle(config.getHero_subtitle());
+            heroDTO.setImage(config.getHero_image());
+            return heroDTO;
+        }
+        return null;
+    }
+
+    @Override
+    public String getCopyright() {
+        SiteConfig config = getSiteConfig();
+        if (config != null) {
+            return config.getCopyright();
+        }
+        return null;
+    }
+
+    @Override
+    public String getSiteName() {
+        SiteConfig config = getSiteConfig();
+        if (config != null) {
+            return config.getSite_name();
+        }
+        return null;
+    }
+
+    @Override
+    public String getSiteIcon() {
+        SiteConfig config = getSiteConfig();
+        if (config != null) {
+            return config.getSite_icon();
+        }
+        return null;
+    }
+
+    @Override
+    public String getSiteTheme() {
+        SiteConfig config = getSiteConfig();
+        if (config != null) {
+            return config.getSite_theme();
+        }
+        return null;
+    }
+
+    @Override
+    public String getExpansionServer() {
+        SiteConfig config = getSiteConfig();
+        if (config != null) {
+            return config.getExpansion_server();
+        }
+        return null;
+    }
+
+    @Override
+    public String getIcpRecordNumber() {
+        SiteConfig config = getSiteConfig();
+        if (config != null) {
+            return config.getIcp_record_number();
+        }
+        return null;
+    }
+
+    @Override
+    public String getMpsRecordNumber() {
+        SiteConfig config = getSiteConfig();
+        if (config != null) {
+            return config.getMps_record_number();
+        }
+        return null;
+    }
+
+    @Override
+    public boolean updateSiteTheme(String themeName) {
+        try {
+            SiteConfig config = getSiteConfig();
+            if (config != null) {
+                config.setSite_theme(themeName);
+                int result = siteConfigMapper.updateSiteConfig(config);
+                if (result > 0) {
+                    cacheService.set("dimstack:site_config", config);
+                    // 同步刷新运行时主题, 无需重启即生效
+                    if (themeProperties != null) {
+                        themeProperties.setActiveTheme(themeName);
+                    }
+                    return true;
+                }
+            }
+            return false;
+        } catch (Exception e) {
+            log.error("更新站点主题失败", e);
+            return false;
+        }
+    }
+
+    @Override
+    public boolean updateSiteConfig(SiteConfig siteConfig) {
+        try {
+            int result = siteConfigMapper.updateSiteConfig(siteConfig);
+            if (result > 0) {
+                cacheService.set("dimstack:site_config", siteConfig);
+                return true;
+            }
+            return false;
+        } catch (Exception e) {
+            log.error("更新站点配置失败", e);
+            return false;
+        }
+    }
+
+    @Override
+    public Integer getEnableRegister() {
+        SiteConfig config = getSiteConfig();
+        if (config != null) {
+            return config.getEnable_register();
+        }
+        return null;
+    }
+
+    @Override
+    public Integer getAdminPostNoReview() {
+        SiteConfig config = getSiteConfig();
+        if (config != null) {
+            return config.getAdmin_post_no_review();
+        }
+        return null;
+    }
+
+    @Override
+    public Integer getEnableLlm() {
+        SiteConfig config = getSiteConfig();
+        if (config != null) {
+            return config.getEnable_llm();
+        }
+        return null;
+    }
+
+    @Override
+    public Integer getEnableLlmArticleReview() {
+        SiteConfig config = getSiteConfig();
+        if (config != null) {
+            return config.getEnable_llm_article_review();
+        }
+        return null;
+    }
+
+    @Override
+    public Integer getEnableLlmCreateArticle() {
+        SiteConfig config = getSiteConfig();
+        if (config != null) {
+            return config.getEnable_llm_create_article();
+        }
+        return null;
+    }
+
+    @Override
+    public String getGlobalHeadCode() {
+        SiteConfig config = getSiteConfig();
+        if (config != null) {
+            return config.getGlobal_head_code();
+        }
+        return null;
+    }
+
+    @Override
+    public String getContentHeadCode() {
+        SiteConfig config = getSiteConfig();
+        if (config != null) {
+            return config.getContent_head_code();
+        }
+        return null;
+    }
+
+    @Override
+    public String getFooterCode() {
+        SiteConfig config = getSiteConfig();
+        if (config != null) {
+            return config.getFooter_code();
+        }
+        return null;
+    }
+
+    @Override
+    public Integer getEnableImageCompression() {
+        SiteConfig config = getSiteConfig();
+        if (config != null) {
+            return config.getEnable_image_compression();
+        }
+        return null;
+    }
+
+    @Override
+    public Integer getImageCompressionThreads() {
+        SiteConfig config = getSiteConfig();
+        if (config != null) {
+            return config.getImage_compression_threads();
+        }
+        return 5;
+    }
+
+    @Override
+    public Integer getProxyResourceDownload() {
+        SiteConfig config = getSiteConfig();
+        if (config != null) {
+            return config.getProxy_resource_download();
+        }
+        return 0;
+    }
+
+    @Override
+    public Integer getEnableComment() {
+        SiteConfig config = getSiteConfig();
+        if (config != null) {
+            return config.getEnable_comment();
+        }
+        return 1;
+    }
+}

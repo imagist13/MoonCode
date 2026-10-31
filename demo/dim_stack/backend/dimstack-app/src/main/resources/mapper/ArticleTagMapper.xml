@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="xyz.lingview.dimstack.mapper.ArticleTagMapper">
+    <select id="findAllEnabledTags" resultType="xyz.lingview.dimstack.domain.ArticleTag">
+        SELECT
+            id,
+            tag_name AS tag_name,
+            tag_explain AS tag_explain,
+            founder,
+            create_time AS create_time,
+            status
+        FROM article_tag
+        WHERE status = 1
+    </select>
+
+    <select id="findAll" resultType="xyz.lingview.dimstack.domain.ArticleTag">
+        SELECT
+            id,
+            tag_name AS tag_name,
+            tag_explain AS tag_explain,
+            founder,
+            create_time AS create_time,
+            status
+        FROM article_tag
+        ORDER BY create_time DESC
+    </select>
+
+    <select id="findByStatus" resultType="xyz.lingview.dimstack.domain.ArticleTag">
+        SELECT
+            id,
+            tag_name AS tag_name,
+            tag_explain AS tag_explain,
+            founder,
+            create_time AS create_time,
+            status
+        FROM article_tag
+        WHERE status = #{status}
+        ORDER BY create_time DESC
+    </select>
+
+    <select id="findById" resultType="xyz.lingview.dimstack.domain.ArticleTag">
+        SELECT
+            id,
+            tag_name AS tag_name,
+            tag_explain AS tag_explain,
+            founder,
+            create_time AS create_time,
+            status
+        FROM article_tag
+        WHERE id = #{id}
+    </select>
+
+    <select id="findByName" resultType="xyz.lingview.dimstack.domain.ArticleTag">
+        SELECT
+            id,
+            tag_name AS tag_name,
+            tag_explain AS tag_explain,
+            founder,
+            create_time AS create_time,
+            status
+        FROM article_tag
+        WHERE tag_name = #{tagName}
+    </select>
+
+    <insert id="insert" parameterType="xyz.lingview.dimstack.domain.ArticleTag">
+        INSERT INTO article_tag (tag_name, tag_explain, founder, status)
+        VALUES (#{tag_name}, #{tag_explain}, #{founder}, #{status})
+    </insert>
+
+    <update id="update" parameterType="xyz.lingview.dimstack.domain.ArticleTag">
+        UPDATE article_tag
+        <set>
+            <if test="tag_name != null and tag_name != ''">tag_name = #{tag_name},</if>
+            <if test="tag_explain != null and tag_explain != ''">tag_explain = #{tag_explain},</if>
+            <if test="founder != null and founder != ''">founder = #{founder},</if>
+            <if test="status != null">status = #{status},</if>
+            create_time = CURRENT_TIMESTAMP
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <update id="updateStatus">
+        UPDATE article_tag
+        SET status = #{status}
+        WHERE id = #{id}
+    </update>
+
+    <!-- 根据标签名称查询文章数量 -->
+    <select id="countArticlesByTag" resultType="int">
+        SELECT COUNT(*)
+        FROM article_tag_relation atr
+                 JOIN article a ON atr.article_id = a.article_id
+        WHERE atr.article_tag = #{tagName} AND a.status = 1
+    </select>
+
+    <!-- 根据标签名称分页查询文章 -->
+    <select id="findArticlesByTag" resultType="xyz.lingview.dimstack.dto.request.ArticleDTO">
+        SELECT
+            a.id,
+            a.article_id,
+            a.article_name AS title,
+            a.excerpt,
+            a.article_cover AS image,
+            a.create_time AS date,
+            u.username AS author,
+            u.avatar AS author_avatar,
+            CASE
+                WHEN p.article_categories IS NULL THEN c.article_categories
+                ELSE CONCAT(p.article_categories, '/', c.article_categories)
+                END AS category,
+            tags.tag_list AS tag,
+            a.alias,
+            CASE
+                WHEN a.password IS NOT NULL AND a.password != '' THEN TRUE
+                ELSE FALSE
+                END AS password
+        FROM (
+                 SELECT article_id
+                 FROM article_tag_relation
+                 WHERE article_tag = #{tagName}
+             ) atr
+                 INNER JOIN article a ON atr.article_id = a.article_id
+                 INNER JOIN user_information u ON a.uuid = u.uuid
+                 LEFT JOIN article_categories c ON a.category_id = c.id
+                 LEFT JOIN article_categories p ON c.parent_id = p.id
+                 INNER JOIN (
+            SELECT article_id, GROUP_CONCAT(article_tag) AS tag_list
+            FROM article_tag_relation
+            GROUP BY article_id
+        ) tags ON a.article_id = tags.article_id
+        WHERE a.status = 1
+          AND EXISTS (
+            SELECT 1
+            FROM article_tag at
+            WHERE at.tag_name = #{tagName}
+              AND at.status = 1
+        )
+        ORDER BY a.create_time DESC
+        LIMIT #{offset}, #{size}
+    </select>
+
+</mapper>

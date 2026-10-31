@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import {
   LayoutDashboard,
   FileText,
@@ -19,13 +19,6 @@ import {
   List,
   MessageCircle,
   Camera,
-  Bell,
-  Users,
-  Palette,
-  Link2,
-  Shield,
-  Download,
-  Image as ImageIcon,
   type LucideIcon,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -67,13 +60,6 @@ export const NAV_ITEMS: NavItem[] = [
   { title: "留言管理", icon: Mail, href: "/admin/messages" },
   { title: "说说管理", icon: MessageCircle, href: "/admin/talks" },
   { title: "相册管理", icon: Camera, href: "/admin/albums" },
-  { title: "通知", icon: Bell, href: "/admin/notifications" },
-  { title: "用户管理", icon: Users, href: "/admin/users" },
-  { title: "主题商店", icon: Palette, href: "/admin/themes" },
-  { title: "友情链接", icon: Link2, href: "/admin/friend-links" },
-  { title: "角色权限", icon: Shield, href: "/admin/rbac" },
-  { title: "附件管理", icon: ImageIcon, href: "/admin/attachments" },
-  { title: "更新管理", icon: Download, href: "/admin/update" },
   { title: "站点设置", icon: Settings, href: "/admin/settings" },
   { title: "操作日志", icon: ScrollText, href: "/admin/logs" },
 ];
@@ -109,7 +95,7 @@ export function DashboardSidebar({
 
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-50 flex h-screen flex-col border-r border-gray-200 bg-white transition-all duration-300 ease-in-out dark:border-gray-700 dark:bg-gray-800 md:sticky md:top-0 md:h-screen",
+          "group fixed inset-y-0 left-0 z-50 flex h-screen flex-col border-r border-gray-200 bg-white transition-all duration-300 ease-in-out dark:border-gray-700 dark:bg-gray-800 md:sticky md:top-0 md:h-screen",
           open ? "translate-x-0" : "-translate-x-full md:translate-x-0",
           collapsed ? "md:w-16" : "md:w-64",
           "w-64",
@@ -199,28 +185,54 @@ function SidebarNavItem({
   collapsed: boolean;
 }) {
   if (!item.children) {
-    return (
-      <Link
-        href={item.href!}
-        className={cn(
-          "flex items-center rounded-md px-3 py-2 text-sm font-medium transition-colors",
-          pathname === item.href
-            ? "bg-blue-100 text-blue-700 dark:bg-blue-800/30 dark:text-blue-300"
-            : "text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700",
-        )}
-      >
-        <item.icon className="h-4 w-4 shrink-0" />
-        {!collapsed && <span className="ml-3 truncate">{item.title}</span>}
-      </Link>
-    );
+    return <SidebarLeafItem item={item} pathname={pathname} collapsed={collapsed} />;
   }
+  return <SidebarGroupItem item={item} pathname={pathname} collapsed={collapsed} />;
+}
 
-  const childActive = item.children.some((c) => pathname === c.href);
+function SidebarLeafItem({
+  item,
+  pathname,
+  collapsed,
+}: {
+  item: NavItem;
+  pathname: string;
+  collapsed: boolean;
+}) {
+  return (
+    <Link
+      href={item.href!}
+      className={cn(
+        "flex items-center rounded-md px-3 py-2 text-sm font-medium transition-colors",
+        pathname === item.href
+          ? "bg-blue-100 text-blue-700 dark:bg-blue-800/30 dark:text-blue-300"
+          : "text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700",
+      )}
+    >
+      <item.icon className="h-4 w-4 shrink-0" />
+      {!collapsed && <span className="ml-3 truncate">{item.title}</span>}
+    </Link>
+  );
+}
+
+function SidebarGroupItem({
+  item,
+  pathname,
+  collapsed,
+}: {
+  item: NavItem;
+  pathname: string;
+  collapsed: boolean;
+}) {
+  const childActive = item.children!.some((c) => pathname === c.href);
   const [open, setOpen] = useState(childActive);
+  const [prevActive, setPrevActive] = useState(childActive);
 
-  useEffect(() => {
+  // 渲染期间同步：导航到子路由时自动展开分组
+  if (prevActive !== childActive) {
+    setPrevActive(childActive);
     if (childActive) setOpen(true);
-  }, [childActive]);
+  }
 
   return (
     <div className="space-y-1">
@@ -248,28 +260,32 @@ function SidebarNavItem({
         )}
       </button>
 
-      {open && !collapsed && (
-        <div className="ml-6 space-y-1">
-          {item.children.map((child) => (
-            <Link
-              key={child.href}
-              href={child.href}
-              className={cn(
-                "block rounded-md px-3 py-2 text-sm transition-colors",
-                pathname === child.href
-                  ? "bg-blue-50 font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
-                  : "text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-700",
-              )}
-            >
-              <child.icon className="mr-2 inline h-4 w-4" />
-              {child.title}
-            </Link>
-          ))}
+      <div
+        className={cn(
+          "grid transition-[grid-template-rows,opacity] duration-200 ease-in-out",
+          open && !collapsed ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0",
+        )}
+      >
+        <div className="overflow-hidden">
+          <div className="ml-6 space-y-1 py-0.5">
+            {item.children!.map((child) => (
+              <Link
+                key={child.href}
+                href={child.href}
+                className={cn(
+                  "block rounded-md px-3 py-2 text-sm transition-colors",
+                  pathname === child.href
+                    ? "bg-blue-50 font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
+                    : "text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-700",
+                )}
+              >
+                <child.icon className="mr-2 inline h-4 w-4" />
+                {child.title}
+              </Link>
+            ))}
+          </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }
-
-// 避免 lint 报错引用未使用
-void useRef;

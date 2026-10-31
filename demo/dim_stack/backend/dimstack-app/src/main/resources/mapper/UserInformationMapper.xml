@@ -1,0 +1,344 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="xyz.lingview.dimstack.mapper.UserInformationMapper">
+
+    <select id="selectUserUUID" parameterType="string" resultType="string">
+        SELECT uuid
+        FROM user_information
+        WHERE username = #{username}
+    </select>
+
+    <select id="selectUserByUUID" parameterType="string" resultType="xyz.lingview.dimstack.domain.UserInformation">
+        SELECT id, uuid, username, avatar, phone, email, gender, birthday, create_time, status
+        FROM user_information
+        WHERE uuid = #{uuid} AND status = 1
+    </select>
+
+    <select id="selectUsernameByUUID" resultType="java.lang.String">
+        SELECT username FROM user_information WHERE uuid = #{uuid}
+    </select>
+
+    <update id="updateUserByUUID" parameterType="xyz.lingview.dimstack.domain.UserInformation">
+        UPDATE user_information
+        <set>
+            <if test="username != null and username != ''">username = #{username},</if>
+            <if test="avatar != null">avatar = #{avatar},</if>
+            <if test="phone != null">phone = #{phone},</if>
+            <if test="email != null">email = #{email},</if>
+            <if test="gender != null">gender = #{gender},</if>
+            <if test="password != null and password != ''">password = #{password},</if>
+            <if test="birthday != null">birthday = #{birthday},</if>
+        </set>
+        WHERE uuid = #{uuid} AND status = 1
+    </update>
+
+    <select id="getUsernameByUuid" parameterType="string" resultType="string">
+        SELECT username
+        FROM user_information
+        WHERE uuid = #{uuid}
+    </select>
+
+    <select id="getEmailByUsername" parameterType="string" resultType="string">
+        SELECT email
+        FROM user_information
+        WHERE username = #{username}
+    </select>
+
+    <select id="getUsernameByEmail" parameterType="string" resultType="string">
+        SELECT username
+        FROM user_information
+        WHERE email = #{email}
+    </select>
+
+    <!-- 根据权限码返回所有拥有该权限的用户邮箱 -->
+    <select id="getEmailsByPermissionCode" parameterType="string" resultType="string">
+        SELECT DISTINCT ui.email
+        FROM user_information ui
+                 INNER JOIN user_role ur ON ui.id = ur.user_id
+                 INNER JOIN role r ON ur.role_id = r.id
+                 INNER JOIN role_permission rp ON r.id = rp.role_id
+                 INNER JOIN permission p ON rp.permission_id = p.id
+        WHERE p.code = #{permissionCode}
+          AND ui.status = 1
+          AND ui.email IS NOT NULL;
+    </select>
+
+    <select id="getUsernamesByPermissionCode" parameterType="string" resultType="string">
+        SELECT DISTINCT ui.username
+        FROM user_information ui
+                 INNER JOIN user_role ur ON ui.id = ur.user_id
+                 INNER JOIN role r ON ur.role_id = r.id
+                 INNER JOIN role_permission rp ON r.id = rp.role_id
+                 INNER JOIN permission p ON rp.permission_id = p.id
+        WHERE p.code = #{permissionCode}
+          AND ui.status = 1
+          AND ui.username IS NOT NULL;
+    </select>
+
+    <!-- 根据文章id查询文章所述用户 -->
+    <select id="getUsernameByArticleId" resultType="string">
+        SELECT ui.username
+        FROM article a
+        INNER JOIN user_information ui ON a.uuid = ui.uuid
+        WHERE a.article_id = #{articleId}
+    </select>
+
+    <!-- 用户管理 -->
+    <resultMap id="UserDTOMap" type="xyz.lingview.dimstack.dto.request.UserDTO">
+        <result column="id" property="id"/>
+        <result column="uuid" property="uuid"/>
+        <result column="username" property="username"/>
+        <result column="avatar" property="avatar"/>
+        <result column="phone" property="phone"/>
+        <result column="email" property="email"/>
+        <result column="gender" property="gender"/>
+        <result column="birthday" property="birthday"/>
+        <result column="role_id" property="role_id"/>
+        <result column="role_name" property="role_name"/>
+        <result column="role_code" property="role_code"/>
+        <result column="create_time" property="create_time"/>
+        <result column="status" property="status"/>
+    </resultMap>
+
+    <select id="selectAllEnableUsers" resultMap="UserDTOMap">
+        SELECT
+            u.id,
+            u.uuid,
+            u.username,
+            u.avatar,
+            u.phone,
+            u.email,
+            u.gender,
+            u.birthday,
+            (
+                SELECT GROUP_CONCAT(ur.role_id)
+                FROM user_role ur 
+                WHERE ur.user_id = u.id 
+            ) as role_id,
+            (
+                SELECT GROUP_CONCAT(r.name ORDER BY r.id)
+                FROM user_role ur 
+                INNER JOIN role r ON ur.role_id = r.id 
+                WHERE ur.user_id = u.id 
+            ) as role_name,
+            (
+                SELECT GROUP_CONCAT(r.code ORDER BY r.id)
+                FROM user_role ur 
+                INNER JOIN role r ON ur.role_id = r.id 
+                WHERE ur.user_id = u.id 
+            ) as role_code,
+            u.create_time,
+            u.status
+        FROM user_information u
+        WHERE u.status != 0
+        ORDER BY u.create_time DESC
+    </select>
+
+    <select id="selectAllUsers" resultMap="UserDTOMap">
+        SELECT
+            u.id,
+            u.uuid,
+            u.username,
+            u.avatar,
+            u.phone,
+            u.email,
+            u.gender,
+            u.birthday,
+            (
+                SELECT GROUP_CONCAT(ur.role_id)
+                FROM user_role ur 
+                WHERE ur.user_id = u.id 
+            ) as role_id,
+            (
+                SELECT GROUP_CONCAT(r.name ORDER BY r.id)
+                FROM user_role ur 
+                INNER JOIN role r ON ur.role_id = r.id 
+                WHERE ur.user_id = u.id 
+            ) as role_name,
+            (
+                SELECT GROUP_CONCAT(r.code ORDER BY r.id)
+                FROM user_role ur 
+                INNER JOIN role r ON ur.role_id = r.id 
+                WHERE ur.user_id = u.id 
+            ) as role_code,
+            u.create_time,
+            u.status
+        FROM user_information u
+        ORDER BY u.create_time DESC
+    </select>
+
+    <sql id="userPageFilter">
+        WHERE u.status != 0
+        <if test="keyword != null and keyword != ''">
+            AND (u.username LIKE CONCAT('%', #{keyword}, '%')
+                 OR u.email LIKE CONCAT('%', #{keyword}, '%')
+                 OR u.phone LIKE CONCAT('%', #{keyword}, '%'))
+        </if>
+    </sql>
+
+    <select id="selectUsersPage" resultMap="UserDTOMap">
+        SELECT
+            u.id,
+            u.uuid,
+            u.username,
+            u.avatar,
+            u.phone,
+            u.email,
+            u.gender,
+            u.birthday,
+            (
+                SELECT GROUP_CONCAT(ur.role_id)
+                FROM user_role ur 
+                WHERE ur.user_id = u.id 
+            ) as role_id,
+            (
+                SELECT GROUP_CONCAT(r.name ORDER BY r.id)
+                FROM user_role ur 
+                INNER JOIN role r ON ur.role_id = r.id 
+                WHERE ur.user_id = u.id 
+            ) as role_name,
+            (
+                SELECT GROUP_CONCAT(r.code ORDER BY r.id)
+                FROM user_role ur 
+                INNER JOIN role r ON ur.role_id = r.id 
+                WHERE ur.user_id = u.id 
+            ) as role_code,
+            u.create_time,
+            u.status
+        FROM user_information u
+        <include refid="userPageFilter"/>
+        ORDER BY u.create_time DESC
+        LIMIT #{offset}, #{size}
+    </select>
+
+    <select id="countUsers" resultType="int">
+        SELECT COUNT(*)
+        FROM user_information u
+        <include refid="userPageFilter"/>
+    </select>
+
+    <select id="selectUserById" resultMap="UserDTOMap">
+        SELECT
+            u.id,
+            u.uuid,
+            u.username,
+            u.avatar,
+            u.phone,
+            u.email,
+            u.gender,
+            u.birthday,
+            (
+                SELECT GROUP_CONCAT(ur.role_id)
+                FROM user_role ur 
+                WHERE ur.user_id = u.id 
+            ) as role_id,
+            (
+                SELECT GROUP_CONCAT(r.name ORDER BY r.id)
+                FROM user_role ur 
+                INNER JOIN role r ON ur.role_id = r.id 
+                WHERE ur.user_id = u.id 
+            ) as role_name,
+            (
+                SELECT GROUP_CONCAT(r.code ORDER BY r.id)
+                FROM user_role ur 
+                INNER JOIN role r ON ur.role_id = r.id 
+                WHERE ur.user_id = u.id 
+            ) as role_code,
+            u.create_time,
+            u.status
+        FROM user_information u
+        WHERE u.id = #{id}
+    </select>
+
+    <insert id="updateUserRole">
+        INSERT INTO user_role (user_id, role_id)
+        VALUES (#{userId}, #{roleId})
+        ON DUPLICATE KEY UPDATE role_id = #{roleId}
+    </insert>
+
+    <update id="updateUserStatus">
+        UPDATE user_information
+        SET status = #{status}
+        WHERE id = #{userId}
+    </update>
+
+    <select id="selectAllRoles" resultType="xyz.lingview.dimstack.domain.Role">
+        SELECT id, code, name, description, status
+        FROM role
+        WHERE status = 1
+        ORDER BY id
+    </select>
+
+    <select id="selectPermissionsByUserId" resultType="string">
+        SELECT DISTINCT p.code
+        FROM user_information u
+                 INNER JOIN user_role ur ON u.id = ur.user_id
+                 INNER JOIN role r ON ur.role_id = r.id
+                 INNER JOIN role_permission rp ON r.id = rp.role_id
+                 INNER JOIN permission p ON rp.permission_id = p.id
+        WHERE u.id = #{userId}
+    </select>
+
+    <select id="getUserByUsernameAndEmail" parameterType="map" resultType="xyz.lingview.dimstack.domain.UserInformation">
+        SELECT id, uuid, username, email, status
+        FROM user_information
+        WHERE username = #{username}
+          AND email = #{email}
+          AND status = 1
+    </select>
+
+
+    <update id="updatePasswordByUsername" parameterType="map">
+        UPDATE user_information
+        SET password = #{password}
+        WHERE username = #{username}
+    </update>
+
+    <select id="selectAvatarByUsername" resultType="string">
+        SELECT avatar
+        FROM user_information
+        WHERE username = #{username}
+    </select>
+
+    <!-- 检查用户名是否存在 -->
+    <select id="selectUserByUsername" resultType="int">
+        SELECT COUNT(*)
+        FROM user_information
+        WHERE username = #{username}
+    </select>
+
+    <!-- 根据用户名查询用户信息 -->
+    <select id="getUserByUsername" resultType="xyz.lingview.dimstack.domain.UserInformation">
+        SELECT id, uuid, username, avatar, phone, email, gender, birthday, create_time, status
+        FROM user_information
+        WHERE username = #{username} AND status = 1
+    </select>
+
+    <!-- 检查手机号是否存在 -->
+    <select id="selectUserByPhone" resultType="int">
+        SELECT COUNT(*)
+        FROM user_information
+        WHERE phone = #{phone}
+    </select>
+
+    <!-- 检查邮箱是否存在 -->
+    <select id="selectUserByEmail" resultType="int">
+        SELECT COUNT(*)
+        FROM user_information
+        WHERE email = #{email}
+    </select>
+
+    <!--后台添加用户-->
+    <insert id="insertUser" parameterType="xyz.lingview.dimstack.domain.UserInformation">
+        INSERT INTO user_information (
+            uuid, username, email, phone, gender, password,
+            birthday, status, avatar
+        ) VALUES (
+                     #{uuid}, #{username}, #{email}, #{phone}, #{gender},
+                     #{password}, #{birthday}, #{status}, #{avatar}
+                 )
+    </insert>
+
+</mapper>

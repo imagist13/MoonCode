@@ -12,7 +12,7 @@ import {
   type ColumnFiltersState,
   type RowSelectionState,
 } from "@tanstack/react-table"
-import { MoreHorizontal } from "lucide-react"
+import { MoreHorizontal, ArrowUp, ArrowDown, ChevronsUpDown } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -265,7 +265,8 @@ export function DataTable<TData>({
                       key={header.id}
                       style={{ width: header.getSize() }}
                       className={cn(
-                        header.column.getCanSort() && "cursor-pointer select-none"
+                        "group",
+                        header.column.getCanSort() && "cursor-pointer select-none hover:bg-muted/50",
                       )}
                       onClick={header.column.getToggleSortingHandler()}
                     >
@@ -275,8 +276,17 @@ export function DataTable<TData>({
                             header.column.columnDef.header,
                             header.getContext()
                           )}
-                      {header.column.getIsSorted() === "asc" && " ↑"}
-                      {header.column.getIsSorted() === "desc" && " ↓"}
+                      {header.column.getCanSort() && (
+                        <span className="ml-1 inline-flex align-middle">
+                          {header.column.getIsSorted() === "asc" ? (
+                            <ArrowUp className="size-3.5 text-blue-600" />
+                          ) : header.column.getIsSorted() === "desc" ? (
+                            <ArrowDown className="size-3.5 text-blue-600" />
+                          ) : (
+                            <ChevronsUpDown className="size-3.5 text-gray-300 transition-colors group-hover:text-gray-500" />
+                          )}
+                        </span>
+                      )}
                     </TableHead>
                   )
                 })}

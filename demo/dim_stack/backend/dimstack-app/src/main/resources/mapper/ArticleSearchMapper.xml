@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="xyz.lingview.dimstack.mapper.ArticleSearchMapper">
+
+    <resultMap id="articleMap" type="xyz.lingview.dimstack.domain.Article">
+        <id property="id" column="id"/>
+        <result property="uuid" column="uuid"/>
+        <result property="article_id" column="article_id"/>
+        <result property="article_name" column="article_name"/>
+        <result property="article_cover" column="article_cover"/>
+        <result property="excerpt" column="excerpt"/>
+        <result property="article_content" column="article_content"/>
+        <result property="page_views" column="page_views"/>
+        <result property="like_count" column="like_count"/>
+        <result property="favorite_count" column="favorite_count"/>
+        <result property="password" column="password"/>
+        <result property="tag" column="tag"/>
+        <result property="category" column="category"/>
+        <result property="alias" column="alias"/>
+        <result property="create_time" column="create_time"/>
+        <result property="status" column="status"/>
+    </resultMap>
+
+    <select id="searchArticlesCn" parameterType="string" resultMap="articleMap">
+        SELECT id, article_name, excerpt, article_cover, alias, create_time,
+               MATCH(article_name, excerpt) AGAINST (#{keyword} IN NATURAL LANGUAGE MODE) AS relevance
+        FROM article FORCE INDEX (idx_fulltext_cn)
+        WHERE status = 1
+          AND MATCH(article_name, excerpt) AGAINST (#{keyword} IN NATURAL LANGUAGE MODE)
+        ORDER BY relevance DESC, create_time DESC
+        LIMIT 50
+    </select>
+
+    <select id="searchArticlesEn" parameterType="string" resultMap="articleMap">
+        SELECT id, article_name, excerpt, article_cover, alias, create_time,
+               MATCH(article_name, excerpt) AGAINST (#{keyword} IN NATURAL LANGUAGE MODE) AS relevance
+        FROM article FORCE INDEX (idx_fulltext_en)
+        WHERE status = 1
+          AND MATCH(article_name, excerpt) AGAINST (#{keyword} IN NATURAL LANGUAGE MODE)
+        ORDER BY relevance DESC, create_time DESC
+        LIMIT 50
+    </select>
+
+    <select id="findAllArticles" resultMap="articleMap">
+        SELECT * FROM article
+        WHERE status = 1
+        ORDER BY create_time DESC
+    </select>
+
+</mapper>

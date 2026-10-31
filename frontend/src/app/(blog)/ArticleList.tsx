@@ -41,6 +41,24 @@ export default function ArticleList() {
   const requestIdRef = useRef(0);
   const holdHeightRef = useRef<number | null>(null);
 
+  // 图片开关持久化（对齐 dim_stack：记住用户偏好，刷新后仍生效）
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("showImages");
+      if (saved !== null) setShowImages(JSON.parse(saved) === true);
+    } catch {
+      /* 隐私模式等场景下忽略 */
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("showImages", JSON.stringify(showImages));
+    } catch {
+      /* 忽略写入失败 */
+    }
+  }, [showImages]);
+
   useEffect(() => {
     setCurrent(1);
     // 记录旧高度，避免布局抖动

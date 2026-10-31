@@ -1,0 +1,163 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="xyz.lingview.dimstack.mapper.SiteConfigMapper">
+
+    <!-- 查询站点配置信息 -->
+    <select id="getSiteConfig" resultType="xyz.lingview.dimstack.domain.SiteConfig">
+        SELECT
+            id,
+            site_name as site_name,
+            register_user_permission as register_user_permission,
+            copyright,
+            article_status,
+            hero_image as hero_image,
+            hero_title as hero_title,
+            hero_subtitle as hero_subtitle,
+            site_icon as site_icon,
+            site_theme as site_theme,
+            expansion_server as expansion_server,
+            enable_notification as enable_notification,
+            smtp_host as smtp_host,
+            smtp_port as smtp_port,
+            mail_sender_email as mail_sender_email,
+            mail_sender_name as mail_sender_name,
+            mail_username as mail_username,
+            mail_password as mail_password,
+            mail_protocol as mail_protocol,
+            mail_enable_tls as mail_enable_tls,
+            mail_enable_ssl as mail_enable_ssl,
+            mail_default_encoding as mail_default_encoding,
+            icp_record_number as icp_record_number,
+            mps_record_number as mps_record_number,
+            enable_register as enable_register,
+            enable_music as enable_music,
+            admin_post_no_review as admin_post_no_review,
+            enable_llm as enable_llm,
+            enable_llm_article_review as enable_llm_article_review,
+            enable_llm_create_article as enable_llm_create_article,
+            global_head_code as global_head_code,
+            content_head_code as content_head_code,
+            footer_code as footer_code,
+            enable_image_compression as enable_image_compression,
+            image_compression_threads as image_compression_threads,
+            proxy_resource_download as proxy_resource_download,
+            enable_comment as enable_comment,
+            comment_status as comment_status,
+            enable_llm_comment_review as enable_llm_comment_review,
+            admin_comment_no_review as admin_comment_no_review,
+            default_storage as default_storage
+        FROM site_config
+        WHERE id = 1
+    </select>
+
+    <!-- 查询站点名称 -->
+    <select id="getSiteName" resultType="string">
+        SELECT site_name
+        FROM site_config
+        WHERE id = 1
+    </select>
+
+    <!-- 查询注册用户默认角色 -->
+    <select id="getRegisterUserPermission" resultType="int">
+        SELECT register_user_permission
+        FROM site_config
+        WHERE id = 1
+    </select>
+
+    <!-- 查询版权信息 -->
+    <select id="getCopyright" resultType="string">
+        SELECT copyright
+        FROM site_config
+        WHERE id = 1
+    </select>
+
+    <!-- 查询文章默认状态 -->
+    <select id="getArticleStatus" resultType="int">
+        SELECT article_status
+        FROM site_config
+        WHERE id = 1
+    </select>
+
+    <!-- 查询站点图标 -->
+    <select id="getSiteIcon" resultType="string">
+        SELECT site_icon
+        FROM site_config
+        WHERE id = 1
+    </select>
+
+    <!-- 更新站点配置 -->
+    <update id="updateSiteConfig" parameterType="xyz.lingview.dimstack.domain.SiteConfig">
+        UPDATE site_config
+        SET site_name = #{site_name},
+            register_user_permission = #{register_user_permission},
+            copyright = #{copyright},
+            article_status = #{article_status},
+            hero_image = #{hero_image},
+            hero_title = #{hero_title},
+            hero_subtitle = #{hero_subtitle},
+            site_icon = #{site_icon},
+            site_theme = #{site_theme},
+            expansion_server = #{expansion_server},
+            enable_notification = #{enable_notification},
+            smtp_host = #{smtp_host},
+            smtp_port = #{smtp_port},
+            mail_sender_email = #{mail_sender_email},
+            mail_sender_name = #{mail_sender_name},
+            mail_username = #{mail_username},
+            mail_password = #{mail_password},
+            mail_protocol = #{mail_protocol},
+            mail_enable_tls = #{mail_enable_tls},
+            mail_enable_ssl = #{mail_enable_ssl},
+            mail_default_encoding = #{mail_default_encoding},
+            icp_record_number = #{icp_record_number},
+            mps_record_number = #{mps_record_number},
+            enable_register = #{enable_register},
+            enable_music = #{enable_music},
+            admin_post_no_review = #{admin_post_no_review},
+            enable_llm = #{enable_llm},
+            enable_llm_article_review = #{enable_llm_article_review},
+            enable_llm_create_article = #{enable_llm_create_article},
+            global_head_code = #{global_head_code},
+            content_head_code = #{content_head_code},
+            footer_code = #{footer_code},
+            enable_image_compression = #{enable_image_compression},
+            image_compression_threads = #{image_compression_threads},
+            proxy_resource_download = #{proxy_resource_download},
+            enable_comment = #{enable_comment},
+            comment_status = #{comment_status},
+            enable_llm_comment_review = #{enable_llm_comment_review},
+            admin_comment_no_review = #{admin_comment_no_review},
+            default_storage = #{default_storage}
+        WHERE id = 1
+    </update>
+
+    <!-- 查询ICP备案号 -->
+    <select id="getIcpRecordNumber" resultType="string">
+        SELECT icp_record_number
+        FROM site_config
+        WHERE id = 1
+    </select>
+
+    <!-- 查询公安联网备案号 -->
+    <select id="getMpsRecordNumber" resultType="string">
+        SELECT mps_record_number
+        FROM site_config
+        WHERE id = 1
+    </select>
+
+    <!-- 获取是否允许注册 -->
+    <select id="getEnableRegister" resultType="int">
+        SELECT enable_register
+        FROM site_config
+        WHERE id = 1
+    </select>
+    
+    <!-- 获取管理员文章是否无需审核 -->
+    <select id="getAdminPostNoReview" resultType="int">
+        SELECT admin_post_no_review
+        FROM site_config
+        WHERE id = 1
+    </select>
+</mapper>

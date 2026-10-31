@@ -1,0 +1,88 @@
+name: Build and Release
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify migration baseline (init.sql vs database_version.txt)
+        run: |
+          MIG_DIR=backend/dimstack-app/src/main/resources/db/migration
+          latest=$(ls "$MIG_DIR"/V*.sql | sed -E 's#.*/V([0-9]+)__.*#\1#' | sort -n | tail -1)
+          baseline=$(tr -d '[:space:]' < "$MIG_DIR/database_version.txt")
+          echo "latest migration = V$latest, database_version.txt = $baseline"
+          if [ "$latest" != "$baseline" ]; then
+            echo "::error::database_version.txt($baseline) 与最新迁移脚本(V$latest) 不一致, 新装库会漏掉迁移内容"
+            exit 1
+          fi
+
+      - uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: ${{ runner.os }}-maven-
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: 17
+          distribution: 'temurin'
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install frontend dependencies
+        run: |
+          cd frontend
+          npm install
+
+      - name: Build frontend
+        run: |
+          cd frontend
+          npm run build
+
+      - name: Clean backend static directory
+        run: |
+          mkdir -p backend/dimstack-app/src/main/resources/static
+          rm -rf backend/dimstack-app/src/main/resources/static/*
+
+      - name: Copy frontend build to backend static
+        run: |
+          mkdir -p backend/dimstack-app/src/main/resources/static
+          cp -r frontend/dist/* backend/dimstack-app/src/main/resources/static/
+
+      - name: Build backend with Maven
+        run: |
+          cd backend
+          mvn clean package -DskipTests
+
+      - name: Create release package
+        run: |
+          cd backend
+          mkdir release
+          cp dimstack-app/target/*.jar release/
+          cd release
+          zip -r dim_stack-release.zip *
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dimstack-release
+          path: backend/release/dim_stack-release.zip
+
+      - name: Create Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "v${{ github.run_number }}" \
+            --title "Release v${{ github.run_number }}" \
+            --notes "Automated release" \
+            backend/release/dim_stack-release.zip

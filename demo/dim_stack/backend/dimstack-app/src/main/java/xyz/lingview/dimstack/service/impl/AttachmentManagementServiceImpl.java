@@ -1,0 +1,619 @@
+package xyz.lingview.dimstack.service.impl;
+
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+import xyz.lingview.dimstack.domain.AttachmentManagement;
+import xyz.lingview.dimstack.domain.StorageMethod;
+import xyz.lingview.dimstack.domain.StorageMigrationFailedItem;
+import xyz.lingview.dimstack.domain.StorageMigrationLog;
+import xyz.lingview.dimstack.mapper.AttachmentManagementMapper;
+import xyz.lingview.dimstack.mapper.StorageMethodMapper;
+import xyz.lingview.dimstack.mapper.StorageMigrationLogMapper;
+import xyz.lingview.dimstack.mapper.UserInformationMapper;
+import xyz.lingview.dimstack.service.AttachmentManagementService;
+import xyz.lingview.dimstack.service.FileStorage;
+import xyz.lingview.dimstack.service.StorageFacadeService;
+
+import java.io.ByteArrayInputStream;
+import java.io.File;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * @Author: lingview
+ * @Date: 2026/02/08 17:35:00
+ * @Description: 附件管理服务实现类
+ * @Version: 1.0
+ */
+@Service
+@Slf4j
+public class AttachmentManagementServiceImpl implements AttachmentManagementService {
+    
+    @Autowired
+    private AttachmentManagementMapper attachmentManagementMapper;
+    
+    @Autowired
+    private UserInformationMapper userInformationMapper;
+
+    @Autowired
+    private StorageFacadeService storageFacadeService;
+
+    @Autowired
+    private StorageMethodMapper storageMethodMapper;
+
+    @Autowired
+    private StorageMigrationLogMapper storageMigrationLogMapper;
+
+    @Value("${file.data-root:.}")
+    private String dataRoot;
+    
+    @Override
+    public Map<String, Object> getPage(int page, int size) {
+        int offset = (page - 1) * size;
+        List<AttachmentManagement> attachments = attachmentManagementMapper.selectPage(offset, size);
+        int total = attachmentManagementMapper.countAll();
+
+        for (AttachmentManagement attachment : attachments) {
+            String username = userInformationMapper.getUsernameByUuid(attachment.getUuid());
+            attachment.setUsername(username != null ? username : "未知用户");
+        }
+        
+        Map<String, Object> result = new HashMap<>();
+        result.put("data", attachments);
+        result.put("total", total);
+        result.put("page", page);
+        result.put("size", size);
+        result.put("totalPages", (int) Math.ceil((double) total / size));
+        
+        return result;
+    }
+    
+    @Override
+    public Map<String, Object> getPageByUuid(String uuid, int page, int size) {
+        int offset = (page - 1) * size;
+        List<AttachmentManagement> attachments = attachmentManagementMapper.selectPageByUuid(uuid, offset, size);
+        int total = attachmentManagementMapper.countByUuid(uuid);
+
+        for (AttachmentManagement attachment : attachments) {
+            String username = userInformationMapper.getUsernameByUuid(attachment.getUuid());
+            attachment.setUsername(username != null ? username : "未知用户");
+        }
+        
+        Map<String, Object> result = new HashMap<>();
+        result.put("data", attachments);
+        result.put("total", total);
+        result.put("page", page);
+        result.put("size", size);
+        result.put("totalPages", (int) Math.ceil((double) total / size));
+        
+        return result;
+    }
+    
+    @Override
+    public Map<String, Object> getPageWithRecentDeleted(int page, int size) {
+        int offset = (page - 1) * size;
+        List<AttachmentManagement> attachments = attachmentManagementMapper.selectAllPageWithRecentDeleted(offset, size);
+        int total = attachmentManagementMapper.countAllWithRecentDeleted();
+
+        for (AttachmentManagement attachment : attachments) {
+            String username = userInformationMapper.getUsernameByUuid(attachment.getUuid());
+            attachment.setUsername(username != null ? username : "未知用户");
+        }
+        
+        Map<String, Object> result = new HashMap<>();
+        result.put("data", attachments);
+        result.put("total", total);
+        result.put("page", page);
+        result.put("size", size);
+        result.put("totalPages", (int) Math.ceil((double) total / size));
+        
+        return result;
+    }
+    
+    @Override
+    public Map<String, Object> getDeletedPageOnly(int page, int size) {
+        int offset = (page - 1) * size;
+        List<AttachmentManagement> attachments = attachmentManagementMapper.selectDeletedOnlyPage(offset, size);
+        int total = attachmentManagementMapper.countDeletedOnly();
+
+        for (AttachmentManagement attachment : attachments) {
+            String username = userInformationMapper.getUsernameByUuid(attachment.getUuid());
+            attachment.setUsername(username != null ? username : "未知用户");
+        }
+        
+        Map<String, Object> result = new HashMap<>();
+        result.put("data", attachments);
+        result.put("total", total);
+        result.put("page", page);
+        result.put("size", size);
+        result.put("totalPages", (int) Math.ceil((double) total / size));
+        
+        return result;
+    }
+    
+    @Override
+    public Map<String, Object> getPageByUuidWithRecentDeleted(String uuid, int page, int size) {
+        int offset = (page - 1) * size;
+        List<AttachmentManagement> attachments = attachmentManagementMapper.selectPageByUuidWithRecentDeleted(uuid, offset, size);
+        int total = attachmentManagementMapper.countByUuidWithRecentDeleted(uuid);
+
+        for (AttachmentManagement attachment : attachments) {
+            String username = userInformationMapper.getUsernameByUuid(attachment.getUuid());
+            attachment.setUsername(username != null ? username : "未知用户");
+        }
+        
+        Map<String, Object> result = new HashMap<>();
+        result.put("data", attachments);
+        result.put("total", total);
+        result.put("page", page);
+        result.put("size", size);
+        result.put("totalPages", (int) Math.ceil((double) total / size));
+        
+        return result;
+    }
+    
+    @Override
+    public Map<String, Object> getDeletedPageByUuidOnly(String uuid, int page, int size) {
+        int offset = (page - 1) * size;
+        List<AttachmentManagement> attachments = attachmentManagementMapper.selectDeletedOnlyPageByUuid(uuid, offset, size);
+        int total = attachmentManagementMapper.countDeletedOnlyByUuid(uuid);
+
+        for (AttachmentManagement attachment : attachments) {
+            String username = userInformationMapper.getUsernameByUuid(attachment.getUuid());
+            attachment.setUsername(username != null ? username : "未知用户");
+        }
+        
+        Map<String, Object> result = new HashMap<>();
+        result.put("data", attachments);
+        result.put("total", total);
+        result.put("page", page);
+        result.put("size", size);
+        result.put("totalPages", (int) Math.ceil((double) total / size));
+        
+        return result;
+    }
+    
+    @Override
+    public Map<String, Object> getPageByUserUuid(String userUuid, int page, int size) {
+        int offset = (page - 1) * size;
+        List<AttachmentManagement> attachments = attachmentManagementMapper.selectPageByUserUuid(userUuid, offset, size);
+        int total = attachmentManagementMapper.countByUserUuid(userUuid);
+
+        for (AttachmentManagement attachment : attachments) {
+            String username = userInformationMapper.getUsernameByUuid(attachment.getUuid());
+            attachment.setUsername(username != null ? username : "未知用户");
+        }
+        
+        Map<String, Object> result = new HashMap<>();
+        result.put("data", attachments);
+        result.put("total", total);
+        result.put("page", page);
+        result.put("size", size);
+        result.put("totalPages", (int) Math.ceil((double) total / size));
+        
+        return result;
+    }
+    
+    @Override
+    public Map<String, Object> getPageByUserUuidWithDeleted(String userUuid, int page, int size) {
+        int offset = (page - 1) * size;
+        List<AttachmentManagement> attachments = attachmentManagementMapper.selectPageByUserUuidWithDeleted(userUuid, offset, size);
+        int total = attachmentManagementMapper.countByUserUuidWithDeleted(userUuid);
+
+        for (AttachmentManagement attachment : attachments) {
+            String username = userInformationMapper.getUsernameByUuid(attachment.getUuid());
+            attachment.setUsername(username != null ? username : "未知用户");
+        }
+        
+        Map<String, Object> result = new HashMap<>();
+        result.put("data", attachments);
+        result.put("total", total);
+        result.put("page", page);
+        result.put("size", size);
+        result.put("totalPages", (int) Math.ceil((double) total / size));
+        
+        return result;
+    }
+    
+    @Override
+    public Map<String, Object> getDeletedPageByUserUuidOnly(String userUuid, int page, int size) {
+        int offset = (page - 1) * size;
+        List<AttachmentManagement> attachments = attachmentManagementMapper.selectDeletedOnlyPageByUserUuid(userUuid, offset, size);
+        int total = attachmentManagementMapper.countDeletedOnlyByUserUuid(userUuid);
+
+        for (AttachmentManagement attachment : attachments) {
+            String username = userInformationMapper.getUsernameByUuid(attachment.getUuid());
+            attachment.setUsername(username != null ? username : "未知用户");
+        }
+        
+        Map<String, Object> result = new HashMap<>();
+        result.put("data", attachments);
+        result.put("total", total);
+        result.put("page", page);
+        result.put("size", size);
+        result.put("totalPages", (int) Math.ceil((double) total / size));
+        
+        return result;
+    }
+    
+    @Override
+    public boolean deleteAttachment(String attachmentId) {
+        LocalDateTime deletedTime = LocalDateTime.now();
+        int result = attachmentManagementMapper.deleteByAttachmentId(attachmentId, deletedTime);
+        return result > 0;
+    }
+
+    @Override
+    public int batchDeleteAttachments(List<String> attachmentIds) {
+        if (attachmentIds == null || attachmentIds.isEmpty()) {
+            return 0;
+        }
+        LocalDateTime deletedTime = LocalDateTime.now();
+        return attachmentManagementMapper.batchDeleteByAttachmentIds(attachmentIds, deletedTime);
+    }
+
+    @Override
+    public int batchRestoreAttachments(List<String> attachmentIds) {
+        if (attachmentIds == null || attachmentIds.isEmpty()) {
+            return 0;
+        }
+        return attachmentManagementMapper.batchRestoreByAttachmentIds(attachmentIds);
+    }
+    
+    @Override
+    public boolean restoreAttachment(String attachmentId) {
+        int result = attachmentManagementMapper.restoreAttachment(attachmentId);
+        return result > 0;
+    }
+    
+    @Override
+    public String getAttachmentOwnerUuid(String attachmentId) {
+        AttachmentManagement attachment = attachmentManagementMapper.selectByAttachmentId(attachmentId);
+        return attachment != null ? attachment.getUuid() : null;
+    }
+
+    @Override
+    public boolean physicallyDeleteAttachment(String attachmentId) {
+        AttachmentManagement attachment = attachmentManagementMapper.selectByAttachmentId(attachmentId);
+        if (attachment == null) {
+            return false;
+        }
+
+        try {
+            String filePath = attachment.getAttachment_path();
+            String storageId = attachment.getStorage_id();
+
+            if (storageId != null && !isLocalStorage(storageId)) {
+                if (!deleteFromStorage(attachment, filePath)) {
+                    log.warn("存储删除失败，附件可能存储在已禁用的存储方式中，请先启用存储方式后重试");
+                    return false;
+                }
+            }
+
+            deletePhysicalFile(filePath);
+
+            deleteCompressedFile(filePath);
+
+            int result = attachmentManagementMapper.physicallyDeleteAttachment(attachmentId);
+            return result > 0;
+        } catch (Exception e) {
+            log.error("彻底删除附件失败: {}", attachmentId, e);
+            return false;
+        }
+    }
+
+    @Override
+    public int batchPhysicallyDeleteAttachments(List<String> attachmentIds) {
+        if (attachmentIds == null || attachmentIds.isEmpty()) {
+            return 0;
+        }
+        int successCount = 0;
+        for (String attachmentId : attachmentIds) {
+            if (physicallyDeleteAttachment(attachmentId)) {
+                successCount++;
+            } else {
+                log.warn("批量彻底删除失败，跳过: {}", attachmentId);
+            }
+        }
+        return successCount;
+    }
+    
+    @Override
+    public int cleanupExpiredDeletedAttachments() {
+        List<AttachmentManagement> expiredAttachments = attachmentManagementMapper.selectExpiredDeletedAttachments();
+        
+        int cleanedCount = 0;
+        
+        for (AttachmentManagement attachment : expiredAttachments) {
+            try {
+                String filePath = attachment.getAttachment_path();
+                String storageId = attachment.getStorage_id();
+                log.debug("准备清理过期附件: {}, storage_id: {}", filePath, storageId);
+
+                boolean fileDeleted;
+
+                if (storageId != null && !isLocalStorage(storageId)) {
+                    // 删 S3
+                    deleteFromStorage(attachment, filePath);
+                    // 同时删本地（兼容旧回退逻辑遗留的本地文件）
+                    deletePhysicalFile(filePath);
+                    fileDeleted = true;
+                } else {
+                    fileDeleted = deletePhysicalFile(filePath);
+                }
+
+                if (fileDeleted) {
+                    if (storageId == null || isLocalStorage(storageId)) {
+                        deleteCompressedFile(filePath);
+                    }
+
+                    int result = attachmentManagementMapper.physicallyDeleteAttachment(attachment.getAttachment_id());
+                    if (result > 0) {
+                        cleanedCount++;
+                        log.info("成功清理过期附件: {}", attachment.getAttachment_id());
+                    }
+                }
+            } catch (Exception e) {
+                log.error("清理附件失败: {}, 错误: {}", attachment.getAttachment_id(), e.getMessage(), e);
+            }
+        }
+        
+        log.info("附件清理任务完成，共清理 {} 个附件", cleanedCount);
+        return cleanedCount;
+    }
+
+    private boolean isLocalStorage(String storageId) {
+        try {
+            StorageMethod method = storageMethodMapper.selectByUuid(storageId);
+            return method != null && "local".equals(method.getType());
+        } catch (Exception e) {
+            return true;
+        }
+    }
+
+    private boolean deleteFromStorage(AttachmentManagement attachment, String filePath) {
+        try {
+            FileStorage storage = storageFacadeService.getStorage(attachment.getStorage_id());
+            storage.delete(filePath);
+            log.info("成功从存储删除文件: {}/{}", attachment.getStorage_id(), filePath);
+            return true;
+        } catch (Exception e) {
+            log.warn("从存储删除文件失败: {}, 错误: {}", filePath, e.getMessage());
+            return false;
+        }
+    }
+
+    private void deleteCompressedFile(String originalFilePath) {
+        try {
+            Path originalPath = Path.of(dataRoot, originalFilePath.replace('\\', '/')).toAbsolutePath().normalize();
+            Path parentDir = originalPath.getParent();
+            String fileName = originalPath.getFileName().toString();
+            
+            int dotIndex = fileName.lastIndexOf('.');
+            String baseName = dotIndex > 0 ? fileName.substring(0, dotIndex) : fileName;
+            String compressedFileName = baseName + "_compressed.jpg";
+            
+            Path compressedPath = parentDir.resolve("compressor").resolve(compressedFileName);
+            
+            if (Files.exists(compressedPath)) {
+                Files.delete(compressedPath);
+                log.info("成功删除压缩文件: {}", compressedPath);
+            }
+        } catch (Exception e) {
+            log.warn("删除压缩文件失败: {}", e.getMessage());
+        }
+    }
+
+    private boolean deletePhysicalFile(String filePath) {
+        try {
+            String normalizedPath = filePath.replace('\\', '/');
+            log.debug("原始路径: {}, 标准化后: {}", filePath, normalizedPath);
+
+            Path fullPath = Path.of(dataRoot, normalizedPath).toAbsolutePath().normalize();
+
+            Path allowedRoot = Path.of(dataRoot, "upload").toAbsolutePath().normalize();
+            if (!fullPath.startsWith(allowedRoot)) {
+                log.error("检测到非法文件删除请求，路径超出允许范围: {}", filePath);
+                return false;
+            }
+
+            File file = fullPath.toFile();
+            log.debug("完整文件路径: {}", fullPath);
+            
+            if (file.exists() && file.isFile()) {
+                if (!file.canWrite()) {
+                    log.warn("文件没有写权限，无法删除: {}", fullPath);
+                    return false;
+                }
+                
+                boolean deleted = file.delete();
+                if (deleted) {
+                    log.info("成功删除文件: {}", fullPath);
+                } else {
+                    log.warn("文件删除失败: {}", fullPath);
+                }
+                return deleted;
+            } else if (!file.exists()) {
+                log.info("未找到本地残留，跳过删除: {}", fullPath);
+                return true;
+            } else {
+                log.warn("路径不是普通文件，跳过删除: {}", fullPath);
+                return false;
+            }
+        } catch (Exception e) {
+            log.error("物理删除文件时发生错误，路径: {}", filePath, e);
+            return false;
+        }
+    }
+
+    @Override
+    public Map<String, Object> migrateStorage(String sourceStorageId, String targetStorageId) {
+        List<AttachmentManagement> attachments = attachmentManagementMapper.selectByStorageId(sourceStorageId);
+        return doMigrate(attachments, sourceStorageId, targetStorageId);
+    }
+
+    @Override
+    public Map<String, Object> switchAttachmentStorage(String attachmentId, String targetStorageId) {
+        AttachmentManagement attachment = attachmentManagementMapper.selectByAttachmentId(attachmentId);
+        if (attachment == null) {
+            return Map.of("error", "附件不存在");
+        }
+        String sourceStorageId = attachment.getStorage_id();
+        if (targetStorageId.equals(sourceStorageId)) {
+            return Map.of("error", "目标存储与当前存储相同");
+        }
+
+        FileStorage sourceStorage;
+        FileStorage targetStorage;
+        try {
+            sourceStorage = storageFacadeService.getStorage(sourceStorageId);
+            targetStorage = storageFacadeService.getStorage(targetStorageId);
+        } catch (Exception e) {
+            return Map.of("error", "存储方式不可用: " + e.getMessage());
+        }
+
+        String filePath = attachment.getAttachment_path();
+        try {
+            if (!sourceStorage.exists(filePath)) {
+                return Map.of("error", "源文件不存在，无法迁移");
+            }
+
+            byte[] fileData;
+            try (InputStream in = sourceStorage.retrieve(filePath)) {
+                fileData = in.readAllBytes();
+            }
+
+            try (InputStream in = new ByteArrayInputStream(fileData)) {
+                targetStorage.store(filePath, in, fileData.length, null);
+            }
+
+            try {
+                sourceStorage.delete(filePath);
+            } catch (Exception e) {
+                log.warn("切换后删除源文件失败（不影响切换结果）: {}", filePath);
+            }
+
+            attachmentManagementMapper.updateStorageId(attachment.getAttachment_id(), targetStorageId);
+            log.info("附件存储切换成功: {} -> {}", filePath, targetStorageId);
+            return Map.of("success", true, "filePath", filePath);
+        } catch (Exception e) {
+            log.error("附件存储切换失败: {}, 错误: {}", filePath, e.getMessage());
+            return Map.of("error", "迁移失败: " + (e.getMessage() != null ? e.getMessage() : "未知错误"));
+        }
+    }
+
+    @Override
+    public Map<String, Object> retryMigrateStorage(String sourceStorageId, String targetStorageId, List<String> attachmentIds) {
+        List<AttachmentManagement> attachments = attachmentIds.stream()
+                .map(attachmentManagementMapper::selectByAttachmentId)
+                .filter(a -> a != null && sourceStorageId.equals(a.getStorage_id()))
+                .toList();
+        return doMigrate(attachments, sourceStorageId, targetStorageId);
+    }
+
+    private Map<String, Object> doMigrate(List<AttachmentManagement> attachments, String sourceStorageId, String targetStorageId) {
+        int total = attachments.size();
+        int success = 0;
+        List<Map<String, String>> failedItems = new java.util.ArrayList<>();
+
+        FileStorage sourceStorage;
+        FileStorage targetStorage;
+        try {
+            sourceStorage = storageFacadeService.getStorage(sourceStorageId);
+            targetStorage = storageFacadeService.getStorage(targetStorageId);
+        } catch (Exception e) {
+            return Map.of("error", "存储方式不可用: " + e.getMessage());
+        }
+
+        // 创建迁移记录
+        StorageMigrationLog migrationLog = new StorageMigrationLog();
+        migrationLog.setSource_storage_id(sourceStorageId);
+        migrationLog.setTarget_storage_id(targetStorageId);
+        migrationLog.setTotal(total);
+        migrationLog.setStatus(0);
+        storageMigrationLogMapper.insertLog(migrationLog);
+        int logId = migrationLog.getId();
+
+        for (AttachmentManagement attachment : attachments) {
+            String filePath = attachment.getAttachment_path();
+            try {
+                if (!sourceStorage.exists(filePath)) {
+                    failedItems.add(Map.of(
+                        "attachmentId", attachment.getAttachment_id(),
+                        "filePath", filePath,
+                        "error", "源文件不存在，无法迁移"));
+                    continue;
+                }
+
+                byte[] fileData;
+                try (InputStream in = sourceStorage.retrieve(filePath)) {
+                    fileData = in.readAllBytes();
+                }
+
+                try (InputStream in = new java.io.ByteArrayInputStream(fileData)) {
+                    targetStorage.store(filePath, in, fileData.length, null);
+                }
+
+                try {
+                    sourceStorage.delete(filePath);
+                } catch (Exception e) {
+                    log.warn("迁移后删除源文件失败（不影响迁移结果）: {}", filePath);
+                }
+
+                attachmentManagementMapper.updateStorageId(attachment.getAttachment_id(), targetStorageId);
+                success++;
+                log.info("迁移成功: {} -> {}", filePath, targetStorageId);
+            } catch (Exception e) {
+                log.error("迁移失败: {}, 错误: {}", filePath, e.getMessage());
+                failedItems.add(Map.of(
+                        "attachmentId", attachment.getAttachment_id(),
+                        "filePath", filePath,
+                        "error", e.getMessage() != null ? e.getMessage() : "未知错误"
+                ));
+            }
+        }
+
+        // 更新迁移记录
+        migrationLog.setSuccess(success);
+        migrationLog.setFailed(failedItems.size());
+        migrationLog.setStatus(1);
+        storageMigrationLogMapper.updateLog(migrationLog);
+
+        // 写入失败明细
+        if (!failedItems.isEmpty()) {
+            List<StorageMigrationFailedItem> items = failedItems.stream().map(f -> {
+                StorageMigrationFailedItem item = new StorageMigrationFailedItem();
+                item.setMigration_id(logId);
+                item.setAttachment_id(f.get("attachmentId"));
+                item.setFile_path(f.get("filePath"));
+                item.setError_msg(f.get("error"));
+                return item;
+            }).toList();
+            storageMigrationLogMapper.insertFailedItems(items);
+        }
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("total", total);
+        result.put("success", success);
+        result.put("failed", failedItems.size());
+        result.put("failedItems", failedItems);
+        return result;
+    }
+
+    @Override
+    public List<StorageMigrationLog> getMigrateLogs() {
+        return storageMigrationLogMapper.selectAll();
+    }
+
+    @Override
+    public StorageMigrationLog getMigrateLogDetail(int id) {
+        return storageMigrationLogMapper.selectById(id);
+    }
+}

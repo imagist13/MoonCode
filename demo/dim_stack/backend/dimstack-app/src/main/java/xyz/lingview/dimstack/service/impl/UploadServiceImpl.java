@@ -1,0 +1,1257 @@
+package xyz.lingview.dimstack.service.impl;
+
+import lombok.extern.slf4j.Slf4j;
+import org.mindrot.jbcrypt.BCrypt;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
+import xyz.lingview.dimstack.domain.UploadArticle;
+import xyz.lingview.dimstack.domain.UploadAttachment;
+import xyz.lingview.dimstack.domain.UserInformation;
+import xyz.lingview.dimstack.mapper.ArticleCategoryMapper;
+import xyz.lingview.dimstack.mapper.UploadMapper;
+import xyz.lingview.dimstack.mapper.UserInformationMapper;
+import xyz.lingview.dimstack.service.CacheService;
+import xyz.lingview.dimstack.service.CurrentUserService;
+import xyz.lingview.dimstack.service.FileStorage;
+import xyz.lingview.dimstack.service.SiteConfigService;
+import xyz.lingview.dimstack.service.StorageFacadeService;
+import xyz.lingview.dimstack.service.UploadService;
+import xyz.lingview.dimstack.mapper.StorageMethodMapper;
+import xyz.lingview.dimstack.util.CategoryPathUtil;
+import xyz.lingview.dimstack.util.RandomUtil;
+
+import jakarta.servlet.http.HttpServletRequest;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.HttpURLConnection;
+import java.net.InetAddress;
+import java.net.URI;
+import java.net.URL;
+import java.nio.channels.FileChannel;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
+import java.time.Instant;
+import java.util.*;
+import java.util.stream.Collectors;
+
+import static java.net.InetAddress.getByName;
+
+/**
+ * @Author: lingview
+ * @Date: 2025/11/12 16:09:36
+ * @Description: 文件上传服务
+ * @Version: 1.0
+ */
+@Slf4j
+@Service
+public class UploadServiceImpl implements UploadService {
+
+    private static final int MAX_EXTERNAL_SIZE = 100 * 1024 * 1024;
+    @Autowired
+    private UploadMapper uploadMapper;
+
+    @Autowired
+    private UserInformationMapper userInformationMapper;
+
+    @Autowired
+    private CurrentUserService currentUserService;
+
+    @Autowired
+    private ArticleCategoryMapper articleCategoryMapper;
+
+    @Autowired
+    private CategoryPathUtil categoryPathUtil;
+
+    @Autowired
+    private SiteConfigService siteConfigService;
+
+    @Autowired
+    private CacheService cacheService;
+
+    @Autowired
+    private StorageFacadeService storageFacadeService;
+
+    @Autowired
+    private StorageMethodMapper storageMethodMapper;
+
+    // 注入配置属性
+    @Value("${file.data-root:.}")
+    private String dataRoot;
+
+    @Value("${file.upload-dir:upload}")
+    private String uploadDir;
+
+    private static final long MAX_FILE_SIZE = 100 * 1024 * 1024;
+
+    private static final Map<String, List<String>> SUPPORTED_FILE_TYPES = Map.of(
+            "image", List.of(
+                    "image/jpeg", "image/jpg", "image/png", "image/gif",
+                    "image/webp", "image/bmp"
+            ),
+            "video", List.of(
+                    "video/mp4", "video/webm", "video/ogg",
+                    "video/avi", "video/mov", "video/mkv"
+            ),
+            "audio", List.of(
+                    "audio/mp3", "audio/mpeg", "audio/wav",
+                    "audio/ogg", "audio/m4a", "audio/aac",
+                    "audio/flac", "audio/x-flac"
+            ),
+            "archive", List.of(
+                    "application/zip", "application/x-rar-compressed",
+                    "application/x-tar", "application/gzip",
+                    "application/x-xz", "application/x-7z-compressed",
+                    "application/x-zip-compressed","application/x-compressed",
+                    "application/x-gzip"
+            ),
+            "document", List.of(
+                    "application/pdf",
+                    "application/msword",
+                    "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            )
+    );
+
+
+    private static final Set<String> SUPPORTED_EXTENSIONS = Set.of(
+            ".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp",
+            ".mp4", ".webm", ".ogg", ".avi", ".mov", ".mkv",
+            ".mp3", ".wav", ".flac", ".aac", ".m4a",
+            ".zip", ".rar", ".tar", ".gz", ".tgz", ".xz", ".7z",
+            ".pdf", ".doc", ".docx"
+    );
+
+    private String getUsername(HttpServletRequest request) {
+        String username = currentUserService.getCurrentUsername();
+        if (username == null) {
+            log.debug("未找到用户会话或用户未登录");
+            return null;
+        }
+        if (!username.matches("^[\\p{L}\\p{N}_]+$")) {
+            log.debug("当前用户名无效: {}", username);
+            return null;
+        }
+        return username;
+    }
+
+    private String getUserUUID(String username) {
+        String uuid = userInformationMapper.selectUserUUID(username);
+        if (uuid == null) {
+            log.warn("未找到用户名 {} 的UUID", username);
+        }
+        return uuid;
+    }
+
+    private boolean isMimeAllowed(String mimeType) {
+        boolean allowed = SUPPORTED_FILE_TYPES.values().stream()
+                .flatMap(List::stream)
+                .anyMatch(type -> type.equalsIgnoreCase(mimeType));
+        if (!allowed) {
+            log.debug("MIME类型不被允许: {}", mimeType);
+        }
+        return allowed;
+    }
+
+    private boolean isExtensionAllowed(String extension) {
+        boolean allowed = SUPPORTED_EXTENSIONS.contains(extension.toLowerCase());
+        if (!allowed) {
+            log.debug("文件扩展名不被允许: {}", extension);
+        }
+        return allowed;
+    }
+
+    private String getFolderByMime(String mimeType) {
+        for (Map.Entry<String, List<String>> entry : SUPPORTED_FILE_TYPES.entrySet()) {
+            if (entry.getValue().contains(mimeType)) {
+                return entry.getKey();
+            }
+        }
+        return "attachment";
+    }
+
+    private String getMimeTypeByExtension(String extension) {
+        Map<String, String> extensionToMime = new HashMap<>();
+        extensionToMime.put(".jpg", "image/jpeg");
+        extensionToMime.put(".jpeg", "image/jpeg");
+        extensionToMime.put(".png", "image/png");
+        extensionToMime.put(".gif", "image/gif");
+        extensionToMime.put(".webp", "image/webp");
+        extensionToMime.put(".svg", "image/svg+xml");
+        extensionToMime.put(".bmp", "image/bmp");
+        extensionToMime.put(".mp4", "video/mp4");
+        extensionToMime.put(".webm", "video/webm");
+        extensionToMime.put(".ogg", "video/ogg");
+        extensionToMime.put(".avi", "video/avi");
+        extensionToMime.put(".mov", "video/mov");
+        extensionToMime.put(".mkv", "video/mkv");
+        extensionToMime.put(".mp3", "audio/mp3");
+        extensionToMime.put(".wav", "audio/wav");
+        extensionToMime.put(".flac", "audio/flac");
+        extensionToMime.put(".aac", "audio/aac");
+        extensionToMime.put(".m4a", "audio/m4a");
+        extensionToMime.put(".zip", "application/zip");
+        extensionToMime.put(".rar", "application/x-rar-compressed");
+        extensionToMime.put(".tar", "application/x-tar");
+        extensionToMime.put(".gz", "application/gzip");
+        extensionToMime.put(".tgz", "application/gzip");
+        extensionToMime.put(".xz", "application/x-xz");
+        extensionToMime.put(".7z", "application/x-7z-compressed");
+        extensionToMime.put(".pdf", "application/pdf");
+        extensionToMime.put(".doc", "application/msword");
+        extensionToMime.put(".docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+        return extensionToMime.getOrDefault(extension.toLowerCase(), "application/octet-stream");
+    }
+
+    private String detectMimeTypeFromFile(Path filePath) {
+        try {
+            String mimeType = Files.probeContentType(filePath);
+            if (mimeType == null || mimeType.equals("application/octet-stream")) {
+                String fileName = filePath.getFileName().toString();
+                if (fileName.contains(".")) {
+                    String extension = fileName.substring(fileName.lastIndexOf("."));
+                    mimeType = getMimeTypeByExtension(extension);
+                }
+            }
+            log.debug("检测到文件 {} 的MIME类型: {}", filePath.getFileName(), mimeType);
+            return mimeType != null ? mimeType : "application/octet-stream";
+        } catch (IOException e) {
+            log.warn("检测文件 {} 的MIME类型时出错", filePath.getFileName(), e);
+            String fileName = filePath.getFileName().toString();
+            if (fileName.contains(".")) {
+                String extension = fileName.substring(fileName.lastIndexOf("."));
+                return getMimeTypeByExtension(extension);
+            }
+            return "application/octet-stream";
+        }
+    }
+
+    private Path getBasePath() {
+        return Path.of(dataRoot).toAbsolutePath().normalize().resolve(uploadDir);
+    }
+
+    private Path buildFileSystemPath(String... paths) {
+        Path basePath = getBasePath();
+        Path relativePath = Path.of(paths[0], Arrays.copyOfRange(paths, 1, paths.length));
+        return basePath.resolve(relativePath).normalize();
+    }
+
+    private String buildDatabasePath(String... paths) {
+        return Path.of(uploadDir, paths).toString().replace('\\', '/');
+    }
+
+    @Override
+    public UploadAttachment selectByAccessKey(String accessKey) {
+        return uploadMapper.selectByAccessKey(accessKey);
+    }
+
+    @Override
+    public Map<String, String> uploadAttachment(HttpServletRequest request, MultipartFile file) {
+        log.info("开始附件上传流程");
+
+        if (file.isEmpty()) {
+            log.warn("尝试上传空文件");
+            return Map.of("error", "文件为空");
+        }
+
+        if (file.getSize() > MAX_FILE_SIZE) {
+            log.warn("尝试上传过大文件: {} 字节", file.getSize());
+            return Map.of("error", "文件过大");
+        }
+
+        String username = getUsername(request);
+        if (username == null) {
+            log.warn("未授权的上传尝试");
+            return Map.of("error", "用户未登录或用户名无效");
+        }
+
+        String userUUID = getUserUUID(username);
+        if (userUUID == null) {
+            log.error("未找到用户名 {} 的UUID", username);
+            return Map.of("error", "未找到用户");
+        }
+
+        String contentType = file.getContentType();
+        String originalFilename = file.getOriginalFilename();
+        String extension = "";
+
+        if (originalFilename != null && originalFilename.contains(".")) {
+            extension = originalFilename.substring(originalFilename.lastIndexOf(".")).toLowerCase();
+        }
+
+        if (!isMimeAllowed(contentType) || !isExtensionAllowed(extension)) {
+            log.warn("尝试上传被禁止的文件类型。MIME: {}, 扩展名: {}", contentType, extension);
+            return Map.of("error", "文件类型不被允许");
+        }
+
+        String subFolder = getFolderByMime(contentType);
+        String fileUUID = RandomUtil.generateUUID();
+        String fileName = fileUUID + extension;
+        String accessKey = UUID.randomUUID().toString().replace("-", "");
+        String databasePath = buildDatabasePath(username, "attachment", subFolder, fileName);
+        String objectKey = databasePath;
+
+        // 获取当前默认存储方式
+        String defaultStorageUuid = siteConfigService.getSiteConfig().getDefault_storage();
+        String storageId = defaultStorageUuid != null ? defaultStorageUuid : storageMethodMapper.selectByType("local").getUuid();
+        FileStorage storage;
+        try {
+            storage = storageFacadeService.getDefaultStorage(defaultStorageUuid);
+        } catch (Exception e) {
+            log.error("默认存储方式不可用: {}", e.getMessage());
+            return Map.of("error", "默认存储方式不可用，请检查存储配置");
+        }
+
+        UploadAttachment uploadFile = new UploadAttachment();
+        uploadFile.setUuid(userUUID);
+        uploadFile.setAttachment_id(fileUUID);
+        uploadFile.setOriginal_filename(originalFilename);
+        uploadFile.setAttachment_path(databasePath);
+        uploadFile.setAccess_key(accessKey);
+        uploadFile.setStorage_id(storageId);
+        uploadFile.setContent_type(contentType);
+        int insertResult = uploadMapper.insertUploadAttachment(uploadFile);
+        if (insertResult != 1) {
+            log.error("插入附件记录到数据库失败。文件: {}", fileName);
+            return Map.of("error", "插入数据库失败");
+        }
+
+        try {
+            storage.store(objectKey, file.getInputStream(), file.getSize(), contentType);
+            log.info("文件上传成功 Key: {}", objectKey);
+        } catch (Exception e) {
+            log.error("保存文件失败: {}", objectKey, e);
+            return Map.of("error", "保存文件失败");
+        }
+
+        String fileUrl = "/file/" + accessKey;
+        log.info("附件上传完成 URL: {}", fileUrl);
+        return Map.of("fileUrl", fileUrl);
+    }
+
+    @Override
+    public Map<String, String> initMultipartUpload(HttpServletRequest request, Map<String, String> payload) {
+        log.info("初始化分片上传");
+
+        String username = getUsername(request);
+        if (username == null) {
+            log.warn("未授权的分片上传初始化尝试");
+            return Map.of("error", "用户未登录或用户名无效");
+        }
+
+        String filename = payload.get("filename");
+        if (filename == null || filename.isEmpty()) {
+            log.warn("分片上传初始化时未提供文件名");
+            return Map.of("error", "文件名是必需的");
+        }
+
+        String extension = "";
+        if (filename.contains(".")) {
+            extension = filename.substring(filename.lastIndexOf(".")).toLowerCase();
+        }
+
+        if (!isExtensionAllowed(extension)) {
+            log.warn("分片上传初始化时使用了被禁止的扩展名: {}", extension);
+            return Map.of("error", "文件扩展名不被允许");
+        }
+
+        String uploadId = UUID.randomUUID().toString();
+        log.info("分片上传初始化成功。上传ID: {}", uploadId);
+        return Map.of("uploadId", uploadId);
+    }
+
+    @Override
+    public Map<String, String> uploadChunk(HttpServletRequest request, String uploadId, int chunkIndex, byte[] chunkData) {
+        log.debug("上传分片 {}/{}，上传ID: {}", chunkIndex, uploadId);
+
+        String username = getUsername(request);
+        if (username == null) {
+            log.warn("未授权的分片上传尝试");
+            return Map.of("error", "用户未登录或用户名无效");
+        }
+
+        Path uploadPath = buildFileSystemPath(username, "temp", uploadId);
+        Path allowedRoot = getBasePath();
+
+        if (!uploadPath.startsWith(allowedRoot)) {
+            log.error("分片的上传路径无效: {}", uploadPath);
+            return Map.of("error", "上传路径无效");
+        }
+
+        try {
+            Files.createDirectories(uploadPath);
+            Path chunkFile = uploadPath.resolve("%05d.part".formatted(chunkIndex));
+            Files.write(chunkFile, chunkData, StandardOpenOption.CREATE, StandardOpenOption.WRITE);
+            log.debug("分片 {}/{} 上传成功", chunkIndex, uploadId);
+        } catch (IOException e) {
+            log.error("保存分片 {}/{} 失败", chunkIndex, uploadId, e);
+            return Map.of("error", "保存分片失败");
+        }
+
+        return Map.of("message", "分片上传成功");
+    }
+
+    @Override
+    public Map<String, String> completeUpload(HttpServletRequest request, Map<String, String> payload) {
+        log.info("完成分片上传");
+
+        String uploadId = payload.get("uploadId");
+        String filename = payload.get("filename");
+
+        if (uploadId == null || uploadId.isEmpty() || filename == null || filename.isEmpty()) {
+            log.warn("完成上传请求缺少必要参数");
+            return Map.of("error", "uploadId和文件名是必需的");
+        }
+
+        String username = getUsername(request);
+        if (username == null) {
+            log.warn("未授权的分片上传完成尝试");
+            return Map.of("error", "用户未登录或用户名无效");
+        }
+
+        String userUUID = getUserUUID(username);
+        if (userUUID == null) {
+            log.error("未找到用户名 {} 的UUID", username);
+            return Map.of("error", "未找到用户");
+        }
+
+        String extension = "";
+        if (filename.contains(".")) {
+            extension = filename.substring(filename.lastIndexOf(".")).toLowerCase();
+        }
+
+        if (!isExtensionAllowed(extension)) {
+            log.warn("分片上传完成时使用了被禁止的扩展名: {}", extension);
+            return Map.of("error", "文件扩展名不被允许");
+        }
+
+        Path tempDir = buildFileSystemPath(username, "temp", uploadId);
+        Path allowedRoot = getBasePath();
+        if (!tempDir.startsWith(allowedRoot)) {
+            log.error("完成操作的上传路径无效: {}", tempDir);
+            return Map.of("error", "上传路径无效");
+        }
+
+        if (!Files.exists(tempDir)) {
+            log.error("临时目录不存在: {}", tempDir);
+            return Map.of("error", "临时目录不存在");
+        }
+
+        String fileUUID = RandomUtil.generateUUID();
+        String newFileName = fileUUID + extension;
+
+        String mimeType = getMimeTypeByExtension(extension);
+        String subFolder = getFolderByMime(mimeType);
+
+        Path finalDir = buildFileSystemPath(username, "attachment", subFolder);
+        Path finalFilePath = finalDir.resolve(newFileName);
+
+        try {
+            Files.createDirectories(finalDir);
+            log.debug("为最终文件创建目录: {}", finalDir);
+
+            List<Path> chunks = Files.list(tempDir)
+                    .filter(p -> p.getFileName().toString().endsWith(".part"))
+                    .sorted(Comparator.comparing(Path::getFileName))
+                    .toList();
+
+            if (chunks.isEmpty()) {
+                log.warn("未找到任何分片文件在目录: {}", tempDir);
+                return Map.of("error", "未找到任何分片文件");
+            }
+
+            log.debug("找到 {} 个分片文件准备合并", chunks.size());
+
+            try (FileChannel outChannel = FileChannel.open(finalFilePath,
+                    StandardOpenOption.CREATE,
+                    StandardOpenOption.WRITE,
+                    StandardOpenOption.TRUNCATE_EXISTING)) {
+
+                for (Path chunk : chunks) {
+                    log.debug("正在处理分片: {}", chunk.getFileName());
+                    try (FileChannel inChannel = FileChannel.open(chunk, StandardOpenOption.READ)) {
+                        inChannel.transferTo(0, inChannel.size(), outChannel);
+                    } catch (IOException e) {
+                        log.error("处理分片文件 {} 时出错", chunk, e);
+                        throw e;
+                    }
+                }
+            }
+
+            log.debug("分片合并完成，开始清理临时文件");
+
+            for (Path chunk : chunks) {
+                try {
+                    Files.deleteIfExists(chunk);
+                    log.debug("已删除分片文件: {}", chunk.getFileName());
+                } catch (IOException e) {
+                    log.warn("删除分片文件 {} 失败", chunk, e);
+                }
+            }
+
+            try {
+                Files.deleteIfExists(tempDir);
+                log.debug("已删除临时目录: {}", tempDir.getFileName());
+            } catch (IOException e) {
+                log.warn("删除临时目录 {} 失败", tempDir, e);
+            }
+
+            log.info("分片合并成功。最终文件: {}", finalFilePath);
+
+        } catch (IOException e) {
+            log.error("合并上传ID为 {} 的分片失败，临时目录: {}", uploadId, tempDir, e);
+
+            try {
+                Files.deleteIfExists(finalFilePath);
+            } catch (IOException cleanupEx) {
+                log.warn("清理不完整的文件 {} 失败", finalFilePath, cleanupEx);
+            }
+
+            return Map.of("error", "合并分片失败: " + e.getMessage());
+        } catch (Exception e) {
+            log.error("合并上传ID为 {} 的分片时发生未预期错误", uploadId, e);
+
+            try {
+                Files.deleteIfExists(finalFilePath);
+            } catch (IOException cleanupEx) {
+                log.warn("清理不完整的文件 {} 失败", finalFilePath, cleanupEx);
+            }
+
+            return Map.of("error", "合并分片时发生错误: " + e.getMessage());
+        }
+
+        String detectedMimeType = detectMimeTypeFromFile(finalFilePath);
+
+        if (!isMimeAllowed(detectedMimeType)) {
+            try {
+                Files.deleteIfExists(finalFilePath);
+            } catch (IOException e) {
+                log.warn("删除MIME类型被禁止的文件失败: {}", finalFilePath, e);
+            }
+
+            log.warn("检测后发现文件类型不被允许: {}", detectedMimeType);
+            return Map.of("error", "文件类型不被允许: " + detectedMimeType);
+        }
+
+        // 通过存储抽象层写入目标存储
+        String databasePath = buildDatabasePath(username, "attachment", subFolder, newFileName);
+        String objectKey = databasePath;
+        String defaultStorageUuid = siteConfigService.getSiteConfig().getDefault_storage();
+        String storageId = defaultStorageUuid != null ? defaultStorageUuid : storageMethodMapper.selectByType("local").getUuid();
+        FileStorage storage;
+        try {
+            storage = storageFacadeService.getDefaultStorage(defaultStorageUuid);
+        } catch (Exception e) {
+            log.error("默认存储方式不可用: {}", e.getMessage());
+            try {
+                Files.deleteIfExists(finalFilePath);
+            } catch (IOException ignored) {}
+            return Map.of("error", "默认存储方式不可用，请检查存储配置");
+        }
+
+        if (storage instanceof LocalFileStorageImpl) {
+            log.info("本地存储合并完成，文件路径: {}", finalFilePath);
+        } else {
+            try (InputStream fileIn = Files.newInputStream(finalFilePath, StandardOpenOption.READ)) {
+                storage.store(objectKey, fileIn, Files.size(finalFilePath), detectedMimeType);
+                log.info("分片合并文件已上传到存储。Key: {}", objectKey);
+            } catch (Exception e) {
+                log.error("分片合并文件上传到存储失败: {}", objectKey, e);
+                return Map.of("error", "保存文件到存储失败");
+            } finally {
+                try {
+                    Files.deleteIfExists(finalFilePath);
+                } catch (IOException e) {
+                    log.warn("清理本地临时文件失败: {}", finalFilePath, e);
+                }
+            }
+        }
+
+        String accessKey = UUID.randomUUID().toString().replace("-", "");
+
+        UploadAttachment uploadFile = new UploadAttachment();
+        uploadFile.setUuid(userUUID);
+        uploadFile.setAttachment_id(fileUUID);
+        uploadFile.setOriginal_filename(filename);
+        uploadFile.setAttachment_path(databasePath);
+        uploadFile.setAccess_key(accessKey);
+        uploadFile.setStorage_id(storageId);
+        uploadFile.setContent_type(detectedMimeType);
+
+        int insertResult = uploadMapper.insertUploadAttachment(uploadFile);
+        if (insertResult != 1) {
+            log.error("保存文件信息到数据库失败。文件: {}", newFileName);
+            try {
+                Files.deleteIfExists(finalFilePath);
+            } catch (IOException e) {
+                log.warn("清理文件 {} 失败", finalFilePath, e);
+            }
+            return Map.of("error", "保存文件信息失败");
+        }
+
+        String fileUrl = "/file/" + accessKey;
+        log.info("分片上传完成。URL: {}", fileUrl);
+        return Map.of("fileUrl", fileUrl);
+    }
+
+    private boolean isAliasExists(String alias, String uuid) {
+        return uploadMapper.selectArticleCountByAliasAndUuid(alias, uuid) > 0;
+    }
+
+    @Override
+    public Map<String, Object> uploadArticle(HttpServletRequest request, UploadArticle uploadArticle) {
+        log.info("开始文章上传流程");
+
+        String username = getUsername(request);
+        if (username == null) {
+            log.warn("未授权的文章上传尝试");
+            return Map.of("error", "用户未登录或用户名无效");
+        }
+
+        String userUUID = getUserUUID(username);
+        if (userUUID == null) {
+            log.error("未找到用户名 {} 的UUID", username);
+            return Map.of("error", "未找到用户");
+        }
+
+        if (uploadArticle.getArticle_name() == null || uploadArticle.getArticle_name().trim().isEmpty()) {
+            log.warn("文章标题为空");
+            return Map.of("error", "文章标题不能为空");
+        }
+
+        if (uploadArticle.getArticle_content() == null || uploadArticle.getArticle_content().trim().isEmpty()) {
+            log.warn("文章内容为空");
+            return Map.of("error", "文章内容不能为空");
+        }
+
+        if (uploadArticle.getCategory() == null || uploadArticle.getCategory().trim().isEmpty()) {
+            log.warn("文章分类为空");
+            return Map.of("error", "文章分类不能为空");
+        }
+
+        CategoryPathUtil.CategoryPath categoryPath = categoryPathUtil.parsePath(uploadArticle.getCategory());
+
+        uploadArticle.setParentCategory(categoryPath.getParentCategory());
+        uploadArticle.setChildCategory(categoryPath.getChildCategory());
+
+        String alias = uploadArticle.getAlias();
+        if (alias == null || alias.trim().isEmpty()) {
+            alias = UUID.randomUUID().toString();
+            uploadArticle.setAlias(alias);
+        } else {
+            alias = alias.trim();
+            uploadArticle.setAlias(alias);
+
+            if (isAliasExists(alias, userUUID)) {
+                log.warn("文章别名已存在: {}", alias);
+                return Map.of("error", "文章别名不能重复");
+            }
+        }
+
+        if (uploadArticle.getPassword() != null && !uploadArticle.getPassword().trim().isEmpty()) {
+            String hashedPassword = BCrypt.hashpw(uploadArticle.getPassword(), BCrypt.gensalt());
+            uploadArticle.setPassword(hashedPassword);
+            log.debug("文章密码已使用BCrypt加密");
+        } else {
+            uploadArticle.setPassword(null);
+        }
+
+        uploadArticle.setUuid(userUUID);
+
+        if (uploadArticle.getArticle_id() == null || uploadArticle.getArticle_id().trim().isEmpty()) {
+            String articleId = UUID.randomUUID().toString();
+            uploadArticle.setArticle_id(articleId);
+        }
+
+//        文章刚创建统一设置为未发布，需要用户手动点击后调用publish接口再读取文章默认状态（该进审核进审核，该发布发布）
+//        if (uploadArticle.getStatus() != 1 && uploadArticle.getStatus() != 3) {
+//            uploadArticle.setStatus(2);
+//        }
+        if (uploadArticle.getStatus() != 2){
+            uploadArticle.setStatus(2);
+            log.warn("检测到非法攻击，文章状态被篡改已恢复正确值");
+        }
+
+        if (uploadArticle.getEnable_comment() == null) {
+            uploadArticle.setEnable_comment(1);
+        }
+
+        try {
+            int result = uploadMapper.insertUploadArticleWithCategory(uploadArticle);
+            if (result == 1) {
+                String[] tags = uploadArticle.getTag().split(",");
+                for (String tag : tags) {
+                    if (!tag.trim().isEmpty()) {
+                        uploadMapper.insertArticleTagRelation(uploadArticle.getArticle_id(), tag.trim());
+                    }
+                }
+
+                CategoryPathUtil.CategoryPath parsedPath = categoryPathUtil.parsePath(uploadArticle.getCategory());
+                String fullPath = parsedPath.getParentCategory() != null 
+                    ? parsedPath.getParentCategory() + "/" + parsedPath.getChildCategory()
+                    : parsedPath.getChildCategory();
+                articleCategoryMapper.incrementCount(fullPath);
+                log.info("文章上传成功，文章ID: {}", uploadArticle.getArticle_id());
+                return Map.of(
+                        "message", "文章保存成功",
+                        "articleId", uploadArticle.getArticle_id()
+                );
+            } else {
+                log.error("插入文章记录到数据库失败");
+                return Map.of("error", "保存文章失败");
+            }
+        } catch (Exception e) {
+            log.error("保存文章时发生错误", e);
+            return Map.of("error", "保存文章时发生内部错误");
+        }
+    }
+
+    @Override
+    public Map<String, String> uploadAvatar(HttpServletRequest request, MultipartFile file) {
+        log.info("开始头像上传流程");
+
+        if (file.isEmpty()) {
+            log.warn("尝试上传空文件");
+            return Map.of("error", "文件为空");
+        }
+
+        // 头像文件大小限制为50MB
+        long MAX_AVATAR_SIZE = 50 * 1024 * 1024;
+        if (file.getSize() > MAX_AVATAR_SIZE) {
+            log.warn("尝试上传过大的头像文件: {} 字节", file.getSize());
+            return Map.of("error", "头像文件过大，最大支持50MB");
+        }
+
+        String username = getUsername(request);
+        if (username == null) {
+            log.warn("未授权的头像上传尝试");
+            return Map.of("error", "用户未登录或用户名无效");
+        }
+
+        String userUUID = getUserUUID(username);
+        if (userUUID == null) {
+            log.error("未找到用户名 {} 的UUID", username);
+            return Map.of("error", "未找到用户");
+        }
+
+        String contentType = file.getContentType();
+        String originalFilename = file.getOriginalFilename();
+        String extension = "";
+
+        if (originalFilename != null && originalFilename.contains(".")) {
+            extension = originalFilename.substring(originalFilename.lastIndexOf(".")).toLowerCase();
+        }
+
+        List<String> allowedImageTypes = SUPPORTED_FILE_TYPES.get("image");
+        if (contentType == null || !allowedImageTypes.contains(contentType) || !isExtensionAllowed(extension)) {
+            log.warn("尝试上传非图片类型作为头像。MIME: {}, 扩展名: {}", contentType, extension);
+            return Map.of("error", "头像文件必须是图片格式");
+        }
+
+        Path uploadPath = buildFileSystemPath(username, "avatar");
+        Path allowedRoot = getBasePath();
+
+        if (!uploadPath.startsWith(allowedRoot)) {
+            log.error("检测到无效的头像上传路径: {}", uploadPath);
+            return Map.of("error", "上传路径无效");
+        }
+
+        try {
+            Files.createDirectories(uploadPath);
+            log.debug("创建头像目录: {}", uploadPath);
+        } catch (IOException e) {
+            log.error("创建头像目录失败: {}", uploadPath, e);
+            return Map.of("error", "创建目录失败");
+        }
+
+        String timestamp = String.valueOf(Instant.now().getEpochSecond());
+        UUID uuid = UUID.randomUUID();
+        String fileUUID = "avatar-" + uuid + "-" + timestamp;
+        String fileName = fileUUID + extension;
+
+        String accessKey = UUID.randomUUID().toString().replace("-", "");
+
+        String databasePath = buildDatabasePath(username, "avatar", fileName);
+        String objectKey = databasePath;
+
+        // 获取当前默认存储方式
+        String defaultStorageUuid = siteConfigService.getSiteConfig().getDefault_storage();
+        String storageId = defaultStorageUuid != null ? defaultStorageUuid : storageMethodMapper.selectByType("local").getUuid();
+        FileStorage storage;
+        try {
+            storage = storageFacadeService.getDefaultStorage(defaultStorageUuid);
+        } catch (Exception e) {
+            log.error("默认存储方式不可用: {}", e.getMessage());
+            return Map.of("error", "默认存储方式不可用，请检查存储配置");
+        }
+
+        try {
+            storage.store(objectKey, file.getInputStream(), file.getSize(), contentType);
+            log.info("头像上传成功。Key: {}", objectKey);
+        } catch (Exception e) {
+            log.error("保存头像文件失败: {}", objectKey, e);
+            return Map.of("error", "保存头像文件失败");
+        }
+
+        try {
+            UploadAttachment uploadFile = new UploadAttachment();
+            uploadFile.setUuid(userUUID);
+            uploadFile.setAttachment_id(fileUUID);
+            uploadFile.setOriginal_filename(originalFilename);
+            uploadFile.setAttachment_path(buildDatabasePath(username, "avatar", fileName));
+            uploadFile.setAccess_key(accessKey);
+            uploadFile.setStorage_id(storageId);
+            uploadFile.setContent_type(contentType);
+
+            uploadMapper.insertUploadAttachment(uploadFile);
+        } catch (Exception e) {
+            log.warn("保存头像访问键到数据库失败", e);
+        }
+
+        String fileUrl = "/file/" + accessKey;
+        log.info("头像上传完成。URL: {}", fileUrl);
+
+        try {
+            UserInformation user = new UserInformation();
+            user.setUuid(userUUID);
+            user.setAvatar(fileUrl);
+            userInformationMapper.updateUserByUUID(user);
+            log.debug("用户头像信息更新成功");
+        } catch (Exception e) {
+            log.error("更新用户头像信息失败", e);
+        }
+
+        cacheService.deleteByPrefix("article:home:");
+        log.info("用户头像修改,已自动清除文章列表分页缓存");
+
+        return Map.of("fileUrl", fileUrl);
+    }
+
+    // 用户管理模块头像上传
+    @Override
+    public Map<String, String> adminUploadAvatar(HttpServletRequest request, MultipartFile file) {
+        log.info("管理员修改用户头像流程开始");
+
+        if (file.isEmpty()) {
+            log.warn("尝试上传空文件");
+            return Map.of("error", "文件为空");
+        }
+
+        // 头像文件大小限制为50MB
+        long MAX_AVATAR_SIZE = 50 * 1024 * 1024;
+        if (file.getSize() > MAX_AVATAR_SIZE) {
+            log.warn("尝试上传过大的头像文件: {} 字节", file.getSize());
+            return Map.of("error", "头像文件过大，最大支持50MB");
+        }
+
+        String username = getUsername(request);
+        if (username == null) {
+            log.warn("未授权的头像上传尝试");
+            return Map.of("error", "用户未登录或用户名无效");
+        }
+
+        String callerUUID = getUserUUID(username);
+        if (callerUUID == null) {
+            log.error("未找到调用者用户名 {} 的UUID", username);
+            return Map.of("error", "未找到调用者用户");
+        }
+
+        String contentType = file.getContentType();
+        String originalFilename = file.getOriginalFilename();
+        String extension = "";
+
+        if (originalFilename != null && originalFilename.contains(".")) {
+            extension = originalFilename.substring(originalFilename.lastIndexOf(".")).toLowerCase();
+        }
+
+        List<String> allowedImageTypes = SUPPORTED_FILE_TYPES.get("image");
+        if (contentType == null || !allowedImageTypes.contains(contentType) || !isExtensionAllowed(extension)) {
+            log.warn("尝试上传非图片类型作为头像。MIME: {}, 扩展名: {}", contentType, extension);
+            return Map.of("error", "头像文件必须是图片格式");
+        }
+
+        String targetUserUUID = request.getParameter("targetUserUUID");
+        if (targetUserUUID == null || targetUserUUID.isEmpty()) {
+            log.warn("未提供目标用户UUID");
+            return Map.of("error", "目标用户UUID不能为空");
+        }
+
+        String targetUsername = userInformationMapper.selectUsernameByUUID(targetUserUUID);
+        if (targetUsername == null) {
+            log.error("未找到目标用户UUID {} 对应的用户", targetUserUUID);
+            return Map.of("error", "目标用户不存在");
+        }
+
+        Path uploadPath = buildFileSystemPath(targetUsername, "avatar");
+        Path allowedRoot = getBasePath();
+
+        if (!uploadPath.startsWith(allowedRoot)) {
+            log.error("检测到无效的头像上传路径: {}", uploadPath);
+            return Map.of("error", "上传路径无效");
+        }
+
+        try {
+            Files.createDirectories(uploadPath);
+            log.debug("创建头像目录: {}", uploadPath);
+        } catch (IOException e) {
+            log.error("创建头像目录失败: {}", uploadPath, e);
+            return Map.of("error", "创建目录失败");
+        }
+
+        String timestamp = String.valueOf(Instant.now().getEpochSecond());
+        UUID uuid = UUID.randomUUID();
+        String fileUUID = "avatar-" + uuid + "-" + timestamp;
+        String fileName = fileUUID + extension;
+
+        String accessKey = UUID.randomUUID().toString().replace("-", "");
+
+        String databasePath = buildDatabasePath(targetUsername, "avatar", fileName);
+        String objectKey = databasePath;
+
+        // 获取当前默认存储方式
+        String defaultStorageUuid = siteConfigService.getSiteConfig().getDefault_storage();
+        String storageId = defaultStorageUuid != null ? defaultStorageUuid : storageMethodMapper.selectByType("local").getUuid();
+        FileStorage storage;
+        try {
+            storage = storageFacadeService.getDefaultStorage(defaultStorageUuid);
+        } catch (Exception e) {
+            log.error("默认存储方式不可用: {}", e.getMessage());
+            return Map.of("error", "默认存储方式不可用，请检查存储配置");
+        }
+
+        try {
+            storage.store(objectKey, file.getInputStream(), file.getSize(), contentType);
+            log.info("头像上传成功。Key: {}", objectKey);
+        } catch (Exception e) {
+            log.error("保存头像文件失败: {}", objectKey, e);
+            return Map.of("error", "保存头像文件失败");
+        }
+
+        try {
+            UploadAttachment uploadFile = new UploadAttachment();
+            uploadFile.setUuid(targetUserUUID);
+            uploadFile.setAttachment_id(fileUUID);
+            uploadFile.setOriginal_filename(originalFilename);
+            uploadFile.setAttachment_path(buildDatabasePath(targetUsername, "avatar", fileName));
+            uploadFile.setAccess_key(accessKey);
+            uploadFile.setStorage_id(storageId);
+            uploadFile.setContent_type(contentType);
+
+            uploadMapper.insertUploadAttachment(uploadFile);
+        } catch (Exception e) {
+            log.warn("保存头像访问键到数据库失败", e);
+        }
+
+        String fileUrl = "/file/" + accessKey;
+        log.info("头像上传完成。URL: {}", fileUrl);
+
+        try {
+            UserInformation user = new UserInformation();
+            user.setUuid(targetUserUUID);
+            user.setAvatar(fileUrl);
+            userInformationMapper.updateUserByUUID(user);
+            log.debug("用户头像信息更新成功，用户UUID: {}", targetUserUUID);
+        } catch (Exception e) {
+            log.error("更新用户头像信息失败", e);
+            return Map.of("error", "更新用户头像信息失败");
+        }
+
+        cacheService.deleteByPrefix("article:home:");
+        log.info("用户头像修改,已自动清除文章列表分页缓存");
+
+        return Map.of("fileUrl", fileUrl, "message", "头像上传成功");
+    }
+
+    @Override
+    public Map<String, String> downloadAndUploadExternalResource(HttpServletRequest request, String url) {
+        try {
+            log.info("开始下载并上传外部资源: {}", url);
+
+            // 检查是否启用外部资源代理下载功能
+            Integer proxyEnabled = siteConfigService.getProxyResourceDownload();
+            if (proxyEnabled == null || proxyEnabled != 1) {
+                log.warn("外部资源代理下载功能未启用");
+                return Map.of("error", "外部资源代理下载功能未启用");
+            }
+
+            if (url == null || url.trim().isEmpty()) {
+                return Map.of("error", "URL不能为空");
+            }
+
+            if (!url.startsWith("http://") && !url.startsWith("https://")) {
+                log.warn("不支持的URL协议: {}", url);
+                return Map.of("error", "只支持HTTP/HTTPS协议");
+            }
+
+            String clientIp = request.getRemoteAddr();
+            boolean isLocalhostRequest = isLocalhost(clientIp);
+
+            URI resourceUri = new URI(url);
+            String host = resourceUri.getHost();
+            
+            if (host == null || host.trim().isEmpty()) {
+                return Map.of("error", "无效的URL");
+            }
+
+            try {
+                java.net.InetAddress resolvedAddress = getByName(host);
+                String resolvedIp = resolvedAddress.getHostAddress();
+
+                if (!isLocalhostRequest) {
+                    if (resolvedAddress.isLoopbackAddress()) {
+                        log.warn("禁止访问本地地址: {} -> {}", host, resolvedIp);
+                        return Map.of("error", "禁止访问本地地址");
+                    }
+
+                    boolean isClientPublicIP = !isLocalhost(clientIp) && !isPrivateIP(clientIp);
+                    if (isClientPublicIP && (resolvedAddress.isSiteLocalAddress() || resolvedAddress.isLinkLocalAddress())) {
+                        log.warn("公网请求禁止访问内网地址: {} -> {}", host, resolvedIp);
+                        return Map.of("error", "禁止访问内网地址");
+                    }
+                }
+            } catch (Exception e) {
+                log.error("DNS解析失败: {}", host, e);
+                return Map.of("error", "DNS解析失败");
+            }
+
+            String username = getUsername(request);
+            if (username == null) {
+                log.warn("未授权的下载尝试");
+                return Map.of("error", "用户未登录或用户名无效");
+            }
+
+            String userUUID = getUserUUID(username);
+            if (userUUID == null) {
+                log.error("未找到用户名 {} 的UUID", username);
+                return Map.of("error", "未找到用户");
+            }
+
+            HttpURLConnection connection = (HttpURLConnection) resourceUri.toURL().openConnection();
+
+            connection.setRequestMethod("GET");
+            connection.setConnectTimeout(10000);
+            connection.setReadTimeout(30000);
+            connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
+            connection.setRequestProperty("Accept", "image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8");
+            connection.setRequestProperty("Accept-Language", "zh-CN,zh;q=0.9,en;q=0.8");
+            connection.setInstanceFollowRedirects(false);
+
+            int responseCode = connection.getResponseCode();
+            int redirectCount = 0;
+            while ((responseCode == HttpURLConnection.HTTP_MOVED_PERM ||
+                    responseCode == HttpURLConnection.HTTP_MOVED_TEMP ||
+                    responseCode == HttpURLConnection.HTTP_SEE_OTHER ||
+                    responseCode == 307 || responseCode == 308) && redirectCount < 5) {
+
+                String location = connection.getHeaderField("Location");
+                connection.disconnect();
+
+                if (location == null || location.trim().isEmpty()) {
+                    return Map.of("error", "重定向地址为空");
+                }
+
+                URI redirectUri = new URI(location);
+                String redirectHost = redirectUri.getHost();
+                if (redirectHost == null || redirectHost.trim().isEmpty()) {
+                    return Map.of("error", "无效的重定向地址");
+                }
+
+                String scheme = redirectUri.getScheme();
+                if (!"http".equals(scheme) && !"https".equals(scheme)) {
+                    log.warn("不安全的重定向协议: {}", scheme);
+                    return Map.of("error", "不安全的请求");
+                }
+
+                try {
+                    java.net.InetAddress redirectAddress = getByName(redirectHost);
+                    if (redirectAddress.isLoopbackAddress() ||
+                        redirectAddress.isSiteLocalAddress() ||
+                        redirectAddress.isLinkLocalAddress()) {
+                        log.warn("重定向目标为内网地址，已拦截: {} -> {}", location, redirectAddress.getHostAddress());
+                        return Map.of("error", "禁止访问内网地址");
+                    }
+                } catch (Exception e) {
+                    log.error("重定向目标DNS解析失败: {}", redirectHost, e);
+                    return Map.of("error", "DNS解析失败");
+                }
+
+                connection = (HttpURLConnection) redirectUri.toURL().openConnection();
+                connection.setRequestMethod("GET");
+                connection.setConnectTimeout(10000);
+                connection.setReadTimeout(30000);
+                connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
+                connection.setRequestProperty("Accept", "image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8");
+                connection.setRequestProperty("Accept-Language", "zh-CN,zh;q=0.9,en;q=0.8");
+                connection.setInstanceFollowRedirects(false);
+
+                responseCode = connection.getResponseCode();
+                redirectCount++;
+            }
+
+            if (responseCode != HttpURLConnection.HTTP_OK) {
+                log.error("下载失败，HTTP状态码: {}, URL: {}", responseCode, url);
+                connection.disconnect();
+                return Map.of("error", "下载失败，HTTP状态码: " + responseCode);
+            }
+
+            byte[] data = connection.getInputStream().readAllBytes();
+            int contentLength = connection.getContentLength();
+            if (contentLength > MAX_EXTERNAL_SIZE) {
+                log.warn("外部资源过大");
+                return Map.of("error", "外部资源过大");
+            }
+            String contentType = connection.getContentType();
+            connection.disconnect();
+            
+            log.info("外部资源下载成功，大小: {} bytes, Content-Type: {}, URL: {}", data.length, contentType, url);
+
+            String extension = "";
+            if (contentType != null) {
+                if (contentType.contains("jpeg") || contentType.contains("jpg")) {
+                    extension = ".jpg";
+                } else if (contentType.contains("png")) {
+                    extension = ".png";
+                } else if (contentType.contains("gif")) {
+                    extension = ".gif";
+                } else if (contentType.contains("webp")) {
+                    extension = ".webp";
+                } else if (contentType.contains("svg")) {
+                    extension = ".svg";
+                } else if (contentType.contains("mp4")) {
+                    extension = ".mp4";
+                } else if (contentType.contains("webm")) {
+                    extension = ".webm";
+                } else if (contentType.contains("ogg")) {
+                    extension = ".ogg";
+                } else if (contentType.contains("mp3") || contentType.contains("mpeg")) {
+                    extension = ".mp3";
+                } else if (contentType.contains("wav")) {
+                    extension = ".wav";
+                } else if (contentType.contains("flac")) {
+                    extension = ".flac";
+                }
+            }
+
+            if (extension.isEmpty()) {
+                String urlPath = url.split("\\?")[0];
+                if (urlPath.contains(".")) {
+                    String urlExt = urlPath.substring(urlPath.lastIndexOf(".")).toLowerCase();
+                    if (isExtensionAllowed(urlExt)) {
+                        extension = urlExt;
+                    }
+                }
+            }
+
+            if (extension.isEmpty()) {
+                extension = ".jpg";
+            }
+
+            String mimeType = getMimeTypeByExtension(extension);
+            if (!isMimeAllowed(mimeType)) {
+                log.warn("不支持的文件类型: {}", mimeType);
+                return Map.of("error", "文件类型不被允许");
+            }
+            
+            String subFolder = getFolderByMime(mimeType);
+            String fileUUID = RandomUtil.generateUUID();
+            String fileName = fileUUID + extension;
+            String accessKey = UUID.randomUUID().toString().replace("-", "");
+            String databasePath = buildDatabasePath(username, "attachment", subFolder, fileName);
+            String objectKey = databasePath;
+
+            // 获取当前默认存储方式
+            String defaultStorageUuid = siteConfigService.getSiteConfig().getDefault_storage();
+            String storageId = defaultStorageUuid != null ? defaultStorageUuid : storageMethodMapper.selectByType("local").getUuid();
+            FileStorage storage;
+            try {
+                storage = storageFacadeService.getDefaultStorage(defaultStorageUuid);
+            } catch (Exception e) {
+                log.error("默认存储方式不可用: {}", e.getMessage());
+                return Map.of("error", "默认存储方式不可用，请检查存储配置");
+            }
+
+            try (ByteArrayInputStream dataStream = new ByteArrayInputStream(data)) {
+                storage.store(objectKey, dataStream, data.length, mimeType);
+                log.info("外部资源保存成功。Key: {}", objectKey);
+            } catch (Exception e) {
+                log.error("保存外部资源失败: {}", objectKey, e);
+                return Map.of("error", "保存文件失败");
+            }
+
+            UploadAttachment uploadFile = new UploadAttachment();
+            uploadFile.setUuid(userUUID);
+            uploadFile.setAttachment_id(fileUUID);
+            uploadFile.setOriginal_filename("external_resource" + extension);
+            uploadFile.setAttachment_path(buildDatabasePath(username, "attachment", subFolder, fileName));
+            uploadFile.setAccess_key(accessKey);
+            uploadFile.setStorage_id(storageId);
+            uploadFile.setContent_type(mimeType);
+
+            int insertResult = uploadMapper.insertUploadAttachment(uploadFile);
+            if (insertResult != 1) {
+                log.error("插入附件记录到数据库失败。文件: {}", fileName);
+                return Map.of("error", "插入数据库失败");
+            }
+
+            String fileUrl = "/file/" + accessKey;
+            log.info("外部资源上传完成。URL: {}", fileUrl);
+            return Map.of("fileUrl", fileUrl);
+                    
+        } catch (Exception e) {
+            log.error("下载并上传外部资源失败: {}", url, e);
+            return Map.of("error", "处理失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 判断是否为localhost地址
+     */
+    private boolean isLocalhost(String host) {
+        if (host == null) {
+            return false;
+        }
+
+        if ("localhost".equalsIgnoreCase(host) || "127.0.0.1".equals(host) || "::1".equals(host)) {
+            return true;
+        }
+
+        if (host.toLowerCase().endsWith(".localhost")) {
+            return true;
+        }
+
+        if (host.startsWith("127.")) {
+            return true;
+        }
+        
+        try {
+            java.net.InetAddress address = getByName(host);
+            return address.isLoopbackAddress();
+        } catch (Exception e) {
+            log.debug("无法解析主机: {}", host);
+            return false;
+        }
+    }
+
+    /**
+     * 判断是否为私有IP地址
+     */
+    private boolean isPrivateIP(String host) {
+        if (host == null) {
+            return false;
+        }
+        
+        try {
+            InetAddress address = getByName(host);
+
+            return address.isSiteLocalAddress() ||
+                   address.isLinkLocalAddress() ||
+                   address.isLoopbackAddress();
+        } catch (Exception e) {
+            log.debug("无法解析主机: {}", host);
+            return false;
+        }
+    }
+
+}

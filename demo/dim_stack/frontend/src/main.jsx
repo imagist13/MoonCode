@@ -1,0 +1,23 @@
+import { createRoot } from 'react-dom/client'
+import { BrowserRouter } from 'react-router-dom'
+import './index.css'
+import App from './App.jsx'
+import { setupPluginRuntime } from './plugin/pluginRuntime.js'
+
+setupPluginRuntime().finally(() => {
+    const root = createRoot(document.getElementById('root'))
+
+    // 设置主题
+    const isDarkMode = localStorage.getItem('theme') === 'dark' ||
+        (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)
+
+    if (isDarkMode) {
+        document.documentElement.classList.add('dark')
+    }
+
+    root.render(
+        <BrowserRouter>
+            <App />
+        </BrowserRouter>
+    )
+})

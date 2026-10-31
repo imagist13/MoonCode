@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="xyz.lingview.dimstack.mapper.HotArticleMapper">
+
+
+    <!-- 查询阅读量最高的10篇文章 -->
+    <select id="selectHotArticles" resultType="xyz.lingview.dimstack.dto.request.HotArticleDTO">
+        SELECT
+            a.id,
+            a.article_id,
+            a.article_name AS title,
+            a.excerpt,
+            a.create_time AS date,
+            u.username AS author,
+            CASE 
+                WHEN p.article_categories IS NULL THEN c.article_categories
+                ELSE CONCAT(p.article_categories, '/', c.article_categories)
+            END AS category,
+            a.page_views,
+            a.alias
+        FROM article a
+                 INNER JOIN user_information u ON a.uuid = u.uuid
+                 LEFT JOIN article_categories c ON a.category_id = c.id
+                 LEFT JOIN article_categories p ON c.parent_id = p.id
+        WHERE a.status = 1
+        ORDER BY a.page_views DESC
+        LIMIT 10;
+    </select>
+
+</mapper>

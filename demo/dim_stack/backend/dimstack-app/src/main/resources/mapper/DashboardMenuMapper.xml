@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="xyz.lingview.dimstack.mapper.DashboardMenuMapper">
+
+    <resultMap id="DashboardMenuMap" type="xyz.lingview.dimstack.domain.DashboardMenu">
+        <id column="id" property="id"/>
+        <result column="title" property="title"/>
+        <result column="icon" property="icon"/>
+        <result column="link" property="link"/>
+        <result column="parent_id" property="parent_id"/>
+        <result column="permission_code" property="permission_code"/>
+        <result column="sort_order" property="sort_order"/>
+        <result column="create_time" property="create_time"/>
+        <result column="type" property="type"/>
+    </resultMap>
+
+    <select id="findByType" resultMap="DashboardMenuMap">
+        SELECT * FROM dashboard_menu
+        WHERE type = #{type}
+        ORDER BY sort_order ASC
+    </select>
+
+    <select id="findByParentId" resultMap="DashboardMenuMap">
+        SELECT * FROM dashboard_menu
+        WHERE parent_id = #{parent_id}
+        ORDER BY sort_order ASC
+    </select>
+
+    <select id="findByPermissionCode" resultMap="DashboardMenuMap">
+        SELECT * FROM dashboard_menu
+        WHERE permission_code = #{permission_code}
+    </select>
+
+    <select id="findAll" resultMap="DashboardMenuMap">
+        SELECT * FROM dashboard_menu
+        ORDER BY sort_order ASC
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO dashboard_menu (title, icon, link, parent_id, permission_code, sort_order, create_time, type)
+        VALUES (#{title}, #{icon}, #{link}, #{parent_id}, #{permission_code}, #{sort_order}, NOW(), #{type})
+    </insert>
+
+    <select id="selectMaxSortByParent" resultType="java.lang.Integer">
+        SELECT IFNULL(MAX(sort_order), 0) FROM dashboard_menu WHERE parent_id = #{parent_id}
+    </select>
+
+    <select id="findByLinkPrefix" resultMap="DashboardMenuMap">
+        SELECT * FROM dashboard_menu WHERE link LIKE CONCAT(#{linkPrefix}, '%')
+    </select>
+
+    <delete id="deleteByIds">
+        DELETE FROM dashboard_menu WHERE id IN
+        <foreach collection="ids" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+</mapper>

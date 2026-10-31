@@ -49,7 +49,7 @@ export function AvatarUploader({
     try {
       const url = await uploadImage(file);
       onChange(url);
-      toast.success("头像已更新，记得保存设置哦～");
+      toast.success("头像已更新");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "上传失败");
     } finally {
