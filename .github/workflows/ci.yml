@@ -133,14 +133,16 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 35
     needs: [frontend, backend]
+    # job 级注入：后续每个 docker compose 命令都需要插值 JWT_SECRET，
+    # 否则 ps / logs / exec 会因变量缺失直接报错，掩盖真实故障
+    env:
+      JWT_SECRET: ci-e2e-secret-at-least-32-characters-long
     # PR 与 main 推送才跑（dev / web 的日常推送省时间）
     if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
     steps:
       - uses: actions/checkout@v4
 
       - name: 启动后端与依赖（不含前端容器）
-        env:
-          JWT_SECRET: ci-e2e-secret-at-least-32-characters-long
         run: |
           docker compose -f docker-compose.yml up -d --build \
             postgres redis rabbitmq elasticsearch backend
