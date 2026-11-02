@@ -111,9 +111,18 @@ jobs:
 
       - name: nginx 配置语法检查
         run: |
+          # moon-ssl.conf 引用的证书在部署机上挂载，CI 没有真实证书；
+          # 生成一天期的自签证书，让 nginx -t 能真实加载 443 配置
+          CERT_DIR=$(mktemp -d)
+          mkdir -p "$CERT_DIR/ideast.top"
+          openssl req -x509 -nodes -newkey rsa:2048 -days 1 \
+            -subj "/CN=ideast.top" \
+            -keyout "$CERT_DIR/ideast.top/privkey.pem" \
+            -out "$CERT_DIR/ideast.top/fullchain.pem" 2>/dev/null
           docker run --rm \
             -v "$PWD/deploy/nginx/conf.d:/etc/nginx/conf.d:ro" \
             -v "$PWD/deploy/nginx/snippets:/etc/nginx/snippets:ro" \
+            -v "$CERT_DIR:/etc/nginx/ssl:ro" \
             nginx:1.27-alpine nginx -t
 
       - name: docker compose 配置校验
