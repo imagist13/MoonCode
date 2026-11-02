@@ -45,6 +45,7 @@ test.describe("留言页", () => {
 test.describe("关于页", () => {
   test("关于页加载正常", async ({ page }) => {
     await page.goto("/about");
-    await expect(page.getByRole("heading", { level: 1 })).toContainText("关于");
+    // 新版关于页的 h1 是博主昵称，不再固定为「关于」
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
   });
 });

@@ -6,8 +6,9 @@ test.describe("管理员登录", () => {
   test("登录页渲染，显示邮箱和密码输入框", async ({ page }) => {
     await page.goto("/admin/login");
 
-    await expect(page.locator("#email")).toBeVisible();
-    await expect(page.locator("#password")).toBeVisible();
+    // FieldInput 的 id 由 useId 生成，用 label 定位更稳定
+    await expect(page.getByLabel("邮箱")).toBeVisible();
+    await expect(page.getByLabel("密码")).toBeVisible();
     await expect(page.getByRole("button", { name: "登录" })).toBeVisible();
   });
 

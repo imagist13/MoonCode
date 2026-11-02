@@ -5,9 +5,9 @@ test.describe.configure({ mode: "serial" });
 test.describe("管理员仪表盘", () => {
   test("仪表盘加载，侧边栏可见", async ({ adminPage }) => {
     await adminPage.goto("/admin");
-    await expect(adminPage.locator("text=后台管理系统").first()).toBeVisible({
-      timeout: 15000,
-    });
+    await expect(
+      adminPage.getByRole("heading", { name: "仪表盘" }),
+    ).toBeVisible({ timeout: 15000 });
   });
 });
 

@@ -5,7 +5,8 @@ test.describe("博客首页", () => {
     await page.goto("/");
 
     await expect(page.locator("header")).toBeVisible();
-    await expect(page.locator('nav >> text=首页')).toBeVisible();
+    // 桌面导航和移动端抽屉里都有「首页」，取第一个可见的
+    await expect(page.locator('nav >> text=首页').first()).toBeVisible();
     await expect(page.locator("footer")).toBeVisible();
   });
 
