@@ -1,15 +1,37 @@
 name: CI
 
+# 推送 / PR 时执行：
+#   frontend  — ESLint + 单测覆盖率门槛 + next build + npm audit
+#   backend   — go vet + go test -race + 编译 + govulncheck
+#   config    — nginx -t + docker compose 配置校验（防止配置类问题上线）
+#   e2e       — 起整套依赖跑 Playwright（PR / main）
+#   build-push— main 分支构建并推送 GHCR 镜像（带 commit sha 标签）
+#
+# 部署由 deploy.yml 通过 workflow_run 在本工作流成功后才触发。
+
 on:
   push:
-    branches: [dev, main]
+    branches: [dev, main, web]
+    # 纯文档改动不跑 CI（PR 不做路径过滤，避免 required checks 卡在 pending）
+    paths-ignore:
+      - "docs/**"
+      - "spec/**"
+      - "**/*.md"
   pull_request:
     branches: [dev, main]
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
 
 jobs:
   frontend:
     name: Frontend (lint + test + build)
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     defaults:
       run:
         working-directory: frontend
@@ -23,13 +45,16 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
 
       - name: 安装依赖
-        run: npm ci || npm install
+        run: npm ci
 
-      - name: 类型检查 + ESLint
-        run: npx --no-install next lint || npm run lint
+      - name: 依赖安全审计（阻断 critical）
+        run: npm audit --audit-level=critical
 
-      - name: 单元测试
-        run: npm run test:run
+      - name: ESLint
+        run: npm run lint
+
+      - name: 单元测试 + 覆盖率门槛
+        run: npm run test:coverage
 
       - name: 构建
         env:
@@ -38,8 +63,9 @@ jobs:
         run: npm run build
 
   backend:
-    name: Backend (build + vet)
+    name: Backend (vet + test + build)
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     defaults:
       run:
         working-directory: backend
@@ -48,11 +74,23 @@ jobs:
 
       - uses: actions/setup-go@v5
         with:
-          go-version: "1.25"
+          go-version-file: backend/go.mod
           cache-dependency-path: backend/go.sum
 
       - name: go vet
         run: go vet ./...
+
+      - name: 单元测试（race + 覆盖率）
+        run: go test -race -covermode=atomic -coverprofile=coverage.out ./...
+
+      - name: 上传覆盖率
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-coverage
+          path: backend/coverage.out
+          retention-days: 7
+          if-no-files-found: ignore
 
       - name: 编译所有二进制
         run: |
@@ -61,14 +99,214 @@ jobs:
           CGO_ENABLED=0 go build -o /tmp/seed ./cmd/seed/
           CGO_ENABLED=0 go build -o /tmp/reindex ./cmd/reindex/
 
-  docker:
-    name: Docker buildx check
+      - name: govulncheck（可触达的已知漏洞）
+        run: go run golang.org/x/vuln/cmd/govulncheck@latest ./...
+
+  config:
+    name: Config (nginx + compose)
     runs-on: ubuntu-latest
-    needs: [frontend, backend]
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-      - uses: docker/setup-buildx-action@v3
-      - name: 预拉基础镜像（缓存）
+
+      - name: nginx 配置语法检查
         run: |
-          docker pull node:22-alpine
-          docker pull golang:1.25-alpine
+          docker run --rm \
+            -v "$PWD/deploy/nginx/conf.d:/etc/nginx/conf.d:ro" \
+            -v "$PWD/deploy/nginx/snippets:/etc/nginx/snippets:ro" \
+            nginx:1.27-alpine nginx -t
+
+      - name: docker compose 配置校验
+        env:
+          JWT_SECRET: ci-dummy-secret-at-least-32-characters
+          POSTGRES_USER: blog
+          POSTGRES_PASSWORD: ci-dummy-password
+          POSTGRES_DB: blog
+          RABBITMQ_USER: blog
+          RABBITMQ_PASSWORD: ci-dummy-password
+        run: |
+          docker compose -f docker-compose.yml config -q
+          docker compose -f deploy/docker-compose.prod.yml config -q
+
+  e2e:
+    name: E2E (Playwright)
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    needs: [frontend, backend]
+    # PR 与 main 推送才跑（dev / web 的日常推送省时间）
+    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 启动后端与依赖（不含前端容器）
+        env:
+          JWT_SECRET: ci-e2e-secret-at-least-32-characters-long
+        run: |
+          docker compose -f docker-compose.yml up -d --build \
+            postgres redis rabbitmq elasticsearch backend
+
+      - name: 等待后端就绪
+        run: |
+          for i in $(seq 1 60); do
+            if curl -fsS http://localhost:8080/health >/dev/null 2>&1; then
+              echo "✅ backend ready"
+              exit 0
+            fi
+            sleep 3
+          done
+          echo "::error::backend 未就绪"
+          docker compose -f docker-compose.yml ps
+          docker compose -f docker-compose.yml logs --tail=150 backend
+          exit 1
+
+      - name: 创建 E2E 管理员账号
+        run: |
+          docker compose -f docker-compose.yml exec -T \
+            -e SEED_ADMIN_EMAIL=test@qq.com \
+            -e SEED_ADMIN_PASSWORD=12345678 \
+            backend /app/seed
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: 安装前端依赖
+        working-directory: frontend
+        run: npm ci
+
+      - name: 构建并启动前端
+        working-directory: frontend
+        env:
+          BACKEND_URL: http://localhost:8080
+          NEXT_PUBLIC_API_BASE: /api/v1
+        run: |
+          npm run build
+          # output: standalone → 必须直接跑 server.js，next start 不支持
+          cp -r .next/static .next/standalone/.next/static
+          cp -r public .next/standalone/public
+          nohup env PORT=3000 HOSTNAME=127.0.0.1 \
+            node .next/standalone/server.js > ../frontend-start.log 2>&1 &
+          for i in $(seq 1 40); do
+            if curl -fsS http://127.0.0.1:3000/ >/dev/null 2>&1; then
+              echo "✅ frontend ready"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "::error::frontend 未就绪"
+          cat ../frontend-start.log
+          exit 1
+
+      - name: 安装 Playwright 浏览器
+        working-directory: frontend
+        run: npx playwright install --with-deps chromium
+
+      - name: 运行 E2E
+        working-directory: frontend
+        env:
+          BASE_URL: http://localhost:3000
+          API_BASE: http://localhost:8080/api/v1
+          ADMIN_EMAIL: test@qq.com
+          ADMIN_PASSWORD: "12345678"
+        run: npm run test:e2e
+
+      - name: 收集日志
+        if: always()
+        run: |
+          docker compose -f docker-compose.yml logs --tail=200 \
+            backend postgres > e2e-service.log 2>&1 || true
+
+      - name: 上传 E2E 报告
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            frontend/playwright-report
+            frontend/test-results
+            e2e-service.log
+            frontend-start.log
+          retention-days: 7
+          if-no-files-found: ignore
+
+      - name: 清理环境
+        if: always()
+        run: docker compose -f docker-compose.yml down -v --remove-orphans || true
+
+  build-push:
+    name: Build & Push Images (GHCR)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: [frontend, backend, config, e2e]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 计算镜像前缀
+        run: echo "IMAGE_PREFIX=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/moon" >> "$GITHUB_ENV"
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 构建后端镜像
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          push: false
+          load: true
+          tags: |
+            ${{ env.IMAGE_PREFIX }}-backend:${{ github.sha }}
+            ${{ env.IMAGE_PREFIX }}-backend:latest
+          cache-from: type=gha,scope=backend
+          cache-to: type=gha,mode=max,scope=backend
+
+      - name: 构建前端镜像
+        uses: docker/build-push-action@v6
+        with:
+          context: ./frontend
+          push: false
+          load: true
+          build-args: |
+            NEXT_PUBLIC_API_BASE=/api/v1
+            BACKEND_URL=http://backend:8080
+          tags: |
+            ${{ env.IMAGE_PREFIX }}-frontend:${{ github.sha }}
+            ${{ env.IMAGE_PREFIX }}-frontend:latest
+          cache-from: type=gha,scope=frontend
+          cache-to: type=gha,mode=max,scope=frontend
+
+      - name: 扫描镜像漏洞（阻断 critical）
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: image
+          image-ref: ${{ env.IMAGE_PREFIX }}-backend:${{ github.sha }}
+          severity: CRITICAL
+          ignore-unfixed: true
+          exit-code: "1"
+
+      - name: 扫描前端镜像漏洞（阻断 critical）
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: image
+          image-ref: ${{ env.IMAGE_PREFIX }}-frontend:${{ github.sha }}
+          severity: CRITICAL
+          ignore-unfixed: true
+          exit-code: "1"
+
+      - name: 推送镜像
+        run: |
+          docker push "$IMAGE_PREFIX-backend:${GITHUB_SHA}"
+          docker push "$IMAGE_PREFIX-backend:latest"
+          docker push "$IMAGE_PREFIX-frontend:${GITHUB_SHA}"
+          docker push "$IMAGE_PREFIX-frontend:latest"
+          echo "✅ 已推送 $IMAGE_PREFIX-{backend,frontend}:${GITHUB_SHA}"

@@ -8,12 +8,16 @@
 #   5. 基础设施服务只跑 postgres / redis / rabbitmq / elasticsearch
 #   6. volumes 命名化（postgres_data 等），方便备份迁移
 #
+# 应用镜像由 CI 构建后推送到 GHCR，本文件不再包含 build（服务器不构建）。
+#
 # 启动：
 #   cp deploy/.env.production.example .env   # 编辑后填值
-#   docker compose -f deploy/docker-compose.prod.yml up -d --build
-#   docker compose -f deploy/docker-compose.prod.yml exec backend ./migrate
-#   docker compose -f deploy/docker-compose.prod.yml exec backend ./seed
-#   docker compose -f deploy/docker-compose.prod.yml exec backend ./reindex
+#   docker compose -f deploy/docker-compose.prod.yml pull
+#   docker compose -f deploy/docker-compose.prod.yml up -d --wait postgres redis rabbitmq elasticsearch
+#   docker compose -f deploy/docker-compose.prod.yml run --rm --no-deps backend /app/migrate
+#   docker compose -f deploy/docker-compose.prod.yml run --rm --no-deps backend /app/seed
+#   docker compose -f deploy/docker-compose.prod.yml up -d --wait backend frontend nginx
+#   docker compose -f deploy/docker-compose.prod.yml run --rm --no-deps backend /app/reindex
 
 services:
   postgres:
@@ -94,9 +98,9 @@ services:
       options: { max-size: "10m", max-file: "5" }
 
   backend:
-    build:
-      context: ../backend
-      dockerfile: Dockerfile
+    # 生产不在服务器上构建：CI 把带 commit sha 标签的镜像推到 GHCR，这里只拉取。
+    # IMAGE_PREFIX / IMAGE_TAG 由 deploy workflow 注入（见 .env.production.example）。
+    image: ${IMAGE_PREFIX:-ghcr.io/tajiaoyezi/moon}-backend:${IMAGE_TAG:-latest}
     container_name: blog-backend
     restart: always
     environment:
@@ -116,6 +120,8 @@ services:
       - ELASTICSEARCH_URL=http://elasticsearch:9200
       - SEED_ADMIN_EMAIL=${SEED_ADMIN_EMAIL}
       - SEED_ADMIN_PASSWORD=${SEED_ADMIN_PASSWORD}
+      # 默认 false：管理员已存在时 seed 不改密码，部署不会踢掉已登录用户
+      - SEED_ADMIN_RESET_PASSWORD=${SEED_ADMIN_RESET_PASSWORD:-false}
     volumes:
       - backend_uploads:/app/uploads
     depends_on:
@@ -128,6 +134,7 @@ services:
       interval: 15s
       timeout: 5s
       retries: 5
+      start_period: 20s
     # 不暴露 8080，对外只走 nginx
     expose: ["8080"]
     logging:
@@ -135,12 +142,8 @@ services:
       options: { max-size: "10m", max-file: "5" }
 
   frontend:
-    build:
-      context: ../frontend
-      dockerfile: Dockerfile
-      args:
-        - NEXT_PUBLIC_API_BASE=/api/v1
-        - BACKEND_URL=http://backend:8080
+    # NEXT_PUBLIC_API_BASE / BACKEND_URL 已在 CI 构建镜像时作为 build-arg 固化
+    image: ${IMAGE_PREFIX:-ghcr.io/tajiaoyezi/moon}-frontend:${IMAGE_TAG:-latest}
     container_name: blog-frontend
     restart: always
     environment:
@@ -167,18 +170,21 @@ services:
       - "80:80"
       - "443:443"
     volumes:
-      - ./nginx/moon.conf:/etc/nginx/conf.d/moon.conf:ro
-      - ./nginx/moon-ssl.conf:/etc/nginx/conf.d/moon-ssl.conf:ro
+      # 整个 conf.d 目录挂载，覆盖镜像自带的 default.conf。
+      # 否则 localhost 会命中镜像欢迎页，容器健康检查 404 → unhealthy。
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
       - ./nginx/snippets:/etc/nginx/snippets:ro
       - ./nginx/certs:/etc/nginx/ssl:ro
     depends_on:
       backend:  { condition: service_healthy }
       frontend: { condition: service_healthy }
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost/healthz || exit 1"]
+      # 只检查 nginx 自身是否在正常响应，不依赖后端
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/nginx-health || exit 1"]
       interval: 15s
       timeout: 5s
       retries: 5
+      start_period: 10s
     logging:
       driver: json-file
       options: { max-size: "10m", max-file: "5" }

@@ -1,4 +1,4 @@
-// Package main 实现 seed 命令：创建 / 重置管理员账号。
+// Package main 实现 seed 命令：创建管理员账号（可选：重置密码）。
 //
 // 使用方式：
 //
@@ -10,11 +10,14 @@
 //
 //	SEED_ADMIN_EMAIL=... SEED_ADMIN_PASSWORD=... ./bin/seed
 //
-// 该命令幂等，且支持密码覆盖：
-//   - 若 tb_user_auth 中已存在 email 对应的账号，则仅重置该账号的密码（re-hash）、
-//     保证绑定 admin 角色（role_id=1）、并 bump token_version 让旧 JWT 失效，
-//     其余字段不动。重复执行可作为"找回管理员密码"的逃生口。
+// 行为：
 //   - 若 email 不存在，则基于环境变量创建 UserInfo + UserAuth + UserRole(admin)。
+//   - 若 email 已存在，默认只保证绑定 admin 角色（role_id=1），**不改密码、
+//     不 bump token_version**，所以部署流水线每次调用也不会把用户踢下线。
+//     这样可以安全地在每次部署中执行。
+//   - 确需重置密码（例如忘记管理员密码）时，显式设置：
+//     SEED_ADMIN_RESET_PASSWORD=true
+//     此时会 re-hash 密码并 bump token_version，让旧 JWT 立即失效。
 //   - 若 email 不存在但 tb_user_auth 已有其他账号，也会照常创建（不依赖"空表才创建"）。
 package main
 
@@ -22,6 +25,7 @@ import (
 	"errors"
 	"log"
 	"os"
+	"strings"
 	"time"
 
 	"golang.org/x/crypto/bcrypt"
@@ -73,20 +77,33 @@ func main() {
 	model.SeedRoles(db)
 	model.SeedPages(db)
 
-	if err := upsertAdmin(db, email, password); err != nil {
-		log.Fatalf("创建/重置管理员失败: %v", err)
+	resetPassword := isTruthy(os.Getenv("SEED_ADMIN_RESET_PASSWORD"))
+	if err := upsertAdmin(db, email, password, resetPassword); err != nil {
+		log.Fatalf("创建/更新管理员失败: %v", err)
 	}
 }
 
-// upsertAdmin 创建或重置管理员账号。
+// isTruthy 解析开关型环境变量（1/true/yes/on，忽略大小写）。
+func isTruthy(v string) bool {
+	switch strings.ToLower(strings.TrimSpace(v)) {
+	case "1", "true", "yes", "on":
+		return true
+	default:
+		return false
+	}
+}
+
+// upsertAdmin 创建管理员账号，或保证已有账号拥有 admin 角色。
 //
 // 行为：
 //   - email 不存在于 tb_user_auth → 创建 UserInfo + UserAuth + UserRole(admin)。
-//   - email 已存在 → 仅重置密码（re-hash），保证 admin 角色已绑定，并 bump token_version
-//     让旧 JWT 立刻失效。其他字段（昵称、头像、last_login_time 等）保持不变。
+//   - email 已存在且 resetPassword=false → 只补绑定 admin 角色，不改密码、
+//     不 bump token_version（部署流水线可安全地重复调用）。
+//   - email 已存在且 resetPassword=true → 重置密码（re-hash）并 bump
+//     token_version，让旧 JWT 立刻失效。其他字段保持不变。
 //
 // 该函数不承担迁移职责，调用方应先执行 model.AutoMigrate / model.Seed。
-func upsertAdmin(db *gorm.DB, email, password string) error {
+func upsertAdmin(db *gorm.DB, email, password string, resetPassword bool) error {
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		return err
@@ -99,18 +116,24 @@ func upsertAdmin(db *gorm.DB, email, password string) error {
 	err = db.Where("username = ?", email).First(&existing).Error
 	switch {
 	case err == nil:
-		// 已存在 → 重置密码 + bump token_version 保证旧 JWT 失效
+		// 保证 admin 角色绑定（幂等）
+		if rerr := ensureAdminRole(db, existing.ID); rerr != nil {
+			return rerr
+		}
+		if !resetPassword {
+			log.Printf("管理员账号已存在，跳过（未改动密码）：username=%s, user_auth_id=%d。"+
+				"如需重置密码请设置 SEED_ADMIN_RESET_PASSWORD=true 后重跑。", email, existing.ID)
+			return nil
+		}
+		// 显式要求重置 → 更新密码 + bump token_version 保证旧 JWT 失效
 		if uerr := db.Model(&existing).Updates(map[string]interface{}{
 			"password":      string(hashedPassword),
 			"token_version": gorm.Expr("token_version + 1"),
 		}).Error; uerr != nil {
 			return uerr
 		}
-		// 保证 admin 角色绑定（幂等）
-		if rerr := ensureAdminRole(db, existing.ID); rerr != nil {
-			return rerr
-		}
-		log.Printf("管理员密码已重置：username=%s, user_auth_id=%d（其他字段未改动）", email, existing.ID)
+		log.Printf("管理员密码已重置：username=%s, user_auth_id=%d（其他字段未改动，"+
+			"旧 JWT 已失效）", email, existing.ID)
 		return nil
 
 	case errors.Is(err, gorm.ErrRecordNotFound):

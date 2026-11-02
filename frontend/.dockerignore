@@ -1,0 +1,17 @@
+# 构建上下文里不需要的东西（node_modules 会有几百 MB，必须排除）
+node_modules
+.next
+out
+build
+coverage
+test-results
+playwright-report
+blob-report
+.git
+.github
+docs
+.env
+.env.*
+!.env.example
+*.log
+*.tsbuildinfo
