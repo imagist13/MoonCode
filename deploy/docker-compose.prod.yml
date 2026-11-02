@@ -175,6 +175,8 @@ services:
       - ./nginx/conf.d:/etc/nginx/conf.d:ro
       - ./nginx/snippets:/etc/nginx/snippets:ro
       - ./nginx/certs:/etc/nginx/ssl:ro
+      # certbot webroot：宿主机先 mkdir -p /var/www/certbot，续期时无需停 nginx
+      - /var/www/certbot:/var/www/certbot:ro
     depends_on:
       backend:  { condition: service_healthy }
       frontend: { condition: service_healthy }

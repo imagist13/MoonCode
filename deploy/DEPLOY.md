@@ -106,27 +106,35 @@ $EDITOR .env
 
 ```bash
 sudo apt install -y certbot
+sudo mkdir -p /var/www/certbot
 
-# 临时停掉占用 80 的容器（首次申请时），或用 --standalone 之外的方式
+# 首次签发：此时还没有证书，先停 nginx 释放 80 端口
+sudo docker stop blog-nginx
 sudo certbot certonly --standalone \
   -d moon.example.com -d www.moon.example.com \
   --agree-tos -m you@example.com
 
-# 拷贝证书到 nginx 容器目录
-sudo mkdir -p /opt/moon/deploy/nginx/certs/moon.example.com
+# 证书放进 nginx 挂载目录，然后取消 moon-ssl.conf 中 443 块的注释并启动
+sudo mkdir -p /opt/moon/MoonCode/deploy/nginx/certs/moon.example.com
 sudo cp /etc/letsencrypt/live/moon.example.com/fullchain.pem \
-        /opt/moon/deploy/nginx/certs/moon.example.com/
+        /opt/moon/MoonCode/deploy/nginx/certs/moon.example.com/
 sudo cp /etc/letsencrypt/live/moon.example.com/privkey.pem \
-        /opt/moon/deploy/nginx/certs/moon.example.com/
-sudo chown -R $USER:$USER /opt/moon/deploy/nginx/certs
+        /opt/moon/MoonCode/deploy/nginx/certs/moon.example.com/
+sudo docker start blog-nginx
 
-# 自动续期（certbot hook：续期后同步到 deploy 目录）
+# 续期改为 webroot：moon.conf 已提供 /.well-known/acme-challenge/，
+# 之后 certbot renew 不需要停 nginx、也不会再抢 80 端口
+sudo certbot certonly --webroot -w /var/www/certbot \
+  -d moon.example.com -d www.moon.example.com \
+  --force-renewal --agree-tos -m you@example.com
+
+# 续期后同步证书并 reload（certbot.timer 会调用）
 sudo tee /etc/letsencrypt/renewal-hooks/deploy/sync-moon.sh > /dev/null <<'EOF'
 #!/bin/bash
 DOMAIN=moon.example.com
-cp /etc/letsencrypt/live/$DOMAIN/fullchain.pem /opt/moon/deploy/nginx/certs/$DOMAIN/
-cp /etc/letsencrypt/live/$DOMAIN/privkey.pem  /opt/moon/deploy/nginx/certs/$DOMAIN/
-docker exec blog-nginx nginx -s reload
+cp /etc/letsencrypt/live/$DOMAIN/fullchain.pem /opt/moon/MoonCode/deploy/nginx/certs/$DOMAIN/
+cp /etc/letsencrypt/live/$DOMAIN/privkey.pem  /opt/moon/MoonCode/deploy/nginx/certs/$DOMAIN/
+docker exec blog-nginx nginx -s reload 2>/dev/null || true
 EOF
 sudo chmod +x /etc/letsencrypt/renewal-hooks/deploy/sync-moon.sh
 ```
@@ -203,9 +211,11 @@ admin 角色，**不会改密码、不会让已登录用户失效**。忘记管�
 
 ### 6.3 HTTPS 终止
 
-- 证书放在 `deploy/nginx/certs/<domain>/`
-- HTTP 强制跳转 HTTPS（见 `moon-ssl.conf` 末尾的 301 block）
-- 续期 hook 会自动 reload nginx
+- 证书放在 `deploy/nginx/certs/<domain>/`，挂载到容器 `/etc/nginx/ssl`
+- 443 的 server 块在 `moon-ssl.conf`；目前 80 仍可直接访问，需要强制跳转时
+  在 `moon.conf` 的 `location /` 返回 301，但要保留 `/nginx-health` 和
+  `/.well-known/acme-challenge/` 两个例外（否则容器健康检查与续期会失败）
+- 续期使用 webroot（`/var/www/certbot`），不需要停 nginx；续期 hook 同步证书并 reload
 
 ### 6.4 反代共用（HTTP / HTTPS）
 
