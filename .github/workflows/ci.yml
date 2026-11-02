@@ -288,7 +288,7 @@ jobs:
           cache-to: type=gha,mode=max,scope=frontend
 
       - name: 扫描镜像漏洞（阻断 critical）
-        uses: aquasecurity/trivy-action@v0.28.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           scan-type: image
           image-ref: ${{ env.IMAGE_PREFIX }}-backend:${{ github.sha }}
@@ -297,7 +297,7 @@ jobs:
           exit-code: "1"
 
       - name: 扫描前端镜像漏洞（阻断 critical）
-        uses: aquasecurity/trivy-action@v0.28.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           scan-type: image
           image-ref: ${{ env.IMAGE_PREFIX }}-frontend:${{ github.sha }}
