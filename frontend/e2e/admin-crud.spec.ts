@@ -56,6 +56,9 @@ test.describe("相册管理", () => {
 test.describe("站点配置", () => {
   test("站点配置页加载", async ({ adminPage }) => {
     await adminPage.goto("/admin/settings");
-    await expect(adminPage.locator("text=站点配置").first()).toBeVisible({ timeout: 10000 });
+    // 重做后的后台把该入口改名为「站点设置」
+    await expect(
+      adminPage.getByRole("heading", { name: "站点设置" }),
+    ).toBeVisible({ timeout: 10000 });
   });
 });
