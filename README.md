@@ -205,8 +205,9 @@ moon/
 │   └── tasks/phase-1..5/
 │
 ├── .github/workflows/
-│   ├── ci.yml               # 推送 / PR 触发:lint / test / build
-│   └── deploy.yml           # 推送 main → SSH 自动部署
+│   ├── ci.yml               # 推送 / PR:lint / test / 配置校验 / E2E / 推送镜像
+│   ├── deploy.yml           # CI 成功后:SSH 拉镜像部署 + 备份 + 自动回滚
+│   └── dependency-review.yml # PR 依赖审查
 │
 ├── docker-compose.yml       # 开发 compose(含 backend + frontend)
 ├── .env.example             # 环境变量模板
@@ -318,6 +319,9 @@ echo "BACKEND_URL=http://localhost:8080" > frontend/.env.local
 | `AUTO_MIGRATE_ON_STARTUP` | ❌ | `true` | 是否随 server 启动执行 schema 迁移 |
 | `SEED_ADMIN_EMAIL` | 仅 seed | — | 首次创建管理员邮箱 |
 | `SEED_ADMIN_PASSWORD` | 仅 seed | — | 管理员密码,**至少 8 位** |
+| `SEED_ADMIN_RESET_PASSWORD` | ❌ | `false` | 账号已存在时是否重置密码(`true` 会让旧 JWT 失效) |
+| `IMAGE_PREFIX` | 生产 ✅ | — | GHCR 镜像前缀,如 `ghcr.io/<owner>/moon` |
+| `IMAGE_TAG` | ❌ | `latest` | 部署的镜像 tag,自动部署时由流水线注入 commit sha |
 | `BACKEND_URL` | 前端 | `http://localhost:8080` | Next rewrites 目标地址 |
 | `NEXT_PUBLIC_API_BASE` | 前端 | `/api/v1` | 浏览器侧 API 基础路径 |
 | `POSTGRES_USER` | 生产 ✅ | `blog` | PostgreSQL 用户 |
@@ -418,9 +422,9 @@ docker compose logs -f backend frontend
 
 1. 准备一台 2C2G+ 的 Linux 服务器(Ubuntu 22.04 / Debian 12 / CentOS 9)
 2. `git clone` 仓库到 `/opt/moon`,复制 `.env.example` 为 `.env` 并填入强密钥
-3. `docker compose -f deploy/docker-compose.prod.yml up -d --build`
-4. `... exec backend ./migrate` → `... exec backend ./seed`
-5. 配置 GitHub Secrets(`DEPLOY_HOST` / `DEPLOY_USER` / `DEPLOY_SSH_KEY` / `DEPLOY_PATH`),后续 `git push origin main` 自动部署
+3. `docker compose -f deploy/docker-compose.prod.yml pull`(拉取 CI 推到 GHCR 的镜像,首次需先 `docker login ghcr.io`)
+4. 先起基础设施,再 `run --rm --no-deps backend /app/migrate` → `/app/seed`,最后 `up -d --wait backend frontend nginx`
+5. 配置 GitHub Secrets(`DEPLOY_HOST` / `DEPLOY_USER` / `DEPLOY_SSH_KEY` / `DEPLOY_PATH`,可选 `GHCR_USER` / `GHCR_TOKEN`),后续 `git push origin main` 自动部署
 
 **架构拓扑**
 

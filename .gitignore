@@ -44,6 +44,10 @@ logs/
 *.db
 *.db-journal
 
+# 部署运行时文件（服务器上的 DEPLOY_PATH 内）
+.deployed_tag
+backups/
+
 # ===================
 # IDE
 # ===================

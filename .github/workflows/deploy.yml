@@ -1,175 +1,183 @@
-name: Deploy
+name: Deploy Production
 
-# 把 main 分支的构建产物推送到服务器。
-# 触发后：
-#   1. 校验 Secrets
-#   2. SSH 到服务器 → 备份 .env → git reset --hard
-#   3. 用 deploy/docker-compose.prod.yml 构建 + 迁移 + seed + 重启
-#   4. 通过 docker exec 做容器内健康检查
+# 触发方式：
+#   1. CI（ci.yml）在 main 上成功完成后自动触发（workflow_run）
+#   2. 手动 workflow_dispatch，可指定任意历史镜像 tag 做回滚
 #
-# 必须在仓库 Settings → Secrets 配置以下 Secrets：
-#   DEPLOY_HOST        服务器地址（例：1.2.3.4）
-#   DEPLOY_PORT        SSH 端口（默认 22，可省略）
-#   DEPLOY_USER        登录用户名
-#   DEPLOY_SSH_KEY     私钥（id_ed25519 全文，含 BEGIN/END 行）
-#   DEPLOY_PATH        项目目录（例：/opt/moon）
+# 服务器只负责：git 同步配置 → 拉 GHCR 镜像 → 迁移 → 重启应用容器 → 冒烟。
+# 镜像由 CI 构建并打上 commit sha 标签，因此回滚 = 重新部署旧 tag。
 #
-# 服务器侧首次部署需手动：
-#   cd $DEPLOY_PATH
-#   cp .env.example .env
-#   vim .env        # 必须填 JWT_SECRET / POSTGRES_PASSWORD / RABBITMQ_PASSWORD
-#                   # 以及 SEED_ADMIN_EMAIL / SEED_ADMIN_PASSWORD（≥8 位）
-#                   # 后者用于 ./seed 创建/重置管理员密码 —— 部署流水线会自动跑 seed，
-#                   # 所以务必与想登录用的账号保持一致；密码变更 = 改 .env + 重新部署。
-#   chmod 600 .env
+# 必须配置的 Secrets：
+#   DEPLOY_HOST / DEPLOY_PORT / DEPLOY_USER / DEPLOY_SSH_KEY / DEPLOY_PATH
+# 可选 Secrets（不配置则依赖服务器上已执行的 docker login ghcr.io）：
+#   GHCR_USER / GHCR_TOKEN   （PAT，至少 read:packages）
+#
+# 服务器上 .env 需要包含 POSTGRES_* / RABBITMQ_* / JWT_SECRET / SEED_ADMIN_*；
+# IMAGE_PREFIX / IMAGE_TAG 由本工作流注入，无需写进 .env。
 
 on:
-  push:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
     branches: [main]
   workflow_dispatch:
+    inputs:
+      image_tag:
+        description: "要部署的镜像 tag（commit sha 或 latest，留空即 latest）"
+        required: false
+        default: ""
 
 concurrency:
-  group: deploy-${{ github.ref }}
-  cancel-in-progress: true
+  group: deploy-production
+  # 部署绝不能被打断：新任务排队等待，而不是取消正在进行的部署
+  cancel-in-progress: false
+
+permissions:
+  contents: read
 
 jobs:
   deploy:
+    # 只有 CI 成功、且是 main 分支才自动部署；手动触发不受限制
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.head_branch == 'main')
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 25
     environment: production
-    permissions:
-      contents: read
     steps:
-      - name: 校验 Secrets
-        run: |
-          : "${DEPLOY_HOST:?需要 DEPLOY_HOST}"
-          : "${DEPLOY_USER:?需要 DEPLOY_USER}"
-          : "${DEPLOY_SSH_KEY:?需要 DEPLOY_SSH_KEY}"
-          : "${DEPLOY_PATH:?需要 DEPLOY_PATH}"
+      - name: 解析部署版本
+        id: meta
         env:
-          DEPLOY_HOST:     ${{ secrets.DEPLOY_HOST }}
-          DEPLOY_USER:     ${{ secrets.DEPLOY_USER }}
-          DEPLOY_SSH_KEY:  ${{ secrets.DEPLOY_SSH_KEY }}
-          DEPLOY_PATH:     ${{ secrets.DEPLOY_PATH }}
+          EVENT: ${{ github.event_name }}
+          INPUT_TAG: ${{ inputs.image_tag }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          OWNER: ${{ github.repository_owner }}
+        run: |
+          if [ "$EVENT" = "workflow_dispatch" ]; then
+            TAG="${INPUT_TAG:-latest}"
+          else
+            TAG="$HEAD_SHA"
+          fi
+          PREFIX="ghcr.io/$(echo "$OWNER" | tr '[:upper:]' '[:lower:]')/moon"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "prefix=$PREFIX" >> "$GITHUB_OUTPUT"
+          echo "将部署：$PREFIX-{backend,frontend}:$TAG"
 
-      - name: SSH 拉取最新代码（保留 .env）
+      - name: 部署到服务器
         uses: appleboy/ssh-action@v1
+        env:
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+          IMAGE_PREFIX: ${{ steps.meta.outputs.prefix }}
+          IMAGE_TAG: ${{ steps.meta.outputs.tag }}
+          GHCR_USER: ${{ secrets.GHCR_USER }}
+          GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
         with:
           host: ${{ secrets.DEPLOY_HOST }}
           port: ${{ secrets.DEPLOY_PORT || 22 }}
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
+          envs: DEPLOY_PATH,IMAGE_PREFIX,IMAGE_TAG,GHCR_USER,GHCR_TOKEN
+          command_timeout: 20m
           script: |
-            set -e
-            cd ${{ secrets.DEPLOY_PATH }}
+            set -eu
+            cd "$DEPLOY_PATH"
 
-            # .env 必须存在（生产 compose 用 ${VAR:?} 强校验）
-            if [ ! -f .env ]; then
-              echo "::error::服务器上缺少 .env。请先：cp .env.example .env && vim .env"
-              exit 1
-            fi
-
-            # 备份 .env，防止 reset --hard 把它冲掉
-            cp -p .env .env.bak.$(date +%Y%m%d%H%M%S)
-
-            git fetch --prune --tags
-            git reset --hard origin/main
-
-            # 二次确认 .env 还在
-            if [ ! -f .env ]; then
-              echo "::error::git reset --hard 后 .env 丢失，请确认 .gitignore 包含 .env"
-              LATEST_BAK=$(ls -t .env.bak.* 2>/dev/null | head -1)
-              if [ -n "$LATEST_BAK" ]; then
-                cp "$LATEST_BAK" .env
-                echo "::warning::已从 $LATEST_BAK 恢复 .env"
-              else
-                exit 1
-              fi
-            fi
-
-      - name: 构建 + 迁移 + 重启
-        uses: appleboy/ssh-action@v1
-        with:
-          host: ${{ secrets.DEPLOY_HOST }}
-          port: ${{ secrets.DEPLOY_PORT || 22 }}
-          username: ${{ secrets.DEPLOY_USER }}
-          key: ${{ secrets.DEPLOY_SSH_KEY }}
-          script: |
-            set -e
-            cd ${{ secrets.DEPLOY_PATH }}
-
-            # 固定 project name，避免与根目录 docker-compose.yml 串
-            # 强制指定 .env 文件（部分定制版 compose 不会自动加载）
             COMPOSE="docker compose --env-file .env -f deploy/docker-compose.prod.yml -p blog"
 
-            echo ">>> 清理旧容器（保留 volumes）"
-            $COMPOSE down --remove-orphans || true
-
-            # 显式清理同名固定容器名（不同 project 残留，例如根目录 compose 起的）
-            for c in blog-postgres blog-redis blog-rabbitmq blog-elasticsearch \
-                     blog-backend blog-frontend blog-nginx; do
-              if docker ps -a --format '{{.Names}}' | grep -qx "$c"; then
-                echo "  移除残留容器 $c"
-                docker rm -f "$c" >/dev/null 2>&1 || true
-              fi
-            done
-
-            echo ">>> 构建新镜像（前端 + 后端）"
-            $COMPOSE build --pull frontend backend
-
-            echo ">>> 启动基础设施（postgres / redis / rabbitmq / elasticsearch）"
-            $COMPOSE up -d postgres redis rabbitmq elasticsearch
-
-            echo ">>> 等待 postgres 就绪（最长 60 秒）"
-            for i in $(seq 1 30); do
-              if $COMPOSE exec -T postgres pg_isready -U "${POSTGRES_USER:-ideast}" >/dev/null 2>&1; then
-                echo "✅ Postgres ready"
-                break
-              fi
-              echo "  等待 postgres ... $i"
-              sleep 2
-            done
-
-            echo ">>> 数据库迁移（用 run 创建一次性容器，--rm 自动清理）"
-            if $COMPOSE run --rm backend /app/migrate; then
-              echo "✅ 迁移完成"
-            else
-              echo "::error::迁移失败，请看 postgres 日志"
-              $COMPOSE logs --tail=80 postgres
+            if [ ! -f .env ]; then
+              echo "::error::缺少 .env，请先 cp deploy/.env.production.example .env 并填写"
               exit 1
             fi
 
-            echo ">>> 创建/重置管理员（依赖 .env 中的 SEED_ADMIN_EMAIL / SEED_ADMIN_PASSWORD）"
-            # 无条件调用 ./seed：seed 命令自身已具备"未设置则优雅跳过"的逻辑，
-            # 这里不再做 shell 层的 env 检查 —— docker compose --env-file .env
-            # 只把变量喂给 compose 插值，不会 export 到 SSH shell，
-            # 此前用 ${SEED_ADMIN_EMAIL:-} 判断会始终为假，导致有 .env 也会被误判。
-            # 已存在同名账号时 ./seed 仅重置密码 + bump token_version，旧 JWT 立即失效。
-            if $COMPOSE run --rm backend /app/seed; then
-              echo "✅ 管理员账号已同步（创建 / 密码重置 / admin 角色补绑，或因未配置 seed 而跳过）"
-            else
-              echo "::error::管理员种子失败，请看下方日志"
-              $COMPOSE logs --tail=80 backend
-              exit 1
+            # 可选：用 CI Secrets 登录 GHCR（不配置则复用服务器已有的 docker login）
+            if [ -n "${GHCR_TOKEN:-}" ] && [ -n "${GHCR_USER:-}" ]; then
+              echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin >/dev/null
             fi
 
-            echo ">>> 启动 backend / frontend / nginx（强制用新镜像）"
-            $COMPOSE up -d --no-deps --force-recreate --remove-orphans backend frontend nginx
+            echo ">>> 同步配置代码（只用于 compose / nginx 配置）"
+            cp -p .env ".env.bak.$(date +%Y%m%d%H%M%S)"
+            git fetch --prune --tags
+            # 尽量检出与镜像完全一致的 commit；手动 latest 则用 main
+            if [ "$IMAGE_TAG" != "latest" ] && git cat-file -e "${IMAGE_TAG}^{commit}" 2>/dev/null; then
+              git checkout -f "$IMAGE_TAG"
+            else
+              git checkout -f origin/main
+            fi
 
-            echo ">>> 等待服务就绪"
-            sleep 15
+            export IMAGE_PREFIX IMAGE_TAG
 
-            echo ">>> 健康检查：nginx 端到端（80 端口是唯一对外端口）"
-            curl -fsS -o /dev/null http://127.0.0.1/ || { echo "nginx 首页失败" && exit 1; }
+            # 读取 .env（去掉可能的 CRLF）
+            GETENV() { sed -n "s/^$1=//p" .env | tail -1 | tr -d '\r'; }
+            PGUSER=$(GETENV POSTGRES_USER); PGUSER=${PGUSER:-blog}
+            PGDB=$(GETENV POSTGRES_DB);     PGDB=${PGDB:-blog}
 
-            echo ">>> 健康检查：backend 容器内（8080 不暴露宿主机，走 docker exec）"
-            $COMPOSE exec -T backend wget -qO- http://127.0.0.1:8080/health >/dev/null || { echo "后端 /health 失败" && exit 1; }
+            echo ">>> 确保基础设施在运行（不重建、不中断）"
+            timeout 400 $COMPOSE up -d --wait postgres redis rabbitmq elasticsearch
 
-            echo ">>> 健康检查：frontend 容器内"
-            $COMPOSE exec -T frontend curl -fsS http://127.0.0.1:3000/ >/dev/null || { echo "前端首页失败" && exit 1; }
+            # 迁移前备份数据库；备份失败则终止部署
+            if docker ps --format '{{.Names}}' | grep -qx blog-postgres; then
+              mkdir -p backups
+              TS=$(date +%Y%m%d%H%M%S)
+              echo ">>> 备份数据库到 backups/db-$TS.sql.gz"
+              if ! docker exec blog-postgres pg_dump -U "$PGUSER" "$PGDB" > "backups/db-$TS.sql"; then
+                rm -f "backups/db-$TS.sql"
+                echo "::error::数据库备份失败，终止部署（未做任何变更）"
+                exit 1
+              fi
+              gzip -f "backups/db-$TS.sql"
+              # 只保留最近 5 份
+              ls -1t backups/db-*.sql.gz | tail -n +6 | xargs -r rm -f || true
+            fi
+
+            PREV_TAG=""
+            if [ -f .deployed_tag ]; then PREV_TAG=$(tr -d '\r' < .deployed_tag); fi
+
+            deploy() {
+              set +e
+              echo ">>> 拉取镜像 $IMAGE_PREFIX-{backend,frontend}:$IMAGE_TAG"
+              $COMPOSE pull backend frontend || return 1
+
+              echo ">>> 数据库迁移"
+              $COMPOSE run --rm --no-deps backend /app/migrate || return 1
+
+              echo ">>> 同步管理员账号（已存在则不改密码）"
+              $COMPOSE run --rm --no-deps backend /app/seed || return 1
+
+              echo ">>> 启动应用容器（等待 healthcheck）"
+              timeout 180 $COMPOSE up -d --no-deps --force-recreate --wait backend frontend nginx || return 1
+
+              echo ">>> 冒烟测试"
+              for i in $(seq 1 15); do
+                if curl -fsS http://127.0.0.1/healthz >/dev/null 2>&1 && \
+                   curl -fsS -o /dev/null http://127.0.0.1/ 2>/dev/null; then
+                  return 0
+                fi
+                sleep 2
+              done
+              return 1
+            }
+
+            if deploy; then
+              echo "$IMAGE_TAG" > .deployed_tag
+              echo "✅ 部署成功：$IMAGE_TAG"
+            else
+              echo "::error::部署失败"
+              $COMPOSE logs --tail=120 backend frontend nginx || true
+              if [ -n "$PREV_TAG" ] && [ "$PREV_TAG" != "$IMAGE_TAG" ]; then
+                echo ">>> 回滚到上一个版本：$PREV_TAG"
+                export IMAGE_TAG="$PREV_TAG"
+                $COMPOSE pull backend frontend || true
+                timeout 180 $COMPOSE up -d --no-deps --force-recreate --wait backend frontend nginx || true
+                echo "::warning::已尝试回滚到 $PREV_TAG；数据库备份在 backups/，必要时手动恢复"
+              else
+                echo "::warning::没有可用的回滚版本"
+              fi
+              exit 1
+            fi
 
             echo ">>> 清理悬空镜像"
-            docker image prune -f
+            docker image prune -f >/dev/null 2>&1 || true
 
             echo ">>> 当前容器状态"
             $COMPOSE ps

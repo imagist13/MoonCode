@@ -90,10 +90,13 @@ cp deploy/.env.production.example .env
 #   POSTGRES_PASSWORD       强密码
 #   RABBITMQ_PASSWORD       强密码
 #   SEED_ADMIN_PASSWORD     强密码
+#   IMAGE_PREFIX            ghcr.io/<你的 GitHub 用户名>/moon
 $EDITOR .env
 ```
 
 > `deploy/.env.production.example` 已加进 `.gitignore` 范畴之外的目录结构里；真实 `.env` 一定不要提交。
+>
+> `IMAGE_TAG` 一般不用手改：自动部署时由 workflow 注入 commit sha；手动部署默认 `latest`，回滚时改成旧 sha 即可。
 
 ---
 
@@ -128,28 +131,46 @@ EOF
 sudo chmod +x /etc/letsencrypt/renewal-hooks/deploy/sync-moon.sh
 ```
 
-修改 `deploy/nginx/moon-ssl.conf` 里的 `server_name` 和证书路径为自己的。
+修改 `deploy/nginx/conf.d/moon-ssl.conf` 里的 `server_name` 和证书路径为自己的。
 
 ---
 
 ## 5. 启动
 
+> 生产镜像由 CI 构建并推送到 GHCR，**服务器上不再构建**。首次使用前需要登录镜像仓库：
+>
+> ```bash
+> echo "<PAT，权限至少 read:packages>" | docker login ghcr.io -u <github用户名> --password-stdin
+> ```
+>
+> 如果镜像包设为 public，可以跳过登录。也可以在 repository Secrets 里配置
+> `GHCR_USER` / `GHCR_TOKEN`，由部署流水线每次自动登录。
+
 ```bash
-# 1. 构建并启动
-docker compose -f deploy/docker-compose.prod.yml up -d --build
+COMPOSE="docker compose -f deploy/docker-compose.prod.yml -p blog"
 
-# 2. 跑 schema 迁移
-docker compose -f deploy/docker-compose.prod.yml exec backend ./migrate
+# 1. 首次部署：先启动基础设施（不会重建已有容器）
+$COMPOSE up -d --wait postgres redis rabbitmq elasticsearch
 
-# 3. 创建管理员（仅首次）
-docker compose -f deploy/docker-compose.prod.yml exec backend ./seed
+# 2. 跑 schema 迁移（使用镜像内的 migrate）
+$COMPOSE run --rm --no-deps backend /app/migrate
 
-# 4. 重建 ES 索引
-docker compose -f deploy/docker-compose.prod.yml exec backend ./reindex
+# 3. 创建管理员（账号已存在时默认不改密码；重置见下方说明）
+$COMPOSE run --rm --no-deps backend /app/seed
 
-# 5. 看日志
-docker compose -f deploy/docker-compose.prod.yml logs -f backend frontend nginx
+# 4. 启动应用
+$COMPOSE up -d --wait backend frontend nginx
+
+# 5. 首次/索引变更后重建 ES
+$COMPOSE run --rm --no-deps backend /app/reindex
+
+# 6. 看日志
+$COMPOSE logs -f backend frontend nginx
 ```
+
+**seed 策略**：部署流水线每次都会调用 seed，但默认只在账号不存在时创建。已存在时只补绑
+admin 角色，**不会改密码、不会让已登录用户失效**。忘记管理员密码时，把 `.env` 里的
+`SEED_ADMIN_RESET_PASSWORD` 临时改为 `true` 再部署（或手动执行一次 seed），之后记得改回 `false`。
 
 访问：
 - `http://moon.example.com`（或 `https://`）
@@ -165,7 +186,8 @@ docker compose -f deploy/docker-compose.prod.yml logs -f backend frontend nginx
 
 | 路径 | 上游 | 说明 |
 |---|---|---|
-| `/healthz` | backend `/health` | 给 LB / 监控用，不走限流 |
+| `/nginx-health` | nginx 自身 | 容器 healthcheck 用，直接返回 200，不依赖后端 |
+| `/healthz` | backend `/health` | 给 LB / 监控用的端到端检查，不走限流 |
 | `/api/*` | backend:8080 | REST 接口 |
 | `/uploads/*` | backend:8080 | 静态上传文件，缓存 30 天 |
 | `/_next/static/*` | frontend:3000 | Next 构建产物，缓存 365 天 |
@@ -189,23 +211,43 @@ docker compose -f deploy/docker-compose.prod.yml logs -f backend frontend nginx
 
 `upstream` 和 `location` 都抽到 `snippets/moon-upstreams.conf` 和 `snippets/moon-locations.conf`，HTTP / HTTPS 各自 `include`，避免配置分裂。
 
+### 6.5 conf.d 目录整体挂载（重要）
+
+`deploy/nginx/conf.d/` 会**整个目录**挂载到容器 `/etc/nginx/conf.d`，覆盖镜像自带的 `default.conf`。
+
+- 镜像自带的 `default.conf` 声明了 `server_name localhost`，容器内健康检查请求 `localhost` 时会命中它，`/nginx-health` 返回 404，导致 nginx 容器一直显示 `unhealthy`。
+- `conf.d/moon.conf` 显式写了 `listen 80 default_server`，所以用公网 IP / localhost / 未匹配域名访问都会落到博客，而不是 nginx 欢迎页。
+- 容器健康检查打的是 `/nginx-health`（nginx 直接返回 200，不依赖后端）；`/healthz` 才是给 LB 用的端到端检查（nginx → backend）。
+- 上游地址通过 `resolver 127.0.0.11` + 变量形式的 `proxy_pass` 解析，容器重建换 IP 后 nginx 会自动重新解析，无需重启 nginx。
+
+> 不要再往 `nginx/` 根目录放 server 配置 —— 只有 `conf.d/` 会被挂载进容器。
+
 ---
 
 ## 7. 自动部署（GitHub Actions）
 
-`.github/workflows/deploy.yml` 已配置完成。
+流水线拆成两条工作流：
+
+- `ci.yml`：lint / 单测 / 覆盖率门槛 / 配置校验 / 安全扫描 / E2E；`main` 上通过后构建并推送 GHCR 镜像（`sha` + `latest` 两个 tag）。
+- `deploy.yml`：通过 `workflow_run` **只在本分支 CI 成功后**触发；服务器只拉镜像、迁移、重启，不再构建。
 
 ### 7.1 必填 Secrets
 
 在仓库 `Settings → Secrets and variables → Actions` 配置：
 
-| Secret | 说明 |
-|---|---|
-| `DEPLOY_HOST` | 服务器公网 IP / 域名 |
-| `DEPLOY_PORT` | SSH 端口（默认 22 可省略） |
-| `DEPLOY_USER` | SSH 用户 |
-| `DEPLOY_SSH_KEY` | 私钥全文（含 `BEGIN OPENSSH PRIVATE KEY` 行） |
-| `DEPLOY_PATH` | 服务器上项目目录（例：`/opt/moon`） |
+| Secret | 必填 | 说明 |
+|---|---|---|
+| `DEPLOY_HOST` | ✅ | 服务器公网 IP / 域名 |
+| `DEPLOY_PORT` | — | SSH 端口（默认 22） |
+| `DEPLOY_USER` | ✅ | SSH 用户 |
+| `DEPLOY_SSH_KEY` | ✅ | 私钥全文（含 `BEGIN OPENSSH PRIVATE KEY` 行） |
+| `DEPLOY_PATH` | ✅ | 服务器上项目目录（例：`/opt/moon`） |
+| `GHCR_USER` | — | 拉取私有镜像用；不配则依赖服务器已有的 `docker login` |
+| `GHCR_TOKEN` | — | PAT，权限 `read:packages` |
+
+另外，CI 需要推送镜像包：仓库 `Settings → Actions → General → Workflow permissions` 建议至少允许
+`Read and write permissions`（工作流内已声明 `packages: write`）。首次推送后，在
+`Packages` 里把 `moon-backend` / `moon-frontend` 的可见性按需设为 public 或保持 private。
 
 ### 7.2 首次：免密钥登录
 
@@ -218,26 +260,50 @@ chmod 600 ~/.ssh/authorized_keys
 # 把 ~/.ssh/github_deploy（私钥）填到 Secret DEPLOY_SSH_KEY
 ```
 
+服务器上还需要能拉取镜像（二选一）：
+
+```bash
+# 方式 A：一次性登录（凭据会保存在 ~/.docker/config.json）
+echo "<read:packages PAT>" | docker login ghcr.io -u <github用户名> --password-stdin
+
+# 方式 B：配置 GHCR_USER / GHCR_TOKEN 两个 Secret，由流水线每次自动登录
+```
+
 ### 7.3 流程
 
-`main` 分支 push → 触发 `deploy` workflow → SSH 到服务器：
-
 ```
-git reset --hard origin/main
-docker compose build --pull frontend backend
-docker compose up -d --no-deps --scale backend=2 backend   # 起新副本
-sleep 5
-docker compose up -d --no-deps --scale backend=1 backend   # 卸老副本
-docker compose up -d --no-deps frontend
-docker image prune -f
-curl /health  &&  curl /                                    # 健康检查
+main push / PR merge
+  └─ CI: frontend + backend + config (+ e2e on main/PR)
+        └─ 全部成功 → build-push（Trivy 扫 critical → 推 GHCR）
+              └─ Deploy（仅 main & CI success，串行、不取消）
+                   ① git 同步 compose/nginx 配置（检出与镜像相同的 sha）
+                   ② 确保 postgres/redis/rabbitmq/elasticsearch 在运行
+                   ③ pg_dump 备份（保留最近 5 份，失败即中止）
+                   ④ 拉取 backend/frontend 镜像
+                   ⑤ migrate → seed（已存在则不改密码）
+                   ⑥ up -d --wait（等 healthcheck）
+                   ⑦ /healthz + / 冒烟；失败自动回滚到上一个 .deployed_tag
 ```
 
-并发保护：`concurrency: deploy-${{ github.ref }}` 保证同一分支串行。
+并发保护：`concurrency: deploy-production`，`cancel-in-progress: false`——连续推送时**排队执行**，
+不会把正在进行的部署打断。
+
+手动回滚 / 部署指定版本：
+
+```bash
+# GitHub → Actions → Deploy Production → Run workflow
+# image_tag 填旧 commit sha（留空 = latest）
+```
+
+> 流水线不再执行 `docker compose down`，因此 Postgres / Redis / RabbitMQ / ES 不会被重启；
+> 只有 backend / frontend / nginx 会被重建，发版期间服务中断时间约等于一次健康检查周期。
 
 ---
 
 ## 8. 备份与恢复
+
+> 部署流水线会在**每次迁移前**自动 `pg_dump` 到服务器上的 `backups/` 目录（保留最近 5 份，
+> 备份失败会直接终止部署）。下面是手动备份 / 恢复的方式。
 
 ```bash
 # === 备份 ===
@@ -281,6 +347,9 @@ docker compose -f deploy/docker-compose.prod.yml logs --tail=200 -f backend
 | 现象 | 排查 |
 |---|---|
 | `nginx 502 Bad Gateway` | `docker compose ps` 看 backend / frontend 是否 healthy；`docker logs blog-backend` |
+| `blog-nginx` 一直 `unhealthy` | 先 `docker exec blog-nginx wget -qO- http://127.0.0.1/nginx-health`，再看 `docker logs blog-nginx`；确认挂载的是 `deploy/nginx/conf.d` 而不是旧的两个单文件 |
+| nginx 容器起不来 / 反复重启 | `docker logs blog-nginx` 若出现 `address already in use`，是宿主机已有 nginx 或别的进程占了 80/443：`sudo ss -lntp \| grep -E ':80\|:443'`，停掉宿主 nginx（`sudo systemctl disable --now nginx`）或改端口映射 |
+| 访问域名得到 nginx 欢迎页 | 说明命中了镜像自带的 `default.conf`，检查 `conf.d` 目录挂载与 `listen 80 default_server` |
 | 前端 API 请求 404 | 检查 `BACKEND_URL` 是否正确构建进镜像；浏览器 devtools 看请求实际打到哪 |
 | 上传文件丢失 | `docker volume inspect moon_backend_uploads` 看挂载；后端重启会丢未挂载目录 |
 | HTTPS 证书过期 | `certbot renew` 手动续；检查 `renewal-hooks/deploy/sync-moon.sh` 是否执行 |
@@ -289,14 +358,31 @@ docker compose -f deploy/docker-compose.prod.yml logs --tail=200 -f backend
 
 ---
 
-## 11. 一键回滚
+## 11. 回滚
 
-```bash
-# 回滚到上一个 commit
-cd /opt/moon
-git log --oneline -5
-git reset --hard <previous-commit>
-docker compose -f deploy/docker-compose.prod.yml up -d --build
+镜像按 commit sha 打 tag，回滚就是重新部署旧 tag：
+
+```
+GitHub → Actions → Deploy Production → Run workflow → image_tag 填旧 sha
 ```
 
-更稳的做法：每次发版打个 tag，rollback 时 `git checkout <tag>`。
+流水线部署失败时也会**自动回滚**到 `.deployed_tag` 记录的上一个版本。服务器上也有历史 sha：
+
+```bash
+cd /opt/moon
+cat .deployed_tag                 # 当前在跑的版本
+git log --oneline -10             # 找要回退的 commit
+```
+
+手动回滚（不经过 Actions）：
+
+```bash
+cd /opt/moon
+export IMAGE_PREFIX=ghcr.io/<owner>/moon IMAGE_TAG=<旧sha>
+git checkout -f <旧sha>            # 同步 compose / nginx 配置
+docker compose -f deploy/docker-compose.prod.yml pull backend frontend
+docker compose -f deploy/docker-compose.prod.yml up -d --no-deps --force-recreate --wait backend frontend nginx
+echo <旧sha> > .deployed_tag
+```
+
+若本次发布包含数据库迁移，必要时用 `backups/` 里的备份恢复（见第 8 节）。
