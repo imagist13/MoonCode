@@ -17,14 +17,11 @@ export function SidebarCard({
 }) {
   return (
     <section
-      className={cn(
-        "mb-5 rounded-xl border border-gray-200/80 bg-white p-5 shadow-sm dark:border-gray-700/80 dark:bg-gray-800",
-        className,
-      )}
+      className={cn("mb-9 border-t border-blog-line pt-5", className)}
     >
-      <h3 className="mb-4 flex items-center gap-2 text-lg font-bold text-gray-900 dark:text-gray-100">
+      <h3 className="mb-4 flex items-center gap-2 text-[10.5px] font-medium tracking-[0.18em] text-blog-soft uppercase">
         {icon && (
-          <span className="inline-flex h-7 w-7 items-center justify-center rounded bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400">
+          <span className="inline-flex opacity-70 [&_svg]:h-3.5 [&_svg]:w-3.5">
             {icon}
           </span>
         )}

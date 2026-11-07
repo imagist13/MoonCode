@@ -85,14 +85,14 @@ export default function AboutPage() {
 
   if (!data) {
     return (
-      <div className="py-20 text-center text-muted-foreground">
+      <div className="py-20 text-center text-[13px] text-blog-soft">
         暂无关于信息
       </div>
     );
   }
 
   return (
-    <div className="grid items-start gap-8 lg:grid-cols-[300px_1fr]">
+    <div className="grid items-start gap-12 lg:grid-cols-[300px_minmax(0,1fr)] lg:gap-16">
       <aside className="lg:sticky lg:top-28 lg:self-start">
         <AboutSidebar
           data={data}

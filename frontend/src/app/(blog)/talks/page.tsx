@@ -48,7 +48,9 @@ export default function TalksPage() {
   if (loading) {
     return (
       <div className="space-y-6">
-        <h1 className="text-3xl font-bold">说说</h1>
+        <h1 className="text-[1.75rem] font-semibold tracking-[-0.03em] text-blog-ink">
+          说说
+        </h1>
         {Array.from({ length: 3 }).map((_, i) => (
           <Skeleton key={i} className="h-32 w-full rounded-xl" />
         ))}
@@ -58,7 +60,7 @@ export default function TalksPage() {
 
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
+      <div className="flex flex-col items-center justify-center py-20 text-[13px] text-blog-soft">
         <p>加载失败: {error}</p>
       </div>
     );
@@ -66,11 +68,15 @@ export default function TalksPage() {
 
   return (
     <div className="mx-auto max-w-2xl">
-      <h1 className="text-3xl font-bold">说说</h1>
-      <p className="mt-2 text-muted-foreground">随心所记</p>
+      <header className="mb-8 border-b border-blog-line pb-5">
+        <h1 className="text-[1.75rem] font-semibold tracking-[-0.03em] text-blog-ink">
+          说说
+        </h1>
+        <p className="mt-2 text-[13px] text-blog-soft">随心所记</p>
+      </header>
 
       {/* 时间线 */}
-      <div className="mt-8 space-y-6">
+      <div className="space-y-5">
         {talks.map((talk) => {
           // 后端已返回 imgList 数组，直接使用（null/undefined 时降级为空数组）
           const imageList = talk.imgList ?? [];
@@ -90,16 +96,16 @@ export default function TalksPage() {
                   </Avatar>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
-                      <span className="font-medium">
+                      <span className="text-[13.5px] font-medium text-blog-ink">
                         {talk.nickname || "博主"}
                       </span>
                       {talk.isTop && (
-                        <span className="rounded bg-primary/10 px-1.5 py-0.5 text-xs text-primary">
+                        <span className="rounded-full border border-blog-line px-2 py-0.5 text-[10.5px] text-blog-soft">
                           置顶
                         </span>
                       )}
                     </div>
-                    <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed">
+                    <p className="mt-1 whitespace-pre-wrap text-[13.5px] leading-relaxed text-blog-ink/85">
                       {talk.content}
                     </p>
 
@@ -121,7 +127,7 @@ export default function TalksPage() {
                       </div>
                     )}
 
-                    <time className="mt-2 block text-xs text-muted-foreground">
+                    <time className="mt-2.5 block font-mono text-[11px] text-blog-soft">
                       {talk.createTime}
                     </time>
                   </div>
@@ -132,7 +138,7 @@ export default function TalksPage() {
         })}
 
         {talks.length === 0 && (
-          <p className="text-center text-muted-foreground">暂无说说</p>
+          <p className="py-10 text-center text-[13px] text-blog-soft">暂无说说</p>
         )}
       </div>
     </div>

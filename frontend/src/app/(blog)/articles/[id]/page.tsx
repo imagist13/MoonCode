@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { flushSync } from "react-dom";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
@@ -45,11 +44,17 @@ type ErrorKind = "notFound" | "server" | "network";
 
 const BACKEND_CODE_NOT_FOUND = 40004;
 
-/** 骨架屏随机宽度（静态生成，避免在渲染时调用 Math.random()） */
-const SKELETON_WIDTHS = Array.from(
-  { length: 8 },
-  () => `${60 + Math.random() * 30}%`,
-);
+/** 骨架屏行宽：固定数组，保证 SSR 与客户端首次渲染一致 */
+const SKELETON_WIDTHS = [
+  "92%",
+  "78%",
+  "95%",
+  "84%",
+  "88%",
+  "72%",
+  "90%",
+  "76%",
+];
 
 /** 标题转 id */
 function headingId(text: string): string {
@@ -76,11 +81,8 @@ export default function ArticleDetailPage() {
 
   useEffect(() => {
     if (!id) return;
-    // 使用 flushSync 批量同步更新初始状态，避免多次渲染
-    flushSync(() => {
-      setLoading(true);
-      setErrorKind(null);
-    });
+    setLoading(true);
+    setErrorKind(null);
     api
       .get<ArticleDetail>(`/articles/${id}`)
       .then(async (res) => {
@@ -112,7 +114,6 @@ export default function ArticleDetailPage() {
         setErrorMessage(err instanceof Error ? err.message : "网络异常");
       })
       .finally(() => setLoading(false));
-     
   }, [id, reloadTick]);
 
   // 回到顶部按钮
@@ -127,25 +128,25 @@ export default function ArticleDetailPage() {
     [article],
   );
 
-  const handleSubmitComment = async (_content: string) => {
+  const handleSubmitComment = async () => {
     toast.info("评论功能开发中");
   };
 
-  const handleReply = async (_id: number, _content: string) => {
+  const handleReply = async () => {
     toast.info("评论功能开发中");
   };
 
   if (loading) {
     return (
-      <div className="space-y-6">
-        <div className="skeleton-shimmer h-72 w-full rounded-lg bg-gray-200 dark:bg-gray-700" />
-        <div className="skeleton-shimmer h-8 w-3/4 rounded bg-gray-200 dark:bg-gray-700" />
-        <div className="skeleton-shimmer h-4 w-1/3 rounded bg-gray-200 dark:bg-gray-700" />
-        <div className="space-y-2">
+      <div className="space-y-8">
+        <div className="skeleton-shimmer aspect-[16/7] w-full rounded-2xl bg-blog-muted" />
+        <div className="skeleton-shimmer h-8 w-3/4 rounded bg-blog-muted" />
+        <div className="skeleton-shimmer h-4 w-1/3 rounded bg-blog-muted" />
+        <div className="space-y-3">
           {Array.from({ length: 8 }).map((_, i) => (
             <div
               key={i}
-              className="skeleton-shimmer h-4 rounded bg-gray-200 dark:bg-gray-700"
+              className="skeleton-shimmer h-4 rounded bg-blog-muted"
               style={{ width: SKELETON_WIDTHS[i] }}
             />
           ))}
@@ -156,7 +157,7 @@ export default function ArticleDetailPage() {
 
   if (errorKind === "notFound") {
     return (
-      <div className="py-20 text-center text-gray-500">
+      <div className="py-24 text-center text-sm text-blog-soft">
         文章不存在或已被删除
       </div>
     );
@@ -164,7 +165,7 @@ export default function ArticleDetailPage() {
 
   if (errorKind === "server" || errorKind === "network") {
     return (
-      <div className="flex flex-col items-center justify-center gap-3 py-20 text-gray-500">
+      <div className="flex flex-col items-center justify-center gap-4 py-24 text-sm text-blog-soft">
         <p>
           {errorKind === "server" ? "服务器错误" : "网络连接失败"}
           {errorMessage ? `（${errorMessage}）` : ""}
@@ -172,7 +173,7 @@ export default function ArticleDetailPage() {
         <button
           type="button"
           onClick={() => setReloadTick((t) => t + 1)}
-          className="rounded border border-gray-300 px-3 py-1 text-sm hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-800"
+          className="rounded-full border border-blog-line px-4 py-1.5 text-[13px] text-blog-ink transition-colors hover:bg-blog-muted"
         >
           重试
         </button>
@@ -182,7 +183,7 @@ export default function ArticleDetailPage() {
 
   if (!article) {
     return (
-      <div className="py-20 text-center text-gray-500">
+      <div className="py-24 text-center text-sm text-blog-soft">
         文章不存在或已被删除
       </div>
     );
@@ -191,11 +192,11 @@ export default function ArticleDetailPage() {
   // 密码保护（spec §4.6）
   if (article.isPassword) {
     return (
-      <div className="mx-auto mt-10 max-w-md rounded border border-gray-200 bg-white px-8 pb-8 pt-6 shadow-md dark:border-gray-700 dark:bg-gray-800">
-        <h2 className="mb-4 flex items-center gap-2 text-lg font-bold text-gray-900 dark:text-gray-100">
+      <div className="mx-auto mt-10 max-w-md rounded-2xl border border-blog-line bg-blog-surface px-8 pt-7 pb-8">
+        <h2 className="mb-4 flex items-center gap-2 text-lg font-semibold text-blog-ink">
           <Lock className="h-5 w-5" /> 受密码保护
         </h2>
-        <p className="mb-4 text-sm text-gray-500">
+        <p className="mb-5 text-sm text-blog-soft">
           这篇文章需要输入密码后才能查看
         </p>
         <input
@@ -203,11 +204,11 @@ export default function ArticleDetailPage() {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           placeholder="请输入密码"
-          className="mb-4 w-full appearance-none rounded border border-gray-300 px-3 py-2 text-gray-700 shadow focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
+          className="mb-4 w-full appearance-none rounded-lg border border-blog-line bg-transparent px-3 py-2.5 text-sm text-blog-ink transition-colors placeholder:text-blog-soft/60 focus:border-blog-ink focus:outline-none"
         />
         <button
           type="button"
-          className="w-full rounded bg-blue-500 px-4 py-2 font-bold text-white hover:bg-blue-700"
+          className="w-full rounded-lg bg-blog-ink px-4 py-2.5 text-sm font-medium text-blog-bg transition-opacity hover:opacity-85"
         >
           提交
         </button>
@@ -219,7 +220,7 @@ export default function ArticleDetailPage() {
     <div className="relative">
       {/* 封面（full-bleed 全宽铺满视口） */}
       {article.articleCover && (
-        <div className="full-bleed relative h-72 w-full overflow-hidden bg-gray-900 md:h-[420px]">
+        <div className="full-bleed relative -mt-10 h-[58vh] max-h-[560px] min-h-[380px] w-full overflow-hidden bg-[#0b0b0a] md:-mt-14">
           <Image
             src={article.articleCover}
             alt={article.articleTitle}
@@ -228,21 +229,21 @@ export default function ArticleDetailPage() {
             preload
             className="object-cover"
           />
-          <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/40 to-black/75" />
-          <div className="absolute inset-x-0 bottom-0 px-4 pb-10 md:px-8 md:pb-14">
-            <div className="mx-auto max-w-[1240px]">
+          <div className="absolute inset-0 bg-gradient-to-b from-black/25 via-black/35 to-black/80" />
+          <div className="absolute inset-x-0 bottom-0 px-5 pb-12 md:px-8 md:pb-16">
+            <div className="mx-auto max-w-[1200px]">
               {article.categoryName && (
                 <Link
                   href={`/?category=${article.categoryId ?? ""}`}
-                  className="mb-3 inline-block rounded-full bg-blue-500/20 px-3 py-1 text-xs font-medium text-blue-200 backdrop-blur-sm transition-colors hover:bg-blue-500/30"
+                  className="mb-5 inline-block text-[11px] font-medium tracking-[0.22em] text-white/55 uppercase transition-colors hover:text-white"
                 >
                   {article.categoryName}
                 </Link>
               )}
-              <h1 className="text-3xl font-bold text-white drop-shadow-md md:text-5xl">
+              <h1 className="max-w-4xl text-[clamp(2rem,4.6vw,3.6rem)] leading-[1.06] font-semibold tracking-[-0.035em] text-white">
                 {article.articleTitle}
               </h1>
-              <div className="mt-4 flex flex-wrap items-center gap-4 text-xs text-gray-200">
+              <div className="mt-6 flex flex-wrap items-center gap-5 text-[11px] tracking-[0.08em] text-white/55">
                 <span className="inline-flex items-center gap-1.5">
                   <CalendarBlank className="h-3.5 w-3.5" />
                   {formatTime(article.createTime)}
@@ -260,34 +261,34 @@ export default function ArticleDetailPage() {
       )}
 
       {/* 双栏布局：左侧 TOC + 右侧正文；宽屏下目录退到正文左侧留白，正文居中 */}
-      <div className="relative mx-auto max-w-[1240px] gap-10 px-4 py-10 lg:max-[1367px]:grid lg:max-[1367px]:grid-cols-[264px_minmax(0,1fr)]">
+      <div className="relative mx-auto max-w-[1080px] gap-14 py-16 lg:max-[1367px]:grid lg:max-[1367px]:grid-cols-[240px_minmax(0,1fr)]">
         {/* 左侧 TOC：帆船跟随当前章节 */}
         <SailingToc headings={headings} />
 
         {/* 右侧内容 */}
-        <article className="min-w-0 min-[1368px]:mx-auto min-[1368px]:max-w-[760px]">
+        <article className="min-w-0 min-[1368px]:mx-auto min-[1368px]:max-w-[720px]">
           {/* 没有封面时显示标题区 */}
           {!article.articleCover && (
-            <header className="mb-8">
+            <header className="mb-10">
               {article.categoryName && (
                 <Link
                   href={`/?category=${article.categoryId ?? ""}`}
-                  className="mb-3 inline-block rounded-full bg-blue-500/20 px-3 py-1 text-xs font-medium text-blue-600 transition-colors hover:bg-blue-500/30 dark:text-blue-300"
+                  className="mb-4 inline-block text-[11px] font-medium tracking-[0.18em] text-blog-soft uppercase transition-colors hover:text-blog-ink"
                 >
                   {article.categoryName}
                 </Link>
               )}
-              <h1 className="text-3xl font-bold tracking-tight text-gray-900 md:text-4xl dark:text-gray-100">
+              <h1 className="text-[clamp(2rem,4vw,3rem)] leading-[1.1] font-semibold tracking-[-0.03em] text-blog-ink">
                 {article.articleTitle}
               </h1>
-              <div className="mt-4 flex flex-wrap items-center gap-4 text-sm text-gray-500">
+              <div className="mt-5 flex flex-wrap items-center gap-5 text-[12px] text-blog-soft">
                 <span className="inline-flex items-center gap-1.5">
-                  <CalendarBlank className="h-4 w-4" />
+                  <CalendarBlank className="h-3.5 w-3.5" />
                   {formatTime(article.createTime)}
                 </span>
                 {article.viewCount !== undefined && (
                   <span className="inline-flex items-center gap-1.5">
-                    <Eye className="h-4 w-4" />
+                    <Eye className="h-3.5 w-3.5" />
                     {formatViews(article.viewCount)} 阅读
                   </span>
                 )}
@@ -299,15 +300,15 @@ export default function ArticleDetailPage() {
           {article.tagVOList && article.tagVOList.length > 0 && (
             <div
               className={cn(
-                "flex flex-wrap gap-2",
-                article.articleCover ? "-mt-2 mb-6" : "mt-5 mb-6",
+                "flex flex-wrap gap-x-4 gap-y-2",
+                article.articleCover ? "mb-10" : "mt-4 mb-10",
               )}
             >
               {article.tagVOList.map((t) => (
                 <Link
                   key={t.id}
                   href={`/?tag=${t.id}`}
-                  className="rounded-full bg-blue-500/10 px-3 py-1 text-xs font-medium text-blue-600 transition-colors hover:bg-blue-500/20 dark:text-blue-300"
+                  className="text-[12.5px] text-blog-soft transition-colors hover:text-blog-ink"
                 >
                   #{t.tagName}
                 </Link>
@@ -315,28 +316,8 @@ export default function ArticleDetailPage() {
             </div>
           )}
 
-          {/* Markdown 正文 - 增强样式 */}
-          <div className="prose prose-slate max-w-none dark:prose-invert
-            prose-headings:font-semibold prose-headings:tracking-tight
-            prose-h1:text-3xl prose-h2:text-2xl prose-h3:text-xl prose-h4:text-lg
-            prose-h2:border-b prose-h2:border-gray-200 prose-h2:pb-2
-            prose-a:text-blue-600 prose-a:no-underline hover:prose-a:underline
-            dark:prose-a:text-blue-400
-            prose-code:bg-blue-50 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded
-            prose-code:text-sm prose-code:font-medium prose-code:text-blue-600
-            dark:prose-code:bg-blue-950 dark:prose-code:text-blue-300
-            prose-pre:bg-gray-900 prose-pre:rounded-lg
-            prose-blockquote:border-l-blue-400 prose-blockquote:bg-blue-50/50
-            prose-blockquote:py-1 prose-blockquote:not-italic
-            dark:prose-blockquote:bg-blue-950/50
-            prose-ul:marker:text-blue-500 prose-ol:marker:text-blue-500
-            prose-table:border-collapse prose-th:border prose-th:border-gray-200
-            prose-th:bg-blue-50 prose-th:px-4 prose-th:py-2
-            dark:prose-th:border-gray-700 dark:prose-th:bg-blue-950/50
-            prose-td:border prose-td:border-gray-200 prose-td:px-4 prose-td:py-2
-            dark:prose-td:border-gray-700
-            prose-img:rounded-lg prose-img:shadow-md
-            prose-hr:border-gray-200">
+          {/* Markdown 正文 */}
+          <div className="prose max-w-none">
             <ReactMarkdown
               remarkPlugins={[remarkGfm]}
               rehypePlugins={[rehypeHighlight]}
@@ -396,9 +377,10 @@ export default function ArticleDetailPage() {
                 ),
                 // 增强图片样式
                 img: ({ src, alt, ...props }) => (
-                  <figure className="my-6">
-                    <img src={src} alt={alt} className="rounded-lg shadow-md" {...props} />
-                    {alt && <figcaption className="mt-2 text-center text-sm text-gray-500">{alt}</figcaption>}
+                  <figure className="my-8">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={src} alt={alt} className="rounded-xl" {...props} />
+                    {alt && <figcaption className="mt-3 text-center text-[12.5px] text-blog-soft">{alt}</figcaption>}
                   </figure>
                 ),
               }}
@@ -408,17 +390,15 @@ export default function ArticleDetailPage() {
           </div>
 
           {/* 上下篇导航 */}
-          <nav className="mt-16 grid gap-4 border-t border-gray-200 pt-8 md:grid-cols-2 dark:border-gray-700">
+          <nav className="mt-20 grid gap-10 border-t border-blog-line pt-8 md:grid-cols-2">
             {prev ? (
               <Link href={`/articles/${prev.id}`} className="group block">
-                <div className="rounded-lg border border-gray-200 p-4 transition-all hover:border-blue-300 hover:shadow-md dark:border-gray-700 dark:hover:border-blue-700">
-                  <div className="mb-2 inline-flex items-center gap-1 text-xs text-gray-500">
-                    <CaretLeft className="h-3.5 w-3.5" />
-                    上一篇
-                  </div>
-                  <div className="line-clamp-2 text-sm font-medium transition-colors group-hover:text-blue-600 dark:group-hover:text-blue-400">
-                    {prev.articleTitle}
-                  </div>
+                <div className="mb-2 inline-flex items-center gap-1.5 text-[10.5px] tracking-[0.16em] text-blog-soft uppercase">
+                  <CaretLeft className="h-3 w-3" />
+                  上一篇
+                </div>
+                <div className="line-clamp-2 text-[15px] leading-snug font-medium text-blog-ink transition-opacity group-hover:opacity-60">
+                  {prev.articleTitle}
                 </div>
               </Link>
             ) : (
@@ -426,14 +406,12 @@ export default function ArticleDetailPage() {
             )}
             {next ? (
               <Link href={`/articles/${next.id}`} className="group block md:text-right">
-                <div className="rounded-lg border border-gray-200 p-4 transition-all hover:border-blue-300 hover:shadow-md dark:border-gray-700 dark:hover:border-blue-700">
-                  <div className="mb-2 inline-flex items-center gap-1 text-xs text-gray-500">
-                    下一篇
-                    <CaretRight className="h-3.5 w-3.5" />
-                  </div>
-                  <div className="line-clamp-2 text-sm font-medium transition-colors group-hover:text-blue-600 dark:group-hover:text-blue-400">
-                    {next.articleTitle}
-                  </div>
+                <div className="mb-2 inline-flex items-center gap-1.5 text-[10.5px] tracking-[0.16em] text-blog-soft uppercase">
+                  下一篇
+                  <CaretRight className="h-3 w-3" />
+                </div>
+                <div className="line-clamp-2 text-[15px] leading-snug font-medium text-blog-ink transition-opacity group-hover:opacity-60">
+                  {next.articleTitle}
                 </div>
               </Link>
             ) : (
@@ -459,8 +437,10 @@ export default function ArticleDetailPage() {
         onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
         aria-label="回到顶部"
         className={cn(
-          "fixed bottom-8 right-8 z-50 rounded-full bg-white p-3 text-gray-700 shadow-lg ring-1 ring-gray-200 transition-all duration-300 hover:bg-blue-50 hover:text-blue-600 dark:bg-gray-800 dark:text-white dark:ring-gray-700 dark:hover:bg-blue-950 dark:hover:text-blue-400",
-          showBackTop ? "opacity-100" : "pointer-events-none opacity-0",
+          "fixed right-8 bottom-8 z-50 rounded-full border border-blog-line bg-blog-surface/90 p-3 text-blog-soft shadow-[0_8px_30px_-12px_rgba(0,0,0,0.25)] backdrop-blur-md transition-all duration-300 hover:text-blog-ink",
+          showBackTop
+            ? "translate-y-0 opacity-100"
+            : "pointer-events-none translate-y-2 opacity-0",
         )}
       >
         <CaretUp className="h-5 w-5" />

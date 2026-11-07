@@ -1,11 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import type { ComponentType } from "react";
+import type { ComponentType, ReactNode } from "react";
 import { EnvelopeSimple, Globe, PencilSimple } from "@phosphor-icons/react";
 import type { AboutInfo } from "@/lib/about";
 import { AvatarUploader } from "./AvatarUploader";
-import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
 interface AboutSidebarProps {
@@ -20,9 +19,11 @@ interface AboutSidebarProps {
 
 /**
  * 关于页左侧栏（极简）：
- *   ① 身份卡：头像 + 姓名 + pronouns + 小编辑入口
+ *   ① 身份：头像 + 姓名 + pronouns + 小编辑入口
  *   ② 联系方式：邮箱 / 网站 / GitHub 各占一行
  *   ③ Tech Stack：技术图标网格
+ *
+ * 视觉与博客侧栏一致：无卡片阴影，只用发丝分割线。
  */
 export function AboutSidebar({
   data,
@@ -60,20 +61,19 @@ export function AboutSidebar({
   }
 
   return (
-    <aside className={cn("space-y-5 reveal-up", className)}>
-      {/* ─── 身份卡 ─── */}
-      <Card className="card-static relative pt-8">
+    <aside className={cn("reveal-up space-y-9", className)}>
+      {/* ─── 身份 ─── */}
+      <section className="relative text-center">
         {editable && (
           <Link
             href="/admin/settings"
             title="编辑资料"
-            className="absolute top-3 right-3 rounded-full p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            className="absolute top-0 right-0 rounded-full p-2 text-blog-soft transition-colors hover:bg-blog-muted hover:text-blog-ink"
           >
-            <PencilSimple className="h-4 w-4" />
+            <PencilSimple className="h-3.5 w-3.5" />
           </Link>
         )}
 
-        {/* 头像 */}
         <div className="flex justify-center">
           {avatarValue ? (
             <AvatarUploader
@@ -84,7 +84,7 @@ export function AboutSidebar({
             />
           ) : (
             <div
-              className="flex h-28 w-28 items-center justify-center rounded-full bg-muted text-5xl font-semibold text-muted-foreground select-none"
+              className="flex h-28 w-28 items-center justify-center rounded-full bg-blog-muted text-5xl font-semibold text-blog-soft select-none"
               aria-label="avatar placeholder"
             >
               {fallback}
@@ -92,71 +92,69 @@ export function AboutSidebar({
           )}
         </div>
 
-        {/* 资料 */}
-        <div className="px-5 pt-4 pb-6 text-center">
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">
-            {data.nickname || "未命名"}
-          </h1>
-          {data.pronouns && (
-            <p className="mt-1.5 text-sm text-muted-foreground">
-              {data.pronouns}
-            </p>
-          )}
-        </div>
-      </Card>
+        <h1 className="mt-5 text-[26px] leading-tight font-semibold tracking-[-0.02em] text-blog-ink">
+          {data.nickname || "未命名"}
+        </h1>
+        {data.pronouns && (
+          <p className="mt-1 text-[12.5px] text-blog-soft">{data.pronouns}</p>
+        )}
+      </section>
 
       {/* ─── 联系方式 ─── */}
       {links.length > 0 && (
-        <Card size="sm">
-          <CardContent>
-            <h3 className="side-title">联系方式</h3>
-            <ul className="mt-3 space-y-2.5">
-              {links.map((link) => (
-                <li key={link.href + link.label}>
-                  <a
-                    href={link.href}
-                    target={link.external ? "_blank" : undefined}
-                    rel={link.external ? "noreferrer noopener" : undefined}
-                    className="link-brand inline-flex items-center gap-2.5 text-sm"
-                  >
-                    <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-muted text-muted-foreground">
-                      <link.icon className="h-3.5 w-3.5" />
-                    </span>
-                    <span className="truncate">{link.label}</span>
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </CardContent>
-        </Card>
+        <section className="border-t border-blog-line pt-5">
+          <SectionTitle>联系方式</SectionTitle>
+          <ul className="mt-3 space-y-0.5">
+            {links.map((link) => (
+              <li key={link.href + link.label}>
+                <a
+                  href={link.href}
+                  target={link.external ? "_blank" : undefined}
+                  rel={link.external ? "noreferrer noopener" : undefined}
+                  className="group flex items-center gap-2.5 rounded-lg py-1.5 text-[13px] text-blog-soft transition-colors hover:text-blog-ink"
+                >
+                  <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-blog-muted text-blog-soft transition-colors group-hover:text-blog-ink">
+                    <link.icon className="h-3.5 w-3.5" />
+                  </span>
+                  <span className="truncate">{link.label}</span>
+                </a>
+              </li>
+            ))}
+          </ul>
+        </section>
       )}
 
       {/* ─── Tech Stack ─── */}
       {data.techStack.length > 0 && (
-        <Card size="sm">
-          <CardContent>
-            <div className="flex items-center justify-between">
-              <h3 className="side-title">Tech Stack</h3>
-              <span className="font-mono text-xs text-muted-foreground">
-                {data.techStack.length}
+        <section className="border-t border-blog-line pt-5">
+          <div className="flex items-center justify-between">
+            <SectionTitle>Tech Stack</SectionTitle>
+            <span className="font-mono text-[10.5px] text-blog-soft">
+              {data.techStack.length}
+            </span>
+          </div>
+          <div className="mt-3 grid grid-cols-5 gap-1.5">
+            {data.techStack.map((t, idx) => (
+              <span
+                key={`${t.name}-${idx}`}
+                title={t.name}
+                className="flex aspect-square items-center justify-center rounded-lg border border-blog-line bg-blog-muted/60 text-[13px] text-blog-ink/70"
+              >
+                {t.icon || t.name?.[0]?.toUpperCase() || "?"}
               </span>
-            </div>
-            <div className="mt-3 grid grid-cols-5 gap-1.5">
-              {data.techStack.map((t, idx) => (
-                <span
-                  key={`${t.name}-${idx}`}
-                  title={t.name}
-                  className="tech-icon"
-                  style={{ backgroundColor: t.color || "#64748b" }}
-                >
-                  {t.icon || t.name?.[0]?.toUpperCase() || "?"}
-                </span>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+            ))}
+          </div>
+        </section>
       )}
     </aside>
+  );
+}
+
+function SectionTitle({ children }: { children: ReactNode }) {
+  return (
+    <h3 className="text-[10.5px] font-medium tracking-[0.18em] text-blog-soft uppercase">
+      {children}
+    </h3>
   );
 }
 

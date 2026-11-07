@@ -91,7 +91,9 @@ export default function CategoriesPage() {
   if (loading) {
     return (
       <div className="space-y-6">
-        <h1 className="text-3xl font-bold">分类</h1>
+        <h1 className="text-[1.75rem] font-semibold tracking-[-0.03em] text-blog-ink">
+          分类
+        </h1>
         <div className="flex flex-wrap justify-center gap-x-14 gap-y-18 py-2">
           {Array.from({ length: 6 }).map((_, i) => (
             <Skeleton
@@ -106,7 +108,7 @@ export default function CategoriesPage() {
 
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
+      <div className="flex flex-col items-center justify-center py-20 text-[13px] text-blog-soft">
         <p>加载失败: {error}</p>
       </div>
     );
@@ -124,7 +126,7 @@ export default function CategoriesPage() {
       />
 
       {items.length === 0 ? (
-        <p className="text-center text-gray-400">暂无分类</p>
+        <p className="py-10 text-center text-[13px] text-blog-soft">暂无分类</p>
       ) : (
         <CategoryFolderGrid items={items} />
       )}

@@ -82,50 +82,50 @@ export function SearchPopover({ open, onClose }: SearchPopoverProps) {
   return (
     <>
       <div
-        className="fixed inset-0 z-40 bg-black/20 backdrop-blur-sm"
+        className="fixed inset-0 z-40 bg-black/25 backdrop-blur-[2px]"
         onClick={onClose}
       />
       <div
         className={cn(
           "fixed z-50",
           // 移动：贴顶；桌面：右上角弹出
-          "right-4 left-4 top-20 md:left-auto md:right-4 md:top-20",
-          "md:w-96 md:max-w-[calc(100vw-2rem)]",
+          "right-4 left-4 top-20 md:left-auto md:right-6 md:top-20",
+          "md:w-[26rem] md:max-w-[calc(100vw-3rem)]",
         )}
       >
-        <div className="overflow-hidden rounded-xl border border-gray-200 bg-white/90 shadow-xl backdrop-blur-md dark:border-gray-700 dark:bg-gray-900/90">
+        <div className="overflow-hidden rounded-2xl border border-blog-line bg-blog-surface/95 shadow-[0_24px_64px_-24px_rgba(0,0,0,0.35)] backdrop-blur-xl">
           {/* 输入区 */}
-          <div className="relative">
-            <MagnifyingGlass className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
+          <div className="relative border-b border-blog-line">
+            <MagnifyingGlass className="absolute top-1/2 left-4 h-[18px] w-[18px] -translate-y-1/2 text-blog-soft" />
             <input
               ref={inputRef}
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="搜索文章..."
-              className="w-full rounded-xl border-0 bg-white/80 px-5 py-3 pl-12 text-base text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800/80 dark:text-gray-100"
+              className="w-full border-0 bg-transparent py-3.5 pr-11 pl-11 text-[14px] text-blog-ink placeholder:text-blog-soft/60 focus:outline-none"
             />
             <button
               type="button"
               onClick={onClose}
-              className="absolute right-3 top-1/2 -translate-y-1/2 rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-700"
+              className="absolute top-1/2 right-2.5 -translate-y-1/2 rounded-full p-1.5 text-blog-soft transition-colors hover:bg-blog-muted hover:text-blog-ink"
               aria-label="关闭搜索"
             >
-              <X className="h-4 w-4" />
+              <X className="h-3.5 w-3.5" />
             </button>
           </div>
 
           {/* 结果区 */}
-          <div className="mt-3 max-h-96 space-y-1 overflow-y-auto px-2 pb-3">
+          <div className="max-h-96 space-y-0.5 overflow-y-auto p-1.5">
             {loading ? (
-              <div className="flex items-center justify-center gap-2 py-12 text-sm text-gray-500">
-                <span className="h-5 w-5 animate-spin rounded-full border-t-2 border-b-2 border-blue-500" />
+              <div className="flex items-center justify-center gap-2 py-12 text-[12.5px] text-blog-soft">
+                <span className="h-4 w-4 animate-spin rounded-full border-2 border-blog-line border-t-blog-ink" />
                 搜索中...
               </div>
             ) : query.trim() && results.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 text-center">
-                <div className="mb-2 text-3xl">🔍</div>
-                <p className="text-sm text-gray-500">未找到相关文章</p>
+                <MagnifyingGlass className="mb-2 h-6 w-6 text-blog-soft/50" />
+                <p className="text-[12.5px] text-blog-soft">未找到相关文章</p>
               </div>
             ) : results.length > 0 ? (
               results.map((r) => (
@@ -133,11 +133,11 @@ export function SearchPopover({ open, onClose }: SearchPopoverProps) {
                   key={r.id}
                   href={`/articles/${r.id}`}
                   onClick={onClose}
-                  className="block rounded-xl border border-transparent p-3 transition-colors hover:border-blue-100 hover:bg-blue-50 dark:hover:border-blue-900/40 dark:hover:bg-blue-900/20"
+                  className="block rounded-xl px-2.5 py-2.5 transition-colors hover:bg-blog-muted"
                 >
                   <div className="flex gap-3">
                     {r.articleCover && (
-                      <div className="relative h-12 w-16 shrink-0 overflow-hidden rounded bg-gray-100">
+                      <div className="relative h-12 w-16 shrink-0 overflow-hidden rounded-lg bg-blog-muted">
                         <Image
                           src={r.articleCover}
                           alt={r.articleTitle}
@@ -148,10 +148,10 @@ export function SearchPopover({ open, onClose }: SearchPopoverProps) {
                       </div>
                     )}
                     <div className="min-w-0 flex-1">
-                      <h4 className="line-clamp-1 text-sm font-medium text-gray-900 dark:text-gray-100">
+                      <h4 className="line-clamp-1 text-[13.5px] font-medium text-blog-ink">
                         {r.articleTitle}
                       </h4>
-                      <p className="mt-0.5 line-clamp-2 text-xs text-gray-500">
+                      <p className="mt-0.5 line-clamp-2 text-[12px] leading-relaxed text-blog-soft">
                         {stripMarkdown(r.articleContent || "").slice(0, 80)}
                       </p>
                     </div>
@@ -159,7 +159,7 @@ export function SearchPopover({ open, onClose }: SearchPopoverProps) {
                 </Link>
               ))
             ) : (
-              <div className="px-3 py-6 text-center text-xs text-gray-400">
+              <div className="px-3 py-8 text-center text-[12px] text-blog-soft/70">
                 输入关键词开始搜索
               </div>
             )}

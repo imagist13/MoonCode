@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Code, EnvelopeSimple, Rss, ShieldCheck } from "@phosphor-icons/react";
+import { ShieldCheck } from "@phosphor-icons/react";
 import { useSiteConfig } from "@/hooks/useSiteConfig";
 
 interface FooterProps {
@@ -19,16 +19,10 @@ export default function Footer({
   const siteConfig = useSiteConfig();
   const siteName = siteConfig?.name || "Blog";
 
-  const socials = [
-    { href: "https://github.com", label: "GitHub 仓库", icon: Code },
-    { href: "mailto:hi@example.com", label: "邮箱", icon: EnvelopeSimple },
-    { href: "/rss.xml", label: "RSS", icon: Rss },
-  ];
-
   return (
-    <footer className="mt-auto bg-white dark:bg-gray-900">
-      <div className="container mx-auto px-4 py-8">
-        <div className="text-center text-sm text-gray-600 dark:text-gray-400">
+    <footer className="mt-auto border-t border-blog-line">
+      <div className="mx-auto w-full max-w-[1200px] px-5 py-12 md:px-8">
+        <div className="text-[12px] leading-relaxed text-blog-soft">
           <p>{copyright || `© ${new Date().getFullYear()} ${siteName}`}</p>
           {icpRecord && (
             <p className="mt-2">
@@ -36,7 +30,7 @@ export default function Footer({
                 href="https://beian.miit.gov.cn"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-gray-600 transition-colors hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400"
+                className="transition-colors hover:text-blog-ink"
               >
                 <ShieldCheck className="mr-1 inline-block h-3 w-3 align-middle" />
                 {icpRecord}
@@ -49,17 +43,17 @@ export default function Footer({
                 href="http://www.beian.gov.cn"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-gray-600 transition-colors hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400"
+                className="transition-colors hover:text-blog-ink"
               >
                 {mpsRecord}
               </a>
             </p>
           )}
-          <p className="mt-2">
+          <p className="mt-3">
             Powered by{" "}
             <Link
               href="/"
-              className="font-medium text-gray-900 hover:text-blue-600 dark:text-gray-100 dark:hover:text-blue-400"
+              className="font-medium text-blog-ink transition-opacity hover:opacity-60"
             >
               {siteName}
             </Link>

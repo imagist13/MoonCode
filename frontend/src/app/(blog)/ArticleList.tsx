@@ -5,7 +5,7 @@ import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { ArticleCard, ArticleListPagination, ArticleListSkeleton, ArticleEmpty, ArticleError, type ArticleCardData } from "@/components/blog/ArticleCard";
 import { CategorySidebar, TagSidebar, RecommendedArticles } from "@/components/blog/Sidebars";
 import { api } from "@/lib/api";
-import { cn, stripMarkdown } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 
 interface PageData {
   records: {
@@ -125,18 +125,18 @@ export default function ArticleList() {
   const totalPages = Math.ceil(total / PAGE_SIZE);
 
   return (
-    <div id="articles" className="grid gap-6 lg:grid-cols-[1fr_310px]">
+    <div id="articles" className="grid gap-12 lg:grid-cols-[minmax(0,1fr)_280px] lg:gap-16">
       {/* 主列表 */}
       <main className="min-w-0">
         {/* 工具栏 */}
-        <div className="mb-6 flex items-center justify-between border-b border-gray-200 pb-3 dark:border-gray-700">
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+        <div className="mb-8 flex items-end justify-between">
+          <h2 className="text-[11px] font-medium tracking-[0.2em] text-blog-soft uppercase">
             {hasFilter ? "文章筛选" : "最新文章"}
           </h2>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-4">
             {/* 图片开关 */}
-            <label className="hidden cursor-pointer items-center gap-3 md:flex">
-              <span className="text-sm font-medium text-gray-600 select-none dark:text-gray-300">
+            <label className="hidden cursor-pointer items-center gap-2.5 md:flex">
+              <span className="text-[11px] tracking-[0.08em] text-blog-soft select-none">
                 显示图片
               </span>
               <button
@@ -151,16 +151,18 @@ export default function ArticleList() {
                   }
                 }}
                 className={cn(
-                  "relative h-6 w-11 rounded-full border transition-colors duration-300",
+                  "relative h-[22px] w-10 rounded-full border transition-colors duration-300",
                   showImages
-                    ? "border-blue-600 bg-blue-500"
-                    : "border-gray-300 bg-gray-200 dark:border-gray-600 dark:bg-gray-700",
+                    ? "border-blog-ink bg-blog-ink"
+                    : "border-blog-line bg-blog-muted",
                 )}
               >
                 <span
                   className={cn(
-                    "absolute top-1 h-4 w-4 rounded-full bg-white shadow-sm transition-transform duration-300",
-                    showImages ? "left-6" : "left-1",
+                    "absolute top-[3px] h-4 w-4 rounded-full transition-transform duration-300",
+                    showImages
+                      ? "left-[21px] bg-blog-bg"
+                      : "left-[3px] bg-blog-soft",
                   )}
                 />
               </button>
@@ -170,7 +172,7 @@ export default function ArticleList() {
               <button
                 type="button"
                 onClick={() => router.replace(pathname)}
-                className="text-sm text-blue-600 transition-colors hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                className="text-[12px] text-blog-soft underline decoration-blog-line underline-offset-4 transition-colors hover:text-blog-ink"
               >
                 清除筛选
               </button>
@@ -184,7 +186,7 @@ export default function ArticleList() {
           style={loading && holdHeightRef.current ? { minHeight: holdHeightRef.current } : undefined}
         >
           {loading ? (
-            <div className="flex items-center justify-center text-sm text-gray-500" style={{ minHeight: holdHeightRef.current ?? 600 }}>
+            <div className="flex items-center justify-center text-sm text-blog-soft" style={{ minHeight: holdHeightRef.current ?? 600 }}>
               <ArticleListSkeleton count={5} />
             </div>
           ) : error ? (
@@ -194,14 +196,25 @@ export default function ArticleList() {
           ) : (
             <>
               {/* 桌面 3 列网格 / 移动横排 */}
-              <div className="hidden gap-4 md:grid md:grid-cols-2 xl:grid-cols-3">
-                {articles.map((a) => (
-                  <ArticleCard key={a.id} article={a} hideCover={!showImages} />
+              <div className="hidden gap-x-6 gap-y-14 md:grid md:grid-cols-2 xl:grid-cols-3">
+                {articles.map((a, i) => (
+                  <ArticleCard
+                    key={a.id}
+                    article={a}
+                    index={i}
+                    hideCover={!showImages}
+                  />
                 ))}
               </div>
-              <div className="space-y-4 md:hidden">
-                {articles.map((a) => (
-                  <ArticleCard key={a.id} article={a} forceMobile hideCover={!showImages} />
+              <div className="space-y-7 md:hidden">
+                {articles.map((a, i) => (
+                  <ArticleCard
+                    key={a.id}
+                    article={a}
+                    index={i}
+                    forceMobile
+                    hideCover={!showImages}
+                  />
                 ))}
               </div>
 
@@ -219,7 +232,7 @@ export default function ArticleList() {
       </main>
 
       {/* 侧栏 */}
-      <aside className="sticky top-28 hidden self-start space-y-0 lg:block">
+      <aside className="sticky top-28 hidden self-start lg:block">
         <CategorySidebar
           activeId={categoryId}
           onSelect={(id) => setFilter("category", id)}
@@ -232,7 +245,7 @@ export default function ArticleList() {
       </aside>
 
       {/* 移动端：筛选在底部 */}
-      <aside className="space-y-0 lg:hidden">
+      <aside className="lg:hidden">
         <CategorySidebar
           activeId={categoryId}
           onSelect={(id) => setFilter("category", id)}

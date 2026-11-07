@@ -23,28 +23,11 @@ function getSizeLevel(count: number, maxCount: number): number {
 }
 
 const sizeClasses = [
-  "text-xs px-2 py-0.5",
-  "text-sm px-2.5 py-0.5",
-  "text-base px-3 py-1",
-  "text-lg px-3.5 py-1",
-  "text-xl px-4 py-1.5",
-];
-
-/** 字号档位越大，颜色越深（用中性灰，避免过重） */
-const colorClasses = [
-  "text-gray-400 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300",
-  "text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200",
-  "text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-gray-100",
-  "text-gray-800 hover:text-gray-900 dark:text-gray-200 dark:hover:text-gray-100",
-  "text-gray-900 hover:text-black dark:text-gray-100 dark:hover:text-white",
-];
-
-const bgClasses = [
-  "bg-transparent",
-  "bg-gray-50 hover:bg-gray-100 dark:bg-gray-800/40 dark:hover:bg-gray-800",
-  "bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700",
-  "bg-gray-200/70 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600",
-  "bg-gray-300/60 hover:bg-gray-300 dark:bg-gray-600 dark:hover:bg-gray-500",
+  "px-2.5 py-1 text-[12px]",
+  "px-3 py-1 text-[13px]",
+  "px-3.5 py-1.5 text-[15px]",
+  "px-4 py-1.5 text-[17px]",
+  "px-4 py-2 text-[19px]",
 ];
 
 export default function TagsPage() {
@@ -67,8 +50,10 @@ export default function TagsPage() {
   if (loading) {
     return (
       <div className="space-y-6">
-        <h1 className="text-3xl font-bold">标签</h1>
-        <div className="flex flex-wrap gap-3">
+        <h1 className="text-[1.75rem] font-semibold tracking-[-0.03em] text-blog-ink">
+          标签
+        </h1>
+        <div className="flex flex-wrap gap-2.5">
           {Array.from({ length: 12 }).map((_, i) => (
             <Skeleton key={i} className="h-8 w-20 rounded-full" />
           ))}
@@ -79,7 +64,7 @@ export default function TagsPage() {
 
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
+      <div className="flex flex-col items-center justify-center py-20 text-[13px] text-blog-soft">
         <p>加载失败: {error}</p>
       </div>
     );
@@ -94,24 +79,29 @@ export default function TagsPage() {
         description={`共 ${tags.length} 个标签 · 字号反映文章数量`}
       />
 
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="flex flex-wrap items-center gap-2.5">
         {tags.map((tag) => {
           const level = getSizeLevel(tag.articleCount, maxCount);
           return (
             <a
               key={tag.id}
               href={`/?tagId=${tag.id}`}
-              className={`inline-flex items-center gap-1 rounded-md
-                          transition-colors duration-200 ${sizeClasses[level]} ${colorClasses[level]} ${bgClasses[level]}`}
+              className={`inline-flex items-center gap-1.5 rounded-full border border-blog-line text-blog-soft
+                          transition-colors duration-200 hover:border-blog-ink hover:text-blog-ink
+                          ${sizeClasses[level]}`}
             >
               <span>{tag.tagName}</span>
-              <span className="opacity-60">({tag.articleCount})</span>
+              <span className="font-mono text-[0.72em] opacity-60">
+                {tag.articleCount}
+              </span>
             </a>
           );
         })}
 
         {tags.length === 0 && (
-          <p className="w-full text-center text-gray-400">暂无标签</p>
+          <p className="w-full py-10 text-center text-[13px] text-blog-soft">
+            暂无标签
+          </p>
         )}
       </div>
     </div>

@@ -29,7 +29,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
       <div className="flex w-full flex-col">
         <Suspense
           fallback={
-            <div className="flex items-center justify-center py-20 text-sm text-gray-500">
+            <div className="flex items-center justify-center py-20 text-sm text-blog-soft">
               加载中...
             </div>
           }

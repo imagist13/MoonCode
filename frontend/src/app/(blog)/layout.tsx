@@ -7,10 +7,10 @@ export default function BlogLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex min-h-screen flex-col bg-gray-50 dark:bg-gray-900">
+    <div className="blog-theme flex min-h-screen flex-col bg-blog-bg text-blog-ink">
       <Header />
       <main className="flex-1">
-        <div className="mx-auto w-full max-w-[1240px] px-4 py-8">{children}</div>
+        <div className="mx-auto w-full max-w-[1200px] px-5 py-10 md:px-8 md:py-14">{children}</div>
       </main>
       <Footer />
     </div>

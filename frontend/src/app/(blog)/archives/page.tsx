@@ -55,9 +55,11 @@ export default function ArchivesPage() {
   if (loading) {
     return (
       <div className="space-y-6">
-        <h1 className="text-3xl font-bold">归档</h1>
+        <h1 className="text-[1.75rem] font-semibold tracking-[-0.03em] text-blog-ink">
+          归档
+        </h1>
         {Array.from({ length: 3 }).map((_, i) => (
-          <Skeleton key={i} className="h-24 w-full rounded-lg" />
+          <Skeleton key={i} className="h-24 w-full rounded-xl" />
         ))}
       </div>
     );
@@ -65,7 +67,7 @@ export default function ArchivesPage() {
 
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
+      <div className="flex flex-col items-center justify-center py-20 text-[13px] text-blog-soft">
         <p>加载失败: {error}</p>
       </div>
     );
@@ -85,14 +87,14 @@ export default function ArchivesPage() {
           const [year, month] = yearMonth.split("-");
           return (
             <section key={yearMonth}>
-              <h2 className="mb-4 flex items-baseline gap-2 text-base font-semibold text-gray-900 dark:text-gray-100">
+              <h2 className="mb-4 flex items-baseline gap-2 text-[15px] font-semibold text-blog-ink">
                 {year} 年 {parseInt(month, 10)} 月
-                <span className="text-sm font-normal text-gray-400">
+                <span className="font-mono text-[11px] font-normal text-blog-soft">
                   ({items.length})
                 </span>
               </h2>
 
-              <ul className="divide-y divide-gray-100 border-y border-gray-100 dark:divide-gray-800 dark:border-gray-800">
+              <ul className="divide-y divide-blog-line border-y border-blog-line">
                 {items.map((article) => {
                   const date = new Date(article.createTime);
                   const day = `${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
@@ -100,13 +102,12 @@ export default function ArchivesPage() {
                     <li key={article.id} className="group">
                       <Link
                         href={`/articles/${article.id}`}
-                        className="flex items-baseline gap-4 px-2 py-3 transition-colors
-                                   hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                        className="flex items-baseline gap-4 px-2 py-3 transition-colors hover:bg-blog-muted"
                       >
-                        <time className="shrink-0 font-mono text-sm tabular-nums text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300">
+                        <time className="shrink-0 font-mono text-[12px] tabular-nums text-blog-soft">
                           {day}
                         </time>
-                        <span className="text-gray-700 group-hover:text-gray-900 dark:text-gray-300 dark:group-hover:text-gray-100">
+                        <span className="text-[13.5px] text-blog-soft transition-colors group-hover:text-blog-ink">
                           {article.articleTitle}
                         </span>
                       </Link>
@@ -119,7 +120,9 @@ export default function ArchivesPage() {
         })}
 
         {grouped.length === 0 && (
-          <p className="text-center text-gray-400">暂无归档文章</p>
+          <p className="py-10 text-center text-[13px] text-blog-soft">
+            暂无归档文章
+          </p>
         )}
       </div>
     </div>

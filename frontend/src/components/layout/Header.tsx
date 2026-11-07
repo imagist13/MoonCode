@@ -159,13 +159,13 @@ export default function Header() {
     <>
       <header
         ref={headerRef}
-        className="fixed left-0 right-0 top-0 z-50 h-16 border-b border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-900"
+        className="fixed left-0 right-0 top-0 z-50 h-16 border-b border-blog-line bg-blog-bg/80 backdrop-blur-xl"
       >
         <div className="mx-auto flex h-full max-w-[1240px] items-center px-4">
           {/* 站点名（spec 4.1） */}
           <Link
             href="/"
-            className="shrink-0 truncate text-xl font-bold text-blue-400 transition-opacity hover:opacity-80 sm:text-2xl sm:max-w-none"
+            className="shrink-0 truncate text-[15px] font-semibold tracking-[-0.01em] text-blog-ink transition-opacity hover:opacity-60 sm:text-base"
           >
             {siteName}
           </Link>
@@ -183,10 +183,10 @@ export default function Header() {
                   key={link.href}
                   href={link.href}
                   className={cn(
-                    "font-medium transition-colors duration-200",
+                    "text-[13.5px] font-medium transition-colors duration-200",
                     pathname === link.href
-                      ? "text-blue-600 dark:text-blue-400"
-                      : "text-gray-600 hover:text-blue-600 dark:text-gray-300 dark:hover:text-blue-400",
+                      ? "text-blog-ink"
+                      : "text-blog-soft hover:text-blog-ink",
                   )}
                 >
                   {link.label}
@@ -200,7 +200,7 @@ export default function Header() {
                     type="button"
                     onClick={() => setMoreMenuOpen((v) => !v)}
                     aria-expanded={moreMenuOpen}
-                    className="inline-flex items-center gap-1 font-medium text-gray-600 transition-colors hover:text-blue-600 dark:text-gray-300 dark:hover:text-blue-400"
+                    className="inline-flex items-center gap-1 text-[13.5px] font-medium text-blog-soft transition-colors hover:text-blog-ink"
                   >
                     更多
                     <CaretDown
@@ -212,7 +212,7 @@ export default function Header() {
                   </button>
                   <div
                     className={cn(
-                      "absolute right-0 top-full z-50 mt-2 w-48 overflow-hidden rounded-md border border-gray-200 bg-white shadow-lg transition-all duration-200 dark:border-gray-700 dark:bg-gray-800",
+                      "absolute right-0 top-full z-50 mt-3 w-44 overflow-hidden rounded-xl border border-blog-line bg-blog-surface p-1 shadow-[0_16px_48px_-16px_rgba(0,0,0,0.25)] transition-all duration-200",
                       moreMenuOpen
                         ? "visible opacity-100"
                         : "invisible opacity-0",
@@ -223,7 +223,7 @@ export default function Header() {
                         key={link.href}
                         href={link.href}
                         onClick={() => setMoreMenuOpen(false)}
-                        className="block px-4 py-2 text-sm text-gray-700 transition-colors hover:bg-blue-50 hover:text-blue-600 dark:text-gray-200 dark:hover:bg-blue-900/30"
+                        className="block rounded-lg px-3 py-2 text-[13px] text-blog-soft transition-colors hover:bg-blog-muted hover:text-blog-ink"
                       >
                         {link.label}
                       </Link>
@@ -239,7 +239,7 @@ export default function Header() {
               aria-hidden="true"
               className="invisible absolute -left-[9999px] top-0 flex space-x-8 whitespace-nowrap"
             >
-              {NAV_LINKS.map((link, i) => (
+              {NAV_LINKS.map((link) => (
                 <li
                   key={link.href}
                   data-measure-item
@@ -259,9 +259,9 @@ export default function Header() {
               type="button"
               onClick={() => setSearchOpen(true)}
               aria-label="搜索"
-              className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-gray-600 transition-all hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-800"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-full text-blog-soft transition-colors hover:bg-blog-muted hover:text-blog-ink"
             >
-              <MagnifyingGlass className="h-5 w-5" />
+              <MagnifyingGlass className="h-[18px] w-[18px]" />
             </button>
 
             {/* 主题切换（spec §4.9） */}
@@ -270,9 +270,9 @@ export default function Header() {
                 type="button"
                 onClick={toggle}
                 aria-label="切换主题"
-                className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-gray-600 transition-all hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-800"
+                className="inline-flex h-9 w-9 items-center justify-center rounded-full text-blog-soft transition-colors hover:bg-blog-muted hover:text-blog-ink"
               >
-                {isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+                {isDark ? <Sun className="h-[18px] w-[18px]" /> : <Moon className="h-[18px] w-[18px]" />}
               </button>
             )}
 
@@ -284,33 +284,33 @@ export default function Header() {
                   onClick={() => setUserMenuOpen((v) => !v)}
                   aria-haspopup="menu"
                   aria-expanded={userMenuOpen}
-                  className="ml-1 flex items-center gap-2 rounded-full px-2 py-1 transition-colors hover:bg-gray-100 dark:hover:bg-gray-800"
+                  className="ml-1 flex items-center gap-2 rounded-full px-2 py-1 transition-colors hover:bg-blog-muted"
                 >
                   <Avatar className="h-8 w-8">
                     <AvatarImage src={user.avatar} alt={user.nickname} />
                     <AvatarFallback>{user.nickname?.[0] || "U"}</AvatarFallback>
                   </Avatar>
-                  <span className="hidden max-w-[120px] text-sm font-medium text-gray-700 sm:inline dark:text-gray-200">
+                  <span className="hidden max-w-[120px] text-[13px] font-medium text-blog-ink sm:inline">
                     {user.nickname}
                   </span>
-                  <CaretDown className="hidden h-4 w-4 text-gray-500 sm:inline" />
+                  <CaretDown className="hidden h-4 w-4 text-blog-soft sm:inline" />
                 </button>
                 {userMenuOpen && (
-                  <div className="absolute right-0 top-full z-50 mt-2 w-48 overflow-hidden rounded-md border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-800">
+                  <div className="absolute right-0 top-full z-50 mt-3 w-44 overflow-hidden rounded-xl border border-blog-line bg-blog-surface p-1 shadow-[0_16px_48px_-16px_rgba(0,0,0,0.25)]">
                     <button
                       type="button"
                       onClick={() => {
                         setUserMenuOpen(false);
                         router.push("/admin");
                       }}
-                      className="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-700"
+                      className="block w-full rounded-lg px-3 py-2 text-left text-[13px] text-blog-soft hover:bg-blog-muted hover:text-blog-ink"
                     >
                       进入控制台
                     </button>
                     <button
                       type="button"
                       onClick={handleLogout}
-                      className="block w-full border-t border-gray-100 px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 dark:border-gray-700 dark:hover:bg-red-900/20"
+                      className="mt-1 block w-full rounded-lg border-t border-blog-line px-3 py-2 text-left text-[13px] text-red-500 hover:bg-red-500/10"
                     >
                       登出
                     </button>
@@ -320,7 +320,7 @@ export default function Header() {
             ) : (
               <Link
                 href="/admin/login"
-                className="ml-1 inline-flex items-center gap-1.5 rounded-full bg-gray-100 px-3 py-1.5 text-sm font-medium text-gray-600 transition-all hover:bg-blue-50 hover:text-blue-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-blue-900/30 dark:hover:text-blue-400"
+                className="ml-1 inline-flex items-center gap-1.5 rounded-full border border-blog-line px-3.5 py-1.5 text-[13px] font-medium text-blog-ink transition-colors hover:bg-blog-muted"
               >
                 <User className="h-4 w-4" />
                 登录
@@ -333,7 +333,7 @@ export default function Header() {
               onClick={() => setMobileOpen((v) => !v)}
               aria-label="菜单"
               aria-expanded={mobileOpen}
-              className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-gray-600 transition-colors hover:bg-gray-100 md:hidden dark:text-gray-300 dark:hover:bg-gray-800"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-full text-blog-soft transition-colors hover:bg-blog-muted hover:text-blog-ink md:hidden"
             >
               {mobileOpen ? <X className="h-5 w-5" /> : <List className="h-5 w-5" />}
             </button>
@@ -344,7 +344,7 @@ export default function Header() {
       {/* 移动端展开菜单 */}
       <div
         className={cn(
-          "fixed left-0 right-0 top-16 z-40 overflow-hidden border-t border-gray-200 bg-white shadow-lg transition-all duration-300 ease-in-out md:hidden dark:border-gray-700 dark:bg-gray-900",
+          "fixed left-0 right-0 top-16 z-40 overflow-hidden border-t border-blog-line bg-blog-bg/95 backdrop-blur-xl transition-all duration-300 ease-in-out md:hidden",
           mobileOpen
             ? "max-h-[80vh] opacity-100 visible"
             : "max-h-0 opacity-0 invisible",
@@ -356,7 +356,7 @@ export default function Header() {
               key={link.href}
               href={link.href}
               onClick={() => setMobileOpen(false)}
-              className="block w-full rounded-lg px-3 py-3 text-left text-base font-medium text-gray-700 transition-colors hover:bg-blue-50 hover:text-blue-600 dark:text-gray-200 dark:hover:bg-blue-900/30"
+              className="block w-full rounded-xl px-3 py-3 text-left text-[15px] font-medium text-blog-soft transition-colors hover:bg-blog-muted hover:text-blog-ink"
             >
               {link.label}
             </Link>
@@ -365,7 +365,7 @@ export default function Header() {
             <Link
               href="/admin/login"
               onClick={() => setMobileOpen(false)}
-              className="mt-2 block w-full rounded-lg bg-blue-500 px-3 py-3 text-center font-medium text-white hover:bg-blue-600"
+              className="mt-2 block w-full rounded-xl bg-blog-ink px-3 py-3 text-center font-medium text-blog-bg transition-opacity hover:opacity-85"
             >
               登录
             </Link>
@@ -376,7 +376,7 @@ export default function Header() {
                 setMobileOpen(false);
                 handleLogout();
               }}
-              className="mt-2 block w-full rounded-lg px-3 py-3 text-left text-base font-medium text-red-600 transition-colors hover:bg-red-50 dark:hover:bg-red-900/20"
+              className="mt-2 block w-full rounded-xl px-3 py-3 text-left text-[15px] font-medium text-red-500 transition-colors hover:bg-red-500/10"
             >
               登出
             </button>
@@ -387,7 +387,7 @@ export default function Header() {
       {/* 移动端遮罩 */}
       {mobileOpen && (
         <div
-          className="fixed inset-0 z-30 bg-black/20 backdrop-blur-sm md:hidden"
+          className="fixed inset-0 z-30 bg-black/30 backdrop-blur-sm md:hidden"
           onClick={() => setMobileOpen(false)}
         />
       )}

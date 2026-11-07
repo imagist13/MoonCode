@@ -34,17 +34,15 @@ export default function LinksPage() {
   if (loading) {
     return (
       <div className="space-y-6">
-        <div className="mb-10 border-b border-gray-200 pb-6 dark:border-gray-700">
-          <h1 className="text-2xl font-bold tracking-tight text-gray-900 md:text-3xl dark:text-gray-100">
+        <div className="mb-10 border-b border-blog-line pb-6">
+          <h1 className="text-[1.75rem] font-semibold tracking-[-0.03em] text-blog-ink md:text-[2rem]">
             友情链接
           </h1>
-          <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-            感谢各位朋友的支持
-          </p>
+          <p className="mt-2 text-[13px] text-blog-soft">感谢各位朋友的支持</p>
         </div>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {Array.from({ length: 6 }).map((_, i) => (
-            <Skeleton key={i} className="h-24 rounded-lg" />
+            <Skeleton key={i} className="h-20 rounded-xl" />
           ))}
         </div>
       </div>
@@ -53,7 +51,7 @@ export default function LinksPage() {
 
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center py-20 text-gray-400">
+      <div className="flex flex-col items-center justify-center py-20 text-[13px] text-blog-soft">
         <p>加载失败: {error}</p>
       </div>
     );
@@ -64,9 +62,9 @@ export default function LinksPage() {
       <PageHeader title="友情链接" description="感谢各位朋友的支持" />
 
       {links.length === 0 ? (
-        <p className="text-center text-gray-400">暂无友链</p>
+        <p className="py-10 text-center text-[13px] text-blog-soft">暂无友链</p>
       ) : (
-        <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
           {links.map((link) => (
             <li key={link.id}>
               <a
@@ -79,18 +77,20 @@ export default function LinksPage() {
                 }
                 target="_blank"
                 rel="noopener noreferrer"
-                className="group flex items-start gap-3 rounded-lg border border-transparent p-3 transition-colors hover:border-gray-200 hover:bg-gray-50 dark:hover:border-gray-700 dark:hover:bg-gray-800/50"
+                className="group flex items-start gap-3 rounded-xl p-3 transition-colors hover:bg-blog-muted"
               >
-                <Avatar className="h-10 w-10 shrink-0">
+                <Avatar className="h-10 w-10 shrink-0 border border-blog-line">
                   <AvatarImage src={link.linkAvatar} alt={link.linkName} />
-                  <AvatarFallback>{link.linkName.slice(0, 2)}</AvatarFallback>
+                  <AvatarFallback className="bg-blog-muted text-[11px] text-blog-soft">
+                    {link.linkName.slice(0, 2)}
+                  </AvatarFallback>
                 </Avatar>
                 <div className="min-w-0 flex-1">
-                  <div className="truncate text-sm font-medium text-gray-800 group-hover:text-gray-900 dark:text-gray-200 dark:group-hover:text-gray-100">
+                  <div className="truncate text-[13.5px] font-medium text-blog-ink">
                     {link.linkName}
                   </div>
                   {link.linkIntro && (
-                    <div className="mt-1 line-clamp-2 text-xs text-gray-500 dark:text-gray-400">
+                    <div className="mt-1 line-clamp-2 text-[12px] leading-relaxed text-blog-soft">
                       {link.linkIntro}
                     </div>
                   )}

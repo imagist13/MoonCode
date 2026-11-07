@@ -2,10 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
 import {
-  Eye,
-  CalendarBlank,
   CaretRight,
   Tag as TagIcon,
   FolderSimple,
@@ -13,9 +10,9 @@ import {
 } from "@phosphor-icons/react";
 import { SidebarCard, FadeScrollContainer } from "./SidebarCard";
 import { api } from "@/lib/api";
-import { cn, formatViews } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 
-/** 分类侧栏（spec §4.5.2） */
+/** 分类侧栏 */
 export function CategorySidebar({
   activeId,
   onSelect,
@@ -37,24 +34,24 @@ export function CategorySidebar({
   }, []);
 
   return (
-    <SidebarCard title="文章分类" icon={<FolderSimple className="h-4 w-4" />}>
+    <SidebarCard title="文章分类" icon={<FolderSimple />}>
       {loading ? (
-        <ul className="space-y-2">
+        <ul className="space-y-3">
           {Array.from({ length: 5 }).map((_, i) => (
-            <li key={i} className="h-8 rounded bg-gray-100 dark:bg-gray-700" />
+            <li key={i} className="h-5 rounded bg-blog-muted" />
           ))}
         </ul>
       ) : (
         <FadeScrollContainer maxHeight="15rem">
-          <ul className="space-y-2">
+          <ul className="space-y-0.5">
             <li>
               <button
                 type="button"
                 onClick={() => onSelect?.(null)}
-                className="flex w-full items-center justify-between rounded px-2 py-1 text-left text-sm text-gray-600 transition-colors hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-700"
+                className="flex w-full items-center justify-between py-1.5 text-left text-[13.5px] text-blog-soft transition-colors hover:text-blog-ink"
               >
                 <span>全部分类</span>
-                <CaretRight className="h-3 w-3" />
+                <CaretRight className="h-3 w-3 opacity-40" />
               </button>
             </li>
             {list.map((cat) => (
@@ -63,14 +60,14 @@ export function CategorySidebar({
                   type="button"
                   onClick={() => onSelect?.(cat.id)}
                   className={cn(
-                    "flex w-full items-center justify-between rounded px-2 py-1 text-left text-sm transition-colors",
+                    "flex w-full items-center justify-between py-1.5 text-left text-[13.5px] transition-colors",
                     String(activeId) === String(cat.id)
-                      ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300"
-                      : "text-gray-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-700",
+                      ? "font-medium text-blog-ink"
+                      : "text-blog-soft hover:text-blog-ink",
                   )}
                 >
-                  <span>{cat.categoryName}</span>
-                  <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-800 dark:bg-gray-700 dark:text-gray-200">
+                  <span className="truncate">{cat.categoryName}</span>
+                  <span className="ml-3 shrink-0 font-mono text-[10.5px] text-blog-soft/70">
                     {cat.articleCount}
                   </span>
                 </button>
@@ -83,7 +80,7 @@ export function CategorySidebar({
   );
 }
 
-/** 标签侧栏（spec §4.5.3） */
+/** 标签侧栏 */
 export function TagSidebar({
   activeId,
   onSelect,
@@ -105,15 +102,15 @@ export function TagSidebar({
   }, []);
 
   return (
-    <SidebarCard title="文章标签" icon={<TagIcon className="h-4 w-4" />}>
+    <SidebarCard title="文章标签" icon={<TagIcon />}>
       {loading ? (
         <div className="flex flex-wrap gap-2">
           {Array.from({ length: 8 }).map((_, i) => (
-            <div key={i} className="h-6 w-14 rounded-full bg-gray-100 dark:bg-gray-700" />
+            <div key={i} className="h-6 w-14 rounded-full bg-blog-muted" />
           ))}
         </div>
       ) : list.length === 0 ? (
-        <p className="text-center text-xs text-gray-400">暂无标签</p>
+        <p className="text-[12px] text-blog-soft/70">暂无标签</p>
       ) : (
         <FadeScrollContainer maxHeight="15rem">
           <div className="flex flex-wrap gap-2">
@@ -123,10 +120,10 @@ export function TagSidebar({
                 type="button"
                 onClick={() => onSelect?.(String(activeId) === String(t.id) ? null : t.id)}
                 className={cn(
-                  "rounded-full px-3 py-1 text-sm transition-colors",
+                  "rounded-full border px-3 py-1 text-[12px] transition-colors",
                   String(activeId) === String(t.id)
-                    ? "bg-blue-500 text-white"
-                    : "bg-gray-100 text-gray-800 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600",
+                    ? "border-blog-ink bg-blog-ink text-blog-bg"
+                    : "border-blog-line text-blog-soft hover:border-blog-soft hover:text-blog-ink",
                 )}
               >
                 {t.tagName}
@@ -139,7 +136,7 @@ export function TagSidebar({
   );
 }
 
-/** 热门文章（spec §4.5.4） */
+/** 热门文章 */
 export function RecommendedArticles() {
   const [list, setList] = useState<
     { id: number; articleTitle: string; viewCount?: number; createTime: string; categoryName?: string }[]
@@ -159,39 +156,28 @@ export function RecommendedArticles() {
   }, []);
 
   return (
-    <SidebarCard title="热门文章" icon={<Flame className="h-4 w-4" />}>
+    <SidebarCard title="热门文章" icon={<Flame />}>
       {loading ? (
         <ul className="space-y-3">
           {Array.from({ length: 4 }).map((_, i) => (
-            <li key={i} className="h-12 rounded bg-gray-100 dark:bg-gray-700" />
+            <li key={i} className="h-10 rounded bg-blog-muted" />
           ))}
         </ul>
       ) : list.length === 0 ? (
-        <p className="text-center text-xs text-gray-400">暂无推荐</p>
+        <p className="text-[12px] text-blog-soft/70">暂无推荐</p>
       ) : (
         <FadeScrollContainer maxHeight="20rem">
-          <ul className="space-y-1">
+          <ul>
             {list.map((a) => (
-              <li key={a.id}>
-                <Link
-                  href={`/articles/${a.id}`}
-                  className="group block rounded-lg p-3 transition-colors hover:bg-gray-50 dark:hover:bg-gray-700"
-                >
-                  <h4 className="line-clamp-2 break-words text-sm font-medium text-gray-900 group-hover:text-blue-600 dark:text-gray-100 dark:group-hover:text-blue-400">
+              <li key={a.id} className="border-t border-blog-line first:border-t-0">
+                <Link href={`/articles/${a.id}`} className="group block py-3">
+                  <h4 className="line-clamp-2 text-[13px] leading-snug font-medium text-blog-ink transition-opacity group-hover:opacity-60">
                     {a.articleTitle}
                   </h4>
-                  <div className="mt-1.5 flex items-center gap-1 truncate text-xs text-gray-500 dark:text-gray-400">
-                    <CalendarBlank className="h-3 w-3 shrink-0" />
+                  <div className="mt-1.5 flex items-center gap-1.5 truncate text-[10.5px] text-blog-soft">
                     <span className="truncate">{a.createTime}</span>
-                    <span className="shrink-0">•</span>
+                    <span className="shrink-0">·</span>
                     <span className="truncate">{a.categoryName || "未分类"}</span>
-                    {a.viewCount !== undefined && (
-                      <>
-                        <span className="shrink-0">•</span>
-                        <Eye className="h-3 w-3 shrink-0" />
-                        <span>{formatViews(a.viewCount)}</span>
-                      </>
-                    )}
                   </div>
                 </Link>
               </li>

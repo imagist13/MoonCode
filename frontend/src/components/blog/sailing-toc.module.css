@@ -23,7 +23,7 @@
 }
 
 .nav {
-  --sailing-surface: #f9fafb;
+  --sailing-surface: #fbfbf8;
   --sailing-ink: #18181b;
   --sailing-muted: #949494;
   --sailing-route: #b8b8bc;
@@ -192,7 +192,7 @@
 /* ---- 暗色 ---------------------------------------------------------------- */
 
 :global(.dark) .nav {
-  --sailing-surface: #111827;
+  --sailing-surface: #0b0b0a;
   --sailing-ink: #f4f4f5;
   --sailing-muted: rgba(244, 244, 245, 0.45);
   --sailing-route: rgba(255, 255, 255, 0.24);

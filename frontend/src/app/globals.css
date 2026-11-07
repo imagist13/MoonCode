@@ -25,6 +25,15 @@
   --font-mono: "Geist Mono", ui-monospace, monospace;
   --font-heading: "Geist", ui-sans-serif, system-ui, sans-serif;
 
+  /* ===== 博客前台中性色 token（仅 .blog-theme 作用域内生效） ===== */
+  --color-blog-bg: var(--blog-bg);
+  --color-blog-surface: var(--blog-surface);
+  --color-blog-ink: var(--blog-ink);
+  --color-blog-soft: var(--blog-soft);
+  --color-blog-line: var(--blog-line);
+  --color-blog-muted: var(--blog-muted);
+  --color-blog-accent: var(--blog-accent);
+
   /* ===== 品牌色 token（蓝色，对齐 uiux-spec） ===== */
   --color-brand-50: var(--brand-50);
   --color-brand-100: var(--brand-100);
@@ -197,6 +206,83 @@
   --sidebar-ring: var(--brand-500);
 }
 
+/* ============================================================
+   博客前台设计 token（试点：首页 + 文章页）
+   仅作用于 .blog-theme 包裹层，后台管理界面不受影响。
+   ============================================================ */
+.blog-theme {
+  --blog-bg: #fbfbf8;
+  --blog-surface: #ffffff;
+  --blog-ink: #12120f;
+  --blog-soft: #6f6f68;
+  --blog-line: rgba(18, 18, 15, 0.09);
+  --blog-muted: #f2f2ee;
+  --blog-accent: #0a84ff;
+
+  /* 让博客内的 shadcn 组件跟随同一套中性色 */
+  --background: var(--blog-bg);
+  --foreground: var(--blog-ink);
+  --card: var(--blog-surface);
+  --card-foreground: var(--blog-ink);
+  --popover: var(--blog-surface);
+  --popover-foreground: var(--blog-ink);
+  --muted: var(--blog-muted);
+  --muted-foreground: var(--blog-soft);
+  --border: var(--blog-line);
+  --input: var(--blog-line);
+  --primary: var(--blog-ink);
+  --primary-foreground: var(--blog-bg);
+  --accent: var(--blog-muted);
+  --accent-foreground: var(--blog-ink);
+  --ring: var(--blog-accent);
+  --radius: 0.875rem;
+
+  font-family:
+    "Geist", "PingFang SC", "HarmonyOS Sans SC", "Noto Sans SC",
+    "Microsoft YaHei", ui-sans-serif, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.dark .blog-theme {
+  --blog-bg: #0b0b0a;
+  --blog-surface: #141412;
+  --blog-ink: #f4f4f0;
+  --blog-soft: #a3a39b;
+  --blog-line: rgba(255, 255, 255, 0.1);
+  --blog-muted: #1c1c19;
+  --blog-accent: #4da3ff;
+}
+
+/* 博客内的 shadcn Card：去掉阴影与悬浮位移，改为发丝边框 */
+.blog-theme [data-slot="card"] {
+  border: 1px solid var(--blog-line);
+  box-shadow: none;
+}
+.blog-theme [data-slot="card"]:hover {
+  translate: 0 0;
+  box-shadow: none;
+}
+
+/* 过滚动 / 短页面时 body 不露出后台底色 */
+body:has(.blog-theme) {
+  background-color: #fbfbf8;
+}
+.dark body:has(.blog-theme) {
+  background-color: #0b0b0a;
+}
+
+.blog-theme ::selection {
+  background: var(--blog-ink);
+  color: var(--blog-bg);
+}
+
+.blog-theme h1,
+.blog-theme h2,
+.blog-theme h3 {
+  letter-spacing: -0.02em;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
@@ -225,23 +311,6 @@
 .hide-scrollbar::-webkit-scrollbar {
   display: none;
 }
-.scrollbar-thin {
-  scrollbar-width: thin;
-}
-.scrollbar-thin::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-.dark .scrollbar-thin::-webkit-scrollbar-thumb {
-  background-color: #6b7280;
-}
-.scrollbar-thin::-webkit-scrollbar-thumb {
-  background-color: #d1d5db;
-  border-radius: 3px;
-}
-.scrollbar-thin::-webkit-scrollbar-thumb:hover {
-  background-color: #9ca3af;
-}
 
 /* ===== 渐隐遮罩（参考规范 4.5.2） ===== */
 .fade-mask-top,
@@ -261,18 +330,6 @@
 .fade-mask-bottom {
   bottom: 0;
   background: linear-gradient(to top, var(--background), transparent);
-}
-
-/* ===== 玻璃态（spec §1.5） ===== */
-.glass-panel {
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(229, 231, 235, 0.5);
-}
-.dark .glass-panel {
-  background: rgba(31, 41, 55, 0.85);
-  border-color: rgba(75, 85, 99, 0.5);
 }
 
 /* ===== 音乐播放器（spec §6.6） ===== */
@@ -388,12 +445,6 @@
   }
 }
 
-/* ===== Toast 玻璃态（spec §6.1） ===== */
-.toast-glass {
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
-}
-
 /* ===== 上传进度面板（spec §6.5） ===== */
 .upload-progress-panel {
   animation: upload-progress-slide-in 0.3s cubic-bezier(0.16, 1, 0.3, 1);
@@ -457,40 +508,6 @@
     opacity: 0;
     transform: translateX(100%);
   }
-}
-
-/* ===== 博客卡片（spec §4.3） ===== */
-.article-card {
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
-  border-radius: 0.5rem;
-  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.06), 0 1px 2px -1px rgb(0 0 0 / 0.04);
-  transition: all 200ms ease;
-  cursor: pointer;
-}
-.article-card:hover {
-  box-shadow: 0 10px 25px -3px rgb(0 0 0 / 0.08), 0 4px 10px -4px rgb(0 0 0 / 0.04);
-  transform: translateY(-2px);
-}
-.dark .article-card {
-  background: #1f2937;
-  border-color: #374151;
-}
-
-.article-tag {
-  background: #f3f4f6;
-  color: #1f2937;
-  font-size: 0.75rem;
-  padding: 0.25rem 0.5rem;
-  border-radius: 0.25rem;
-  transition: background-color 200ms ease;
-}
-.article-tag:hover {
-  background: #e5e7eb;
-}
-.dark .article-tag {
-  background: #374151;
-  color: #f9fafb;
 }
 
 /* ===== 文章正文 prose 样式（参考 Simon Willison 文章页） ===== */
@@ -826,23 +843,7 @@
   border-radius: 4px;
 }
 
-/* ===== 表单错误条（spec §4.10） ===== */
-.form-error-bar {
-  background: #fef2f2;
-  color: #991b1b;
-  padding: 0.75rem;
-  border-radius: 0.375rem;
-  font-size: 0.875rem;
-  border: 1px solid #fecaca;
-  margin-bottom: 1rem;
-}
-.dark .form-error-bar {
-  background: rgba(239, 68, 68, 0.12);
-  color: #fca5a5;
-  border-color: rgba(239, 68, 68, 0.3);
-}
-
-/* ===== 关于页：侧栏小标题 / Tech 图标 ===== */
+/* ===== 关于页：入场动画 ===== */
 
 @keyframes rise {
   from {
@@ -858,152 +859,187 @@
   animation: rise 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
-/* 侧栏小标题：左竖条 + 文字 */
-.side-title {
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: var(--foreground);
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-.side-title::before {
-  content: "";
-  width: 0.25rem;
-  height: 1rem;
-  border-radius: 9999px;
-  background: var(--primary);
-  flex-shrink: 0;
-}
-
-.link-brand {
-  color: var(--muted-foreground);
-  transition: color 150ms ease;
-}
-.link-brand:hover {
-  color: var(--primary);
-}
-
-/* Tech Stack 32×32 小图标 */
-.tech-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
-  color: #fff;
-  font-weight: 700;
-  font-size: 11px;
-  font-family: var(--font-mono, ui-monospace, monospace);
-  box-shadow: 0 4px 10px -3px rgba(0, 0, 0, 0.18);
-  transition: transform 0.15s ease;
-  cursor: default;
-}
-.tech-icon:hover {
-  transform: translateY(-2px);
-}
-
-/* 身份卡：静态展示，禁用 Card 默认的 hover 上移，避免头像视觉抖动 */
-.card-static {
-  overflow: visible !important;
-}
-.card-static:hover {
-  --tw-translate-y: 0 !important;
-  translate: none !important;
-}
-
 @media (prefers-reduced-motion: reduce) {
   .reveal-up {
     animation: none;
   }
 }
 
-/* ===== DataTable 状态徽章（spec §5.13） ===== */
-.status-badge {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.125rem 0.5rem;
-  border-radius: 0.25rem;
-  font-size: 0.75rem;
+/* ============================================================
+   博客前台正文排版
+   覆盖通用 .prose，仅 .blog-theme 内生效（后台预览保持原样）。
+   ============================================================ */
+.blog-theme .prose {
+  font-size: 1.0625rem;
+  line-height: 1.85;
+  color: var(--blog-soft);
+}
+
+.blog-theme .prose p {
+  margin: 1.4em 0;
+  line-height: 1.85;
+}
+
+.blog-theme .prose a {
+  color: var(--blog-ink);
+  text-decoration-color: var(--blog-line);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
   font-weight: 500;
-  border: 1px solid transparent;
+  transition: color 160ms ease, text-decoration-color 160ms ease;
 }
-.status-badge-success {
-  background: #ecfdf5;
-  color: #047857;
-  border-color: #a7f3d0;
-}
-.status-badge-info {
-  background: #eff6ff;
-  color: #1d4ed8;
-  border-color: #bfdbfe;
-}
-.status-badge-warning {
-  background: #fff7ed;
-  color: #c2410c;
-  border-color: #fed7aa;
-}
-.status-badge-danger {
-  background: #fef2f2;
-  color: #b91c1c;
-  border-color: #fecaca;
-}
-.status-badge-default {
-  background: #f3f4f6;
-  color: #1f2937;
-  border-color: #e5e7eb;
+.blog-theme .prose a:hover {
+  color: var(--blog-accent);
+  text-decoration-color: currentColor;
 }
 
-/* ===== 分类树（spec §5.10.1） ===== */
-.category-tree-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0.75rem 1rem;
-  background: #ffffff;
-  border-bottom: 1px solid #e5e7eb;
-  transition: background-color 150ms ease;
+.blog-theme .prose h1,
+.blog-theme .prose h2,
+.blog-theme .prose h3,
+.blog-theme .prose h4 {
+  color: var(--blog-ink);
+  font-weight: 600;
+  letter-spacing: -0.025em;
 }
-.category-tree-row:hover {
-  background: #f9fafb;
+.blog-theme .prose h2 {
+  font-size: 1.5rem;
+  line-height: 1.35;
+  margin: 2.6em 0 0.9em;
+  padding-bottom: 0;
+  border-bottom: 0;
 }
-.dark .category-tree-row {
-  background: #1f2937;
-  border-color: #374151;
+.blog-theme .prose h3 {
+  font-size: 1.1875rem;
+  line-height: 1.45;
+  margin: 2em 0 0.7em;
 }
-.dark .category-tree-row:hover {
-  background: #111827;
-}
-.category-tree-child {
-  margin-left: 2rem;
-  position: relative;
-}
-.category-tree-child::before {
-  content: '';
-  position: absolute;
-  left: -1rem;
-  top: 0;
-  bottom: 0;
-  width: 1px;
-  background: #e5e7eb;
-}
-.dark .category-tree-child::before {
-  background: #374151;
+.blog-theme .prose h4 {
+  font-size: 1.0625rem;
+  margin: 1.6em 0 0.5em;
 }
 
-/* ===== 进度条（spec §6.5） ===== */
-.progress-track {
-  background: #f3f4f6;
-  height: 4px;
-  border-radius: 9999px;
-  overflow: hidden;
+.blog-theme .prose strong {
+  color: var(--blog-ink);
+  font-weight: 600;
 }
-.dark .progress-track {
-  background: #374151;
+.blog-theme .prose em {
+  color: var(--blog-soft);
 }
-.progress-fill {
-  background: linear-gradient(90deg, #3b82f6, #60a5fa);
-  height: 100%;
-  transition: width 200ms ease;
+
+.blog-theme .prose ul > li::marker,
+.blog-theme .prose ol > li::marker {
+  color: var(--blog-soft);
+}
+
+.blog-theme .prose blockquote {
+  margin: 2em 0;
+  padding: 0.25em 0 0.25em 1.35em;
+  border-left: 1.5px solid var(--blog-line);
+  background: transparent;
+  color: var(--blog-ink);
+  border-radius: 0;
+}
+.blog-theme .prose blockquote p {
+  margin: 0.5em 0;
+}
+
+.blog-theme .prose code {
+  background: var(--blog-muted);
+  color: var(--blog-ink);
+  border: 1px solid var(--blog-line);
+  padding: 0.12em 0.4em;
+  border-radius: 0.35rem;
+  font-size: 0.85em;
+  font-weight: 450;
+}
+.blog-theme .prose pre {
+  background: #0f0f0e !important;
+  color: #f4f4f0 !important;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 0.875rem;
+  padding: 1.25rem 1.4rem;
+  margin: 1.9em 0;
+  font-size: 0.85rem;
+  line-height: 1.7;
+}
+.blog-theme .prose pre code {
+  background: transparent !important;
+  border: 0;
+  color: inherit;
+}
+
+.blog-theme .prose table {
+  border: 1px solid var(--blog-line);
+  border-radius: 0.75rem;
+  font-size: 0.9375rem;
+}
+.blog-theme .prose thead {
+  background: transparent;
+}
+.blog-theme .prose th {
+  color: var(--blog-soft);
+  font-weight: 500;
+  border-bottom: 1px solid var(--blog-line);
+}
+.blog-theme .prose td {
+  border-bottom: 1px solid var(--blog-line);
+}
+.blog-theme .prose tbody tr:last-child td {
+  border-bottom: none;
+}
+.blog-theme .prose tbody tr:hover {
+  background: var(--blog-muted);
+}
+
+.blog-theme .prose img {
+  border-radius: 0.875rem;
+  box-shadow: none;
+  margin: 2em auto;
+}
+.blog-theme .prose figcaption {
+  color: var(--blog-soft);
+  font-size: 0.8125rem;
+  letter-spacing: 0.01em;
+}
+
+.blog-theme .prose hr {
+  border-top: 1px solid var(--blog-line);
+  margin: 3em 0;
+}
+
+.blog-theme .prose kbd {
+  background: var(--blog-muted);
+  color: var(--blog-ink);
+  border: 1px solid var(--blog-line);
+  border-bottom-width: 1px;
+  border-radius: 0.35rem;
+}
+
+/* 克制的入场：卡片与主体分段上浮 */
+@keyframes blog-rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.blog-reveal {
+  animation: blog-rise 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* 焦点环跟随中性色，不再使用默认蓝 */
+.blog-theme a:focus-visible,
+.blog-theme button:focus-visible {
+  outline: 2px solid var(--blog-accent);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .blog-reveal {
+    animation: none;
+  }
 }

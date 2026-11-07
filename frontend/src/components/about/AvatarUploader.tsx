@@ -60,7 +60,7 @@ export function AvatarUploader({
   return (
     <div
       className={cn(
-        "group/avatar relative shrink-0 overflow-hidden rounded-full ring-1 ring-black/5",
+        "group/avatar relative shrink-0 overflow-hidden rounded-full ring-1 ring-blog-line",
         className,
       )}
       style={{ width: size, height: size }}
@@ -74,7 +74,7 @@ export function AvatarUploader({
           draggable={false}
         />
       ) : (
-        <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-slate-200 to-slate-300 text-3xl font-semibold text-slate-500">
+        <div className="flex h-full w-full items-center justify-center bg-blog-muted text-3xl font-semibold text-blog-soft">
           🙂
         </div>
       )}

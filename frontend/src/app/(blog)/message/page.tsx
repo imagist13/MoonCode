@@ -76,13 +76,15 @@ export default function MessagePage() {
 
   return (
     <div className="mx-auto max-w-2xl">
-      <h1 className="text-3xl font-bold">留言板</h1>
-      <p className="mt-2 text-muted-foreground">
-        欢迎留下你的足迹
-      </p>
+      <header className="mb-8 border-b border-blog-line pb-5">
+        <h1 className="text-[1.75rem] font-semibold tracking-[-0.03em] text-blog-ink">
+          留言板
+        </h1>
+        <p className="mt-2 text-[13px] text-blog-soft">欢迎留下你的足迹</p>
+      </header>
 
       {/* 留言表单 */}
-      <Card className="mt-8">
+      <Card>
         <CardContent className="pt-4">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-2">
@@ -131,11 +133,11 @@ export default function MessagePage() {
             <Skeleton key={i} className="h-24 w-full rounded-xl" />
           ))
         ) : error ? (
-          <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
+          <div className="flex flex-col items-center justify-center py-20 text-[13px] text-blog-soft">
             <p>加载失败: {error}</p>
           </div>
         ) : messages.length === 0 ? (
-          <p className="text-center text-muted-foreground">
+          <p className="py-10 text-center text-[13px] text-blog-soft">
             还没有留言，来做第一个留言的人吧！
           </p>
         ) : (
@@ -160,14 +162,14 @@ export default function MessagePage() {
                   </Avatar>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium">
+                      <span className="text-[13.5px] font-medium text-blog-ink">
                         {msg.nickname}
                       </span>
-                      <time className="text-xs text-muted-foreground">
+                      <time className="font-mono text-[11px] text-blog-soft">
                         {msg.createTime}
                       </time>
                     </div>
-                    <p className="mt-1 text-sm leading-relaxed">
+                    <p className="mt-1 text-[13.5px] leading-relaxed text-blog-ink/85">
                       {msg.messageContent}
                     </p>
                   </div>

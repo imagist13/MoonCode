@@ -5,6 +5,8 @@ import { cn } from "@/lib/utils";
  * - 实色标题
  * - 底部细分隔线作为视觉锚点
  * - 副标题用 muted 灰色
+ *
+ * 仅用于博客前台，颜色走 .blog-theme token。
  */
 export function PageHeader({
   title,
@@ -16,14 +18,12 @@ export function PageHeader({
   className?: string;
 }) {
   return (
-    <header className={cn("mb-10 border-b border-gray-200 pb-6 dark:border-gray-700", className)}>
-      <h1 className="text-2xl font-bold tracking-tight text-gray-900 md:text-3xl dark:text-gray-100">
+    <header className={cn("mb-10 border-b border-blog-line pb-6", className)}>
+      <h1 className="text-[1.75rem] leading-tight font-semibold tracking-[-0.03em] text-blog-ink md:text-[2rem]">
         {title}
       </h1>
       {description && (
-        <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-          {description}
-        </p>
+        <p className="mt-2 text-[13px] text-blog-soft">{description}</p>
       )}
     </header>
   );
