@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Code, Mail, Rss, Shield } from "lucide-react";
+import { Code, EnvelopeSimple, Rss, ShieldCheck } from "@phosphor-icons/react";
 import { useSiteConfig } from "@/hooks/useSiteConfig";
 
 interface FooterProps {
@@ -21,7 +21,7 @@ export default function Footer({
 
   const socials = [
     { href: "https://github.com", label: "GitHub 仓库", icon: Code },
-    { href: "mailto:hi@example.com", label: "邮箱", icon: Mail },
+    { href: "mailto:hi@example.com", label: "邮箱", icon: EnvelopeSimple },
     { href: "/rss.xml", label: "RSS", icon: Rss },
   ];
 
@@ -38,7 +38,7 @@ export default function Footer({
                 rel="noopener noreferrer"
                 className="text-gray-600 transition-colors hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400"
               >
-                <Shield className="mr-1 inline-block h-3 w-3 align-middle" />
+                <ShieldCheck className="mr-1 inline-block h-3 w-3 align-middle" />
                 {icpRecord}
               </a>
             </p>

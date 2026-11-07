@@ -2,7 +2,12 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { Heart, Reply, Trash2, Send } from "lucide-react";
+import {
+  Heart,
+  ArrowBendUpLeft,
+  Trash,
+  PaperPlaneTilt,
+} from "@phosphor-icons/react";
 import { cn, formatTime } from "@/lib/utils";
 
 export interface CommentNode {
@@ -88,7 +93,7 @@ export function CommentSection({
               disabled={!content.trim() || submitting}
               className="inline-flex items-center gap-1 rounded bg-blue-500 px-3 py-1 font-medium text-white transition-colors hover:bg-blue-600 disabled:opacity-50"
             >
-              <Send className="h-3 w-3" />
+              <PaperPlaneTilt className="h-3 w-3" />
               发表
             </button>
           </div>
@@ -185,7 +190,10 @@ function CommentItem({
                   : "hover:text-red-500",
               )}
             >
-              <Heart className={cn("h-3.5 w-3.5", liked && "fill-current")} />
+              <Heart
+                weight={liked ? "fill" : "regular"}
+                className="h-3.5 w-3.5"
+              />
               <span>{likeCount}</span>
             </button>
             <button
@@ -193,7 +201,7 @@ function CommentItem({
               onClick={() => setReplyOpen((v) => !v)}
               className="inline-flex items-center gap-1 hover:text-blue-500"
             >
-              <Reply className="h-3.5 w-3.5" />
+              <ArrowBendUpLeft className="h-3.5 w-3.5" />
               回复
             </button>
             {onDelete && (
@@ -202,7 +210,7 @@ function CommentItem({
                 onClick={() => onDelete(comment.id)}
                 className="inline-flex items-center gap-1 hover:text-red-500"
               >
-                <Trash2 className="h-3.5 w-3.5" />
+                <Trash className="h-3.5 w-3.5" />
                 删除
               </button>
             )}

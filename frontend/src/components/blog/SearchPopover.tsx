@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { Search, X } from "lucide-react";
+import { MagnifyingGlass, X } from "@phosphor-icons/react";
 import { cn, debounce, stripMarkdown } from "@/lib/utils";
 import { api } from "@/lib/api";
 
@@ -96,7 +96,7 @@ export function SearchPopover({ open, onClose }: SearchPopoverProps) {
         <div className="overflow-hidden rounded-xl border border-gray-200 bg-white/90 shadow-xl backdrop-blur-md dark:border-gray-700 dark:bg-gray-900/90">
           {/* 输入区 */}
           <div className="relative">
-            <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
+            <MagnifyingGlass className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
             <input
               ref={inputRef}
               type="text"

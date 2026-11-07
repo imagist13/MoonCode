@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, RefreshCw } from "lucide-react";
+import { ArrowRight, ArrowsClockwise } from "@phosphor-icons/react";
 import { useState } from "react";
 
 interface CaptchaBlockProps {
@@ -50,7 +50,7 @@ export function CaptchaBlock({ value, onChange, src, onRefresh }: CaptchaBlockPr
             />
           ) : (
             <span className="inline-flex items-center gap-1 text-xs">
-              <RefreshCw className="h-3 w-3" />
+              <ArrowsClockwise className="h-3 w-3" />
               获取
             </span>
           )}

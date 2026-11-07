@@ -3,7 +3,15 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { Menu, Moon, Search, Sun, User, X, ChevronDown, LogOut } from "lucide-react";
+import {
+  CaretDown,
+  List,
+  Moon,
+  MagnifyingGlass,
+  Sun,
+  User,
+  X,
+} from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuthStore, useHydrated } from "@/stores/auth";
@@ -195,7 +203,7 @@ export default function Header() {
                     className="inline-flex items-center gap-1 font-medium text-gray-600 transition-colors hover:text-blue-600 dark:text-gray-300 dark:hover:text-blue-400"
                   >
                     更多
-                    <ChevronDown
+                    <CaretDown
                       className={cn(
                         "h-4 w-4 transition-transform",
                         moreMenuOpen && "rotate-180",
@@ -253,7 +261,7 @@ export default function Header() {
               aria-label="搜索"
               className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-gray-600 transition-all hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-800"
             >
-              <Search className="h-5 w-5" />
+              <MagnifyingGlass className="h-5 w-5" />
             </button>
 
             {/* 主题切换（spec §4.9） */}
@@ -285,7 +293,7 @@ export default function Header() {
                   <span className="hidden max-w-[120px] text-sm font-medium text-gray-700 sm:inline dark:text-gray-200">
                     {user.nickname}
                   </span>
-                  <ChevronDown className="hidden h-4 w-4 text-gray-500 sm:inline" />
+                  <CaretDown className="hidden h-4 w-4 text-gray-500 sm:inline" />
                 </button>
                 {userMenuOpen && (
                   <div className="absolute right-0 top-full z-50 mt-2 w-48 overflow-hidden rounded-md border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-800">
@@ -327,7 +335,7 @@ export default function Header() {
               aria-expanded={mobileOpen}
               className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-gray-600 transition-colors hover:bg-gray-100 md:hidden dark:text-gray-300 dark:hover:bg-gray-800"
             >
-              {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+              {mobileOpen ? <X className="h-5 w-5" /> : <List className="h-5 w-5" />}
             </button>
           </div>
         </div>

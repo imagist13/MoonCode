@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { Moon, Sun } from "lucide-react";
+import { Moon, Sun } from "@phosphor-icons/react";
 import { useSiteConfig } from "@/hooks/useSiteConfig";
+import { AuthOceanBackground } from "./AuthOceanBackground";
 
 /** 主题切换（极简版） */
 function ThemeToggle() {
@@ -43,14 +44,16 @@ function ThemeToggle() {
   );
 }
 
-/** 鉴权页面外壳：顶部站点名 + 主题切换，下方内容居中 */
+/** 鉴权页面外壳：字符鲨鱼背景 + 顶部站点名/主题切换，下方内容居中 */
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   const siteConfig = useSiteConfig();
   const siteName = siteConfig?.name || "Moon";
 
   return (
-    <div className="flex min-h-screen flex-col bg-white text-gray-900 dark:bg-gray-950 dark:text-gray-100">
-      <header className="flex h-16 items-center justify-between px-6">
+    <div className="relative flex min-h-screen flex-col overflow-hidden bg-white text-gray-900 dark:bg-gray-950 dark:text-gray-100">
+      <AuthOceanBackground />
+
+      <header className="relative z-10 flex h-16 items-center justify-between px-6">
         <Link
           href="/"
           className="text-base font-medium tracking-tight text-gray-900 transition-opacity hover:opacity-60 dark:text-gray-100"
@@ -60,8 +63,8 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         <ThemeToggle />
       </header>
 
-      <main className="flex flex-1 items-start justify-center px-6 pb-16 pt-12 sm:pt-24">
-        <div className="w-full max-w-[360px]">{children}</div>
+      <main className="pointer-events-none relative z-10 flex flex-1 items-start justify-center px-6 pb-16 pt-12 sm:pt-24">
+        <div className="pointer-events-auto w-full max-w-[360px]">{children}</div>
       </main>
     </div>
   );

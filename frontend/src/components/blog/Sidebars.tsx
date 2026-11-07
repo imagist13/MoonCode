@@ -3,7 +3,14 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { Eye, Calendar, ChevronRight, Tag as TagIcon, FolderTree, Flame } from "lucide-react";
+import {
+  Eye,
+  CalendarBlank,
+  CaretRight,
+  Tag as TagIcon,
+  FolderSimple,
+  Flame,
+} from "@phosphor-icons/react";
 import { SidebarCard, FadeScrollContainer } from "./SidebarCard";
 import { api } from "@/lib/api";
 import { cn, formatViews } from "@/lib/utils";
@@ -30,7 +37,7 @@ export function CategorySidebar({
   }, []);
 
   return (
-    <SidebarCard title="文章分类" icon={<FolderTree className="h-4 w-4" />}>
+    <SidebarCard title="文章分类" icon={<FolderSimple className="h-4 w-4" />}>
       {loading ? (
         <ul className="space-y-2">
           {Array.from({ length: 5 }).map((_, i) => (
@@ -47,7 +54,7 @@ export function CategorySidebar({
                 className="flex w-full items-center justify-between rounded px-2 py-1 text-left text-sm text-gray-600 transition-colors hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-700"
               >
                 <span>全部分类</span>
-                <ChevronRight className="h-3 w-3" />
+                <CaretRight className="h-3 w-3" />
               </button>
             </li>
             {list.map((cat) => (
@@ -174,7 +181,7 @@ export function RecommendedArticles() {
                     {a.articleTitle}
                   </h4>
                   <div className="mt-1.5 flex items-center gap-1 truncate text-xs text-gray-500 dark:text-gray-400">
-                    <Calendar className="h-3 w-3 shrink-0" />
+                    <CalendarBlank className="h-3 w-3 shrink-0" />
                     <span className="truncate">{a.createTime}</span>
                     <span className="shrink-0">•</span>
                     <span className="truncate">{a.categoryName || "未分类"}</span>

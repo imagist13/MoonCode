@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import type { ComponentType } from "react";
-import { Mail, Globe, Pencil } from "lucide-react";
+import { EnvelopeSimple, Globe, PencilSimple } from "@phosphor-icons/react";
 import type { AboutInfo } from "@/lib/about";
 import { AvatarUploader } from "./AvatarUploader";
 import { Card, CardContent } from "@/components/ui/card";
@@ -40,7 +40,7 @@ export function AboutSidebar({
     external?: boolean;
   }[] = [];
   if (data.email) {
-    links.push({ href: `mailto:${data.email}`, icon: Mail, label: data.email });
+    links.push({ href: `mailto:${data.email}`, icon: EnvelopeSimple, label: data.email });
   }
   if (data.website) {
     links.push({
@@ -69,7 +69,7 @@ export function AboutSidebar({
             title="编辑资料"
             className="absolute top-3 right-3 rounded-full p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
           >
-            <Pencil className="h-4 w-4" />
+            <PencilSimple className="h-4 w-4" />
           </Link>
         )}
 

@@ -1,41 +1,103 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PageHeader } from "@/components/ui/page-header";
+import {
+  CategoryFolderGrid,
+  type CategoryFolderItem,
+} from "@/components/blog/CategoryFolderGrid";
 import { api } from "@/lib/api";
 
-interface Category {
+interface CategoryRecord {
   id: number;
   categoryName: string;
   articleCount: number;
 }
 
+interface ArticleRecord {
+  id: number;
+  articleTitle: string;
+  articleCover?: string | null;
+  createTime?: string | null;
+}
+
+interface ArticlePage {
+  records?: ArticleRecord[];
+  count?: number;
+}
+
+const LATEST_PER_FOLDER = 4;
+
 export default function CategoriesPage() {
-  const [categories, setCategories] = useState<Category[]>([]);
+  const [items, setItems] = useState<CategoryFolderItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    api
-      .get<Category[]>("/categories")
-      .then((res) => {
-        if (res.flag && res.data) {
-          setCategories(res.data);
+    let cancelled = false;
+
+    async function load() {
+      try {
+        const res = await api.get<CategoryRecord[]>("/categories");
+        if (!res.flag || !res.data) {
+          throw new Error(res.message || "加载失败");
         }
-      })
-      .catch((err) => setError(err instanceof Error ? err.message : "加载失败"))
-      .finally(() => setLoading(false));
+
+        const categories = await Promise.all(
+          res.data.map(async (category): Promise<CategoryFolderItem> => {
+            const base: CategoryFolderItem = {
+              id: category.id,
+              name: category.categoryName,
+              count: category.articleCount,
+              articles: [],
+            };
+            try {
+              const page = await api.get<ArticlePage>(
+                `/articles?current=1&size=${LATEST_PER_FOLDER}&categoryId=${category.id}`,
+              );
+              const records = page.data?.records ?? [];
+              return {
+                ...base,
+                articles: records.map((article) => ({
+                  id: article.id,
+                  title: article.articleTitle,
+                  cover: article.articleCover || undefined,
+                  time: article.createTime || undefined,
+                })),
+              };
+            } catch {
+              return base;
+            }
+          }),
+        );
+
+        if (!cancelled) setItems(categories);
+      } catch (err) {
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : "加载失败");
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    void load();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   if (loading) {
     return (
       <div className="space-y-6">
         <h1 className="text-3xl font-bold">分类</h1>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="flex flex-wrap justify-center gap-x-14 gap-y-18 py-2">
           {Array.from({ length: 6 }).map((_, i) => (
-            <Skeleton key={i} className="h-28 rounded-xl" />
+            <Skeleton
+              key={i}
+              className="h-[326px] w-full max-w-[340px] rounded-3xl"
+            />
           ))}
         </div>
       </div>
@@ -54,29 +116,17 @@ export default function CategoriesPage() {
     <div>
       <PageHeader
         title="分类"
-        description={`共 ${categories.length} 个分类`}
+        description={
+          items.length > 0
+            ? `共 ${items.length} 个分类 · 点击文件夹展开最新文章`
+            : "共 0 个分类"
+        }
       />
 
-      {categories.length === 0 ? (
+      {items.length === 0 ? (
         <p className="text-center text-gray-400">暂无分类</p>
       ) : (
-        <ul className="divide-y divide-gray-100 border-y border-gray-100 dark:divide-gray-800 dark:border-gray-800">
-          {categories.map((cat) => (
-            <li key={cat.id}>
-              <Link
-                href={`/?categoryId=${cat.id}`}
-                className="group flex items-center justify-between px-2 py-4 transition-colors hover:bg-gray-50 dark:hover:bg-gray-800/50"
-              >
-                <span className="text-gray-700 group-hover:text-gray-900 dark:text-gray-300 dark:group-hover:text-gray-100">
-                  {cat.categoryName}
-                </span>
-                <span className="text-sm text-gray-400 tabular-nums">
-                  {cat.articleCount} 篇
-                </span>
-              </Link>
-            </li>
-          ))}
-        </ul>
+        <CategoryFolderGrid items={items} />
       )}
     </div>
   );

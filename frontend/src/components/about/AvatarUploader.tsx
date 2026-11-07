@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { Camera } from "lucide-react";
+import { Camera } from "@phosphor-icons/react";
 import { uploadImage } from "@/lib/about";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";

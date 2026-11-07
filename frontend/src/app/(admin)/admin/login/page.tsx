@@ -8,6 +8,7 @@ import { api } from "@/lib/api";
 import { useAuthStore } from "@/stores/auth";
 import { FieldInput } from "@/components/auth/FieldInput";
 import { ErrorBar } from "@/components/auth/ErrorBar";
+import { AuthOceanBackground } from "@/components/auth/AuthOceanBackground";
 
 interface LoginResponse {
   token: string;
@@ -58,8 +59,10 @@ export default function AdminLoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen flex-col bg-white text-gray-900 dark:bg-gray-950 dark:text-gray-100">
-      <header className="flex h-16 items-center justify-between px-6">
+    <div className="relative flex min-h-screen flex-col overflow-hidden bg-white text-gray-900 dark:bg-gray-950 dark:text-gray-100">
+      <AuthOceanBackground />
+
+      <header className="relative z-10 flex h-16 items-center justify-between px-6">
         <Link
           href="/"
           className="text-base font-medium tracking-tight text-gray-900 transition-opacity hover:opacity-60 dark:text-gray-100"
@@ -68,8 +71,8 @@ export default function AdminLoginPage() {
         </Link>
       </header>
 
-      <main className="flex flex-1 items-start justify-center px-6 pb-16 pt-12 sm:pt-24">
-        <div className="w-full max-w-[360px] space-y-8">
+      <main className="pointer-events-none relative z-10 flex flex-1 items-start justify-center px-6 pb-16 pt-12 sm:pt-24">
+        <div className="pointer-events-auto w-full max-w-[360px] space-y-8">
           <header className="space-y-1">
             <h1 className="text-2xl font-semibold tracking-tight">后台管理登录</h1>
             <p className="text-sm text-gray-500 dark:text-gray-400">仅限管理员访问</p>

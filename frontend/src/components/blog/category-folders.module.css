@@ -1,0 +1,529 @@
+/* 玻璃文件夹：基于 LeiBox「玻璃文件夹展开」的视觉语言，改为分类 + 文章数据驱动 */
+
+.grid {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 72px 56px;
+  margin: 0;
+  /* 顶部留白给展开时向上扇出的卡片 */
+  padding: 44px 0 96px;
+  list-style: none;
+}
+
+.folder {
+  position: relative;
+  flex: none;
+  width: min(340px, 100%);
+  height: calc(326px * var(--k, 1));
+  --ink: #141416;
+  --ink-soft: rgba(20, 20, 22, 0.55);
+  animation: folder-in 0.8s var(--ease) both;
+  animation-delay: calc(var(--i, 0) * 90ms);
+}
+
+@keyframes folder-in {
+  from {
+    opacity: 0;
+    transform: translateY(26px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.stage {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 340px;
+  height: 272px;
+  transform-origin: 0 0;
+  transform: translateY(calc(54px * var(--k, 1))) scale(var(--k, 1));
+  font-family: var(--font-sans, ui-sans-serif, system-ui, sans-serif);
+  -webkit-font-smoothing: antialiased;
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --spring: cubic-bezier(0.34, 1.36, 0.5, 1);
+  --hinge: 0deg;
+  --lift: 42px;
+  --spread: 0px;
+  --fan: 0deg;
+  --stack: 15px;
+  --px: 0;
+  --py: 0;
+}
+
+.folder:hover .stage,
+.folder:focus-within .stage {
+  --hinge: -11deg;
+  --lift: -34px;
+  --spread: 8px;
+  --fan: 1.4deg;
+  --stack: 10px;
+}
+
+.folder[data-open="true"] .stage {
+  --hinge: -24deg;
+  --lift: -96px;
+  --spread: 40px;
+  --fan: 5deg;
+  --stack: 30px;
+}
+
+.tilt {
+  position: absolute;
+  inset: 0;
+  transform: perspective(1400px) rotateX(calc(var(--py) * -3deg)) rotateY(calc(var(--px) * 4deg));
+  transition: transform 0.9s var(--ease);
+}
+
+.shadow {
+  position: absolute;
+  left: 18px;
+  right: 18px;
+  bottom: -6px;
+  height: 60px;
+  border-radius: 40px;
+  background: rgba(16, 18, 24, 0.34);
+  filter: blur(22px);
+  transform: translateX(calc(var(--px) * -8px));
+  transition: transform 0.9s var(--ease), opacity 0.9s var(--ease);
+}
+
+/* ---- 文件夹主体 ---------------------------------------------------------- */
+
+.back {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: linear-gradient(180deg, #f3f3f4 0%, #e3e3e6 100%);
+}
+
+.art,
+.artImg {
+  position: absolute;
+  left: -12px;
+  top: -12px;
+  width: 364px;
+  height: 296px;
+  max-width: none;
+  object-fit: cover;
+  transform: translate(calc(var(--px) * -7px), calc(var(--py) * -6px)) scale(1.02);
+  transition: transform 1.1s var(--ease);
+}
+
+.art[data-preset="0"] {
+  background:
+    radial-gradient(120% 90% at 85% 10%, rgba(255, 255, 255, 0.4), transparent 55%),
+    linear-gradient(118deg, #f4efe9 0%, #e9c2b8 20%, #c2433f 40%, #2a1e2a 60%, #22395e 80%, #6f97c2 100%);
+}
+
+.art[data-preset="1"] {
+  background:
+    radial-gradient(90% 80% at 20% 20%, rgba(239, 74, 43, 0.55), transparent 60%),
+    radial-gradient(80% 90% at 80% 80%, rgba(61, 95, 104, 0.7), transparent 65%),
+    linear-gradient(140deg, #07090c 0%, #16252c 45%, #3d5f68 70%, #a3201a 100%);
+}
+
+.art[data-preset="2"] {
+  background:
+    radial-gradient(100% 80% at 80% 20%, rgba(234, 176, 138, 0.55), transparent 60%),
+    linear-gradient(125deg, #120c18 0%, #3e2850 35%, #8f6c9c 55%, #b3502f 80%, #fbe7d2 100%);
+}
+
+.art[data-preset="3"] {
+  background:
+    radial-gradient(120% 90% at 30% 10%, rgba(255, 255, 255, 0.8), transparent 55%),
+    linear-gradient(120deg, #f7f8fa 0%, #d9e2ea 35%, #9fb4c7 65%, #e8edf2 100%);
+}
+
+.art[data-preset="4"] {
+  background:
+    radial-gradient(90% 80% at 75% 15%, rgba(233, 207, 135, 0.5), transparent 55%),
+    linear-gradient(135deg, #070b08 0%, #173024 40%, #4f7a5a 65%, #e9cf87 100%);
+}
+
+.sheen {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0) 22%),
+    radial-gradient(120% 80% at 80% 0%, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0) 60%);
+  pointer-events: none;
+}
+
+/* ---- 前层玻璃 ------------------------------------------------------------ */
+
+.front {
+  position: absolute;
+  left: 0;
+  top: 74px;
+  width: 340px;
+  height: 198px;
+  z-index: 10;
+  -webkit-backdrop-filter: blur(22px) saturate(1.5);
+  backdrop-filter: blur(22px) saturate(1.5);
+  transform-origin: 50% 100%;
+  transform: perspective(760px) rotateX(var(--hinge));
+  transition: transform 0.8s var(--spring), opacity 1s var(--ease);
+}
+
+.tint {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.16) 0%,
+    rgba(255, 255, 255, 0.5) 42%,
+    rgba(252, 252, 252, 0.93) 100%
+  );
+}
+
+.spec {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    260px 200px at calc(50% + var(--px) * 46%) calc(30% + var(--py) * 40%),
+    rgba(255, 255, 255, 0.5),
+    rgba(255, 255, 255, 0) 70%
+  );
+  mix-blend-mode: soft-light;
+  opacity: 0.9;
+  transition: background-position 0.6s var(--ease);
+  pointer-events: none;
+}
+
+.hit {
+  all: unset;
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  cursor: pointer;
+}
+
+.hit:focus-visible ~ .label .title {
+  text-decoration: underline;
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 4px;
+}
+
+.label {
+  position: absolute;
+  left: 28px;
+  bottom: 32px;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-width: 216px;
+  pointer-events: none;
+  color: var(--ink);
+}
+
+.title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 18px;
+  font-weight: 500;
+  line-height: 1.15;
+  letter-spacing: -0.012em;
+}
+
+.meta {
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace);
+  font-size: 12px;
+  letter-spacing: 0.03em;
+  color: var(--ink-soft);
+  white-space: nowrap;
+}
+
+/* ---- 扇形展开的文章卡片 --------------------------------------------------- */
+
+.files {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+  clip-path: inset(-400px -400px 10px -400px);
+}
+
+.sheet {
+  position: absolute;
+  left: 34px;
+  top: 96px;
+  width: 272px;
+  height: 184px;
+  border-radius: 16px;
+  overflow: hidden;
+  cursor: pointer;
+  pointer-events: auto;
+  background: linear-gradient(180deg, #ffffff 0%, #f2f2f0 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 0 0 0.5px rgba(0, 0, 0, 0.1),
+    0 10px 26px -8px rgba(10, 12, 20, 0.28);
+  transform-origin: 50% 100%;
+  transform: translate(
+      calc(var(--jx, 0px) + var(--slot, 0) * var(--spread)),
+      calc(var(--lift) + var(--depth, 0) * var(--stack) * -1)
+    )
+    rotate(calc(var(--jr, 0deg) + var(--slot, 0) * var(--fan)));
+  transition:
+    transform 0.75s var(--spring) calc(var(--depth, 0) * 40ms),
+    box-shadow 0.4s var(--ease),
+    opacity 0.9s var(--ease);
+}
+
+.folder[data-open="true"] .sheet:hover,
+.folder[data-open="true"] .sheet:focus-visible {
+  transform: translate(
+      calc(var(--jx, 0px) + var(--slot, 0) * var(--spread)),
+      calc(var(--lift) + var(--depth, 0) * var(--stack) * -1 - 18px)
+    )
+    rotate(calc(var(--slot, 0) * var(--fan) * 0.6));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 0 0 0.5px rgba(0, 0, 0, 0.1),
+    0 22px 40px -12px rgba(10, 12, 20, 0.42);
+  transition-delay: 0s;
+}
+
+.sheet:focus-visible {
+  outline: 2px solid #4c8dff;
+  outline-offset: 2px;
+}
+
+.sheetArt {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.sheetShade {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.55) 0%, rgba(0, 0, 0, 0) 45%);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2);
+  pointer-events: none;
+}
+
+.lines {
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  top: 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.lines i {
+  display: block;
+  height: 5px;
+  border-radius: 3px;
+  background: rgba(24, 24, 27, 0.08);
+}
+
+.lines i:first-child {
+  height: 9px;
+  margin-bottom: 4px;
+  background: rgba(24, 24, 27, 0.14);
+}
+
+.sheetHead {
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  top: 11px;
+  z-index: 1;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.sheetName {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  font-size: 12.5px;
+  font-weight: 560;
+  line-height: 1.35;
+  letter-spacing: -0.005em;
+  color: #18181b;
+}
+
+.sheetMeta {
+  flex: none;
+  padding-top: 1px;
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace);
+  font-size: 10px;
+  letter-spacing: 0.02em;
+  color: rgba(24, 24, 27, 0.5);
+  white-space: nowrap;
+}
+
+.sheet[data-art="true"] .sheetName {
+  color: #fafafa;
+}
+
+.sheet[data-art="true"] .sheetMeta {
+  color: rgba(250, 250, 250, 0.66);
+}
+
+.sheetEmpty {
+  display: grid;
+  place-items: center;
+  border: 1px dashed rgba(24, 24, 27, 0.18);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(242, 242, 240, 0.92));
+  color: rgba(24, 24, 27, 0.45);
+  font-size: 12.5px;
+  letter-spacing: 0.02em;
+}
+
+/* ---- 右下角「查看全部」 --------------------------------------------------- */
+
+.key {
+  position: absolute;
+  right: 22px;
+  bottom: 22px;
+  z-index: 12;
+  display: grid;
+  place-items: center;
+  width: 58px;
+  height: 58px;
+  border-radius: 18px;
+  color: #111113;
+  text-decoration: none;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.92) 0%, rgba(226, 226, 230, 0.82) 100%);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  box-shadow:
+    inset 0 1px 0 #fff,
+    inset 0 -2px 4px rgba(0, 0, 0, 0.06),
+    0 0 0 1px rgba(0, 0, 0, 0.16),
+    0 10px 18px -8px rgba(0, 0, 0, 0.3);
+  transition: transform 0.35s var(--spring), box-shadow 0.35s var(--ease), background 0.35s var(--ease);
+}
+
+.key:hover {
+  transform: translateY(-2px);
+}
+
+.key:active {
+  transform: translateY(0) scale(0.93);
+  transition-duration: 0.12s;
+}
+
+.key:focus-visible {
+  outline: 2px solid #4c8dff;
+  outline-offset: 3px;
+}
+
+.keyIcon {
+  width: 24px;
+  height: 24px;
+  stroke-width: 1.7;
+}
+
+/* ---- 暗色 ---------------------------------------------------------------- */
+
+:global(.dark) .folder {
+  --ink: #f5f5f7;
+  --ink-soft: rgba(245, 245, 247, 0.58);
+}
+
+:global(.dark) .shadow {
+  background: rgba(0, 0, 0, 0.62);
+}
+
+:global(.dark) .back {
+  background: linear-gradient(180deg, #2a2a2e 0%, #121214 100%);
+}
+
+:global(.dark) .tint {
+  background: linear-gradient(
+    180deg,
+    rgba(18, 18, 20, 0.18) 0%,
+    rgba(14, 14, 16, 0.62) 46%,
+    rgba(8, 8, 10, 0.94) 100%
+  );
+}
+
+:global(.dark) .spec {
+  mix-blend-mode: screen;
+  opacity: 0.16;
+}
+
+:global(.dark) .sheet {
+  background: linear-gradient(180deg, #2c2c30 0%, #1c1c1f 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.14),
+    0 0 0 0.5px rgba(255, 255, 255, 0.08),
+    0 12px 28px -8px rgba(0, 0, 0, 0.7);
+}
+
+:global(.dark) .sheetName {
+  color: #fafafa;
+}
+
+:global(.dark) .sheetMeta {
+  color: rgba(250, 250, 250, 0.66);
+}
+
+:global(.dark) .lines i {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+:global(.dark) .lines i:first-child {
+  background: rgba(255, 255, 255, 0.16);
+}
+
+:global(.dark) .sheetEmpty {
+  border-color: rgba(255, 255, 255, 0.16);
+  background: linear-gradient(180deg, rgba(44, 44, 48, 0.92), rgba(28, 28, 31, 0.92));
+  color: rgba(245, 245, 247, 0.45);
+}
+
+:global(.dark) .key {
+  color: #f5f5f7;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0.06) 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    0 0 0 1px rgba(255, 255, 255, 0.1),
+    0 10px 18px -8px rgba(0, 0, 0, 0.6);
+}
+
+/* ---- 小屏与动效偏好 ------------------------------------------------------- */
+
+@media (max-width: 480px) {
+  .grid {
+    gap: 56px 24px;
+    padding-bottom: 56px;
+  }
+
+  .folder[data-open="true"] .stage {
+    --spread: 24px;
+    --fan: 3deg;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .folder,
+  .folder *,
+  .folder *::before,
+  .folder *::after {
+    animation: none !important;
+    transition-duration: 0s !important;
+    transition-delay: 0s !important;
+  }
+
+  .tilt {
+    transform: none;
+  }
+}

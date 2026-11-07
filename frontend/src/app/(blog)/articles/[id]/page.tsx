@@ -9,14 +9,14 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
 import {
-  Calendar,
+  CalendarBlank,
   Eye,
-  ChevronUp,
+  CaretUp,
   Lock,
-  ChevronLeft,
-  ChevronRight,
-} from "lucide-react";
-import { TableOfContents } from "@/components/blog/TableOfContents";
+  CaretLeft,
+  CaretRight,
+} from "@phosphor-icons/react";
+import { SailingToc } from "@/components/blog/SailingToc";
 import { CommentSection, type CommentNode } from "@/components/blog/CommentSection";
 import { api } from "@/lib/api";
 import { cn, extractHeadings, formatTime, formatViews } from "@/lib/utils";
@@ -244,7 +244,7 @@ export default function ArticleDetailPage() {
               </h1>
               <div className="mt-4 flex flex-wrap items-center gap-4 text-xs text-gray-200">
                 <span className="inline-flex items-center gap-1.5">
-                  <Calendar className="h-3.5 w-3.5" />
+                  <CalendarBlank className="h-3.5 w-3.5" />
                   {formatTime(article.createTime)}
                 </span>
                 {article.viewCount !== undefined && (
@@ -259,13 +259,13 @@ export default function ArticleDetailPage() {
         </div>
       )}
 
-      {/* 双栏布局：左侧 TOC + 右侧正文 */}
-      <div className="mx-auto max-w-[1240px] gap-10 px-4 py-10 lg:grid lg:grid-cols-[220px_minmax(0,1fr)]">
-        {/* 左侧 TOC */}
-        <TableOfContents headings={headings} />
+      {/* 双栏布局：左侧 TOC + 右侧正文；宽屏下目录退到正文左侧留白，正文居中 */}
+      <div className="relative mx-auto max-w-[1240px] gap-10 px-4 py-10 lg:max-[1367px]:grid lg:max-[1367px]:grid-cols-[264px_minmax(0,1fr)]">
+        {/* 左侧 TOC：帆船跟随当前章节 */}
+        <SailingToc headings={headings} />
 
         {/* 右侧内容 */}
-        <article className="min-w-0">
+        <article className="min-w-0 min-[1368px]:mx-auto min-[1368px]:max-w-[760px]">
           {/* 没有封面时显示标题区 */}
           {!article.articleCover && (
             <header className="mb-8">
@@ -282,7 +282,7 @@ export default function ArticleDetailPage() {
               </h1>
               <div className="mt-4 flex flex-wrap items-center gap-4 text-sm text-gray-500">
                 <span className="inline-flex items-center gap-1.5">
-                  <Calendar className="h-4 w-4" />
+                  <CalendarBlank className="h-4 w-4" />
                   {formatTime(article.createTime)}
                 </span>
                 {article.viewCount !== undefined && (
@@ -413,7 +413,7 @@ export default function ArticleDetailPage() {
               <Link href={`/articles/${prev.id}`} className="group block">
                 <div className="rounded-lg border border-gray-200 p-4 transition-all hover:border-blue-300 hover:shadow-md dark:border-gray-700 dark:hover:border-blue-700">
                   <div className="mb-2 inline-flex items-center gap-1 text-xs text-gray-500">
-                    <ChevronLeft className="h-3.5 w-3.5" />
+                    <CaretLeft className="h-3.5 w-3.5" />
                     上一篇
                   </div>
                   <div className="line-clamp-2 text-sm font-medium transition-colors group-hover:text-blue-600 dark:group-hover:text-blue-400">
@@ -429,7 +429,7 @@ export default function ArticleDetailPage() {
                 <div className="rounded-lg border border-gray-200 p-4 transition-all hover:border-blue-300 hover:shadow-md dark:border-gray-700 dark:hover:border-blue-700">
                   <div className="mb-2 inline-flex items-center gap-1 text-xs text-gray-500">
                     下一篇
-                    <ChevronRight className="h-3.5 w-3.5" />
+                    <CaretRight className="h-3.5 w-3.5" />
                   </div>
                   <div className="line-clamp-2 text-sm font-medium transition-colors group-hover:text-blue-600 dark:group-hover:text-blue-400">
                     {next.articleTitle}
@@ -463,7 +463,7 @@ export default function ArticleDetailPage() {
           showBackTop ? "opacity-100" : "pointer-events-none opacity-0",
         )}
       >
-        <ChevronUp className="h-5 w-5" />
+        <CaretUp className="h-5 w-5" />
       </button>
     </div>
   );

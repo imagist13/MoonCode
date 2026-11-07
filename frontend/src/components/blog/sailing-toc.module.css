@@ -1,0 +1,211 @@
+/* 帆船滚动目录：航线 + 帆船跟随当前章节（参考 LeiBox sailing-toc） */
+
+.aside {
+  display: none;
+}
+
+@media (min-width: 1024px) {
+  .aside {
+    display: block;
+    width: 100%;
+  }
+}
+
+/* 宽屏：目录移到正文左侧的留白里，正文居中成为主角 */
+@media (min-width: 1368px) {
+  .aside {
+    position: absolute;
+    top: 2.5rem;
+    bottom: 2.5rem;
+    left: -68px;
+    width: 264px;
+  }
+}
+
+.nav {
+  --sailing-surface: #f9fafb;
+  --sailing-ink: #18181b;
+  --sailing-muted: #949494;
+  --sailing-route: #b8b8bc;
+  --sailing-ship-line: #4a4a4e;
+
+  position: sticky;
+  top: 7rem;
+  max-height: calc(100vh - 9rem);
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding-bottom: 8px;
+  scrollbar-width: thin;
+}
+
+.caption {
+  padding-left: 60px;
+  margin-bottom: 16px;
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace);
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  color: var(--sailing-muted);
+}
+
+.shell {
+  position: relative;
+  padding: 22px 14px 26px 0;
+}
+
+.rail {
+  position: absolute;
+  left: 0;
+  top: 0;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.route {
+  fill: none;
+  stroke: var(--sailing-route);
+  stroke-width: 1.1;
+  stroke-dasharray: 3 3;
+}
+
+.end {
+  fill: var(--sailing-surface);
+  stroke: var(--sailing-route);
+  stroke-width: 1.1;
+}
+
+.endDot {
+  fill: var(--sailing-route);
+  stroke: none;
+}
+
+/* ---- 帆船 ---------------------------------------------------------------- */
+
+.ship {
+  position: absolute;
+  left: 12px;
+  top: 0;
+  width: 44px;
+  height: 44px;
+  transform-origin: center;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  will-change: transform;
+}
+
+.shell[data-ready="true"] .ship {
+  opacity: 1;
+}
+
+.ship svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.ship path {
+  fill: var(--sailing-surface);
+  stroke: var(--sailing-ship-line);
+  stroke-width: 1.1;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.ship path.line {
+  fill: none;
+}
+
+.wake {
+  position: absolute;
+  inset: 0;
+}
+
+.wake ellipse {
+  fill: none;
+  stroke: var(--sailing-muted);
+  stroke-width: 0.65;
+  opacity: 0;
+}
+
+/* ---- 目录条目 ------------------------------------------------------------ */
+
+.links {
+  position: relative;
+  margin: 0;
+  padding: 0 0 0 60px;
+  list-style: none;
+}
+
+.item {
+  margin: 0 0 10px;
+}
+
+.item:last-child {
+  margin-bottom: 0;
+}
+
+.link {
+  display: block;
+  width: 100%;
+  margin: 0;
+  padding: 2px 6px 2px 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 13px;
+  line-height: 1.45;
+  text-align: left;
+  overflow-wrap: anywhere;
+  color: var(--sailing-muted);
+  cursor: pointer;
+  transform: translateX(0);
+  transition:
+    transform 0.32s cubic-bezier(0.22, 1, 0.36, 1),
+    color 0.2s;
+}
+
+.item[data-level="3"] {
+  padding-left: 12px;
+}
+
+.item[data-level="3"] .link {
+  font-size: 12px;
+}
+
+.link:hover {
+  color: var(--sailing-ink);
+}
+
+.link[data-active="true"] {
+  color: var(--sailing-ink);
+  font-weight: 500;
+  transform: translateX(10px);
+}
+
+.link:focus-visible {
+  outline: 1px solid #333;
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
+/* ---- 暗色 ---------------------------------------------------------------- */
+
+:global(.dark) .nav {
+  --sailing-surface: #111827;
+  --sailing-ink: #f4f4f5;
+  --sailing-muted: rgba(244, 244, 245, 0.45);
+  --sailing-route: rgba(255, 255, 255, 0.24);
+  --sailing-ship-line: #b9b9c2;
+}
+
+:global(.dark) .link:focus-visible {
+  outline-color: #d4d4d8;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .link,
+  .ship {
+    transition: none;
+  }
+}

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { Calendar, Eye, FolderTree, Tag as TagIcon, ChevronRight } from "lucide-react";
+import { CalendarBlank, Eye, FolderSimple, Tag as TagIcon } from "@phosphor-icons/react";
 import { cn, formatViews, safeTruncate, stripMarkdown } from "@/lib/utils";
 
 export interface ArticleCardData {
@@ -103,7 +103,7 @@ export function ArticleCard({
             <div className="hide-scrollbar -mx-1 mt-1 flex items-center gap-1.5 overflow-x-auto whitespace-nowrap text-xs">
               {article.categoryName && (
                 <span className="inline-flex shrink-0 items-center gap-1 rounded-md bg-blue-50 px-2 py-0.5 font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
-                  <FolderTree className="h-3 w-3" />
+                  <FolderSimple className="h-3 w-3" />
                   {article.categoryName}
                 </span>
               )}
@@ -143,7 +143,7 @@ export function ArticleCard({
                 )}
                 {article.publishTime && (
                   <span className="inline-flex items-center gap-1 truncate">
-                    <Calendar className="h-3 w-3 shrink-0" />
+                    <CalendarBlank className="h-3 w-3 shrink-0" />
                     <span className="truncate">{article.publishTime}</span>
                   </span>
                 )}
@@ -332,5 +332,3 @@ export function ArticleListSkeleton({ count = 5 }: { count?: number }) {
     </div>
   );
 }
-
-export { ChevronRight };
