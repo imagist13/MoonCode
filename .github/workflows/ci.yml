@@ -139,7 +139,8 @@ jobs:
 
   e2e:
     name: E2E (Playwright)
-    runs-on: ubuntu-latest
+    # ubuntu-latest 已迁移到 26.04，Playwright 当前版本尚不支持该发行版
+    runs-on: ubuntu-24.04
     timeout-minutes: 35
     needs: [frontend, backend]
     # job 级注入：后续每个 docker compose 命令都需要插值 JWT_SECRET，
