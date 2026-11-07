@@ -62,7 +62,7 @@ function notFound(): Response {
   return json({ code: 40004, flag: false, message: "接口不存在", data: null }, 404);
 }
 
-async function readBody<T = any>(req: Request): Promise<T> {
+async function readBody<T = unknown>(req: Request): Promise<T> {
   try {
     return (await req.json()) as T;
   } catch {
@@ -920,9 +920,9 @@ async function handleAdmin(req: Request, url: URL, path: string): Promise<Respon
   }
 
   if (path === "/admin/about" && method === "PUT") {
-    const body = await readBody<Record<string, any>>(req);
+    const body = await readBody<Record<string, unknown>>(req);
     if (!body.nickname) return fail("昵称不能为空", 40010);
-    const merged: Record<string, any> = { ...db.about, ...body };
+    const merged: Record<string, unknown> = { ...db.about, ...body };
     for (const key of ["aboutPoints", "techStack", "achievements"]) {
       if (Array.isArray(merged[key])) merged[key] = JSON.stringify(merged[key]);
     }
