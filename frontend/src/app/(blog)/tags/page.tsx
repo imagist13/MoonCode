@@ -11,25 +11,6 @@ interface Tag {
   articleCount: number;
 }
 
-/** 根据文章数量计算标签大小等级 (0-4) */
-function getSizeLevel(count: number, maxCount: number): number {
-  if (maxCount <= 0) return 0;
-  const ratio = count / maxCount;
-  if (ratio > 0.8) return 4;
-  if (ratio > 0.6) return 3;
-  if (ratio > 0.4) return 2;
-  if (ratio > 0.2) return 1;
-  return 0;
-}
-
-const sizeClasses = [
-  "px-2.5 py-1 text-[12px]",
-  "px-3 py-1 text-[13px]",
-  "px-3.5 py-1.5 text-[15px]",
-  "px-4 py-1.5 text-[17px]",
-  "px-4 py-2 text-[19px]",
-];
-
 export default function TagsPage() {
   const [tags, setTags] = useState<Tag[]>([]);
   const [loading, setLoading] = useState(true);
@@ -53,9 +34,9 @@ export default function TagsPage() {
         <h1 className="text-[1.75rem] font-semibold tracking-[-0.03em] text-blog-ink">
           标签
         </h1>
-        <div className="flex flex-wrap gap-2.5">
+        <div className="flex flex-wrap gap-x-8 gap-y-5">
           {Array.from({ length: 12 }).map((_, i) => (
-            <Skeleton key={i} className="h-8 w-20 rounded-full" />
+            <Skeleton key={i} className="h-6 w-24" />
           ))}
         </div>
       </div>
@@ -70,40 +51,44 @@ export default function TagsPage() {
     );
   }
 
-  const maxCount = Math.max(...tags.map((t) => t.articleCount), 1);
+  const sorted = [...tags].sort(
+    (a, b) =>
+      b.articleCount - a.articleCount ||
+      a.tagName.localeCompare(b.tagName, "zh-Hans-CN"),
+  );
 
   return (
     <div>
       <PageHeader
         title="标签"
-        description={`共 ${tags.length} 个标签 · 字号反映文章数量`}
+        description={`共 ${tags.length} 个标签 · 按文章数量排序`}
       />
 
-      <div className="flex flex-wrap items-center gap-2.5">
-        {tags.map((tag) => {
-          const level = getSizeLevel(tag.articleCount, maxCount);
-          return (
-            <a
-              key={tag.id}
-              href={`/?tagId=${tag.id}`}
-              className={`inline-flex items-center gap-1.5 rounded-full border border-blog-line text-blog-soft
-                          transition-colors duration-200 hover:border-blog-ink hover:text-blog-ink
-                          ${sizeClasses[level]}`}
+      <div className="flex max-w-4xl flex-wrap items-baseline gap-x-10 gap-y-7 sm:gap-x-24">
+        {sorted.map((tag) => (
+          <a
+            key={tag.id}
+            href={`/?tagId=${tag.id}`}
+            aria-label={`${tag.tagName}，${tag.articleCount} 篇文章`}
+            className="group inline-flex items-baseline gap-1 border-b border-dashed border-blog-line pb-1.5 text-[19px] text-blog-ink transition-colors hover:border-blog-ink"
+          >
+            <span
+              aria-hidden="true"
+              className="text-blog-soft/50 transition-colors group-hover:text-blog-ink"
             >
-              <span>{tag.tagName}</span>
-              <span className="font-mono text-[0.72em] opacity-60">
-                {tag.articleCount}
-              </span>
-            </a>
-          );
-        })}
-
-        {tags.length === 0 && (
-          <p className="w-full py-10 text-center text-[13px] text-blog-soft">
-            暂无标签
-          </p>
-        )}
+              #
+            </span>
+            <span>{tag.tagName}</span>
+            <sup className="ml-0.5 font-mono text-[11px] text-blog-soft/50 transition-colors group-hover:text-blog-ink">
+              {tag.articleCount}
+            </sup>
+          </a>
+        ))}
       </div>
+
+      {tags.length === 0 && (
+        <p className="py-10 text-center text-[13px] text-blog-soft">暂无标签</p>
+      )}
     </div>
   );
 }

@@ -10,13 +10,13 @@ import rehypeHighlight from "rehype-highlight";
 import {
   CalendarBlank,
   Eye,
-  CaretUp,
   Lock,
   CaretLeft,
   CaretRight,
 } from "@phosphor-icons/react";
 import { SailingToc } from "@/components/blog/SailingToc";
 import { CommentSection, type CommentNode } from "@/components/blog/CommentSection";
+import { SoftActionWheel } from "@/components/leibox/soft-action-wheel/SoftActionWheel";
 import { api } from "@/lib/api";
 import { cn, extractHeadings, formatTime, formatViews } from "@/lib/utils";
 import { toast } from "sonner";
@@ -75,7 +75,6 @@ export default function ArticleDetailPage() {
   const [errorKind, setErrorKind] = useState<ErrorKind | null>(null);
   const [errorMessage, setErrorMessage] = useState("");
   const [reloadTick, setReloadTick] = useState(0);
-  const [showBackTop, setShowBackTop] = useState(false);
   const [password, setPassword] = useState("");
   const [comments] = useState<CommentNode[]>([]);
 
@@ -116,13 +115,6 @@ export default function ArticleDetailPage() {
       .finally(() => setLoading(false));
   }, [id, reloadTick]);
 
-  // 回到顶部按钮
-  useEffect(() => {
-    const onScroll = () => setShowBackTop(window.scrollY > 300);
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
-
   const headings = useMemo(
     () => (article ? extractHeadings(article.articleContent) : []),
     [article],
@@ -134,6 +126,39 @@ export default function ArticleDetailPage() {
 
   const handleReply = async () => {
     toast.info("评论功能开发中");
+  };
+
+  // 文章页右下角快捷操作：分享 / 评论 / 回顶
+  const handleWheelAction = async (action: string) => {
+    if (action === "top") {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
+    if (action === "comment") {
+      document.getElementById("comments")?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+      return;
+    }
+    if (action === "share") {
+      const url = window.location.href;
+      const title = article?.articleTitle ?? document.title;
+      if (typeof navigator.share === "function") {
+        try {
+          await navigator.share({ title, url });
+          return;
+        } catch {
+          /* 用户取消分享 */
+        }
+      }
+      try {
+        await navigator.clipboard.writeText(url);
+        toast.success("链接已复制");
+      } catch {
+        toast.error("复制失败，请手动复制地址栏链接");
+      }
+    }
   };
 
   if (loading) {
@@ -420,7 +445,7 @@ export default function ArticleDetailPage() {
           </nav>
 
           {/* 评论 */}
-          <div className="mt-12">
+          <div id="comments" className="mt-12 scroll-mt-24">
             <CommentSection
               comments={comments}
               onSubmit={handleSubmitComment}
@@ -431,20 +456,11 @@ export default function ArticleDetailPage() {
         </article>
       </div>
 
-      {/* 回到顶部 */}
-      <button
-        type="button"
-        onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-        aria-label="回到顶部"
-        className={cn(
-          "fixed right-8 bottom-8 z-50 rounded-full border border-blog-line bg-blog-surface/90 p-3 text-blog-soft shadow-[0_8px_30px_-12px_rgba(0,0,0,0.25)] backdrop-blur-md transition-all duration-300 hover:text-blog-ink",
-          showBackTop
-            ? "translate-y-0 opacity-100"
-            : "pointer-events-none translate-y-2 opacity-0",
-        )}
-      >
-        <CaretUp className="h-5 w-5" />
-      </button>
+      {/* 右下角快捷操作：分享 / 评论 / 回顶 */}
+      <SoftActionWheel
+        className="pointer-events-none fixed right-4 bottom-4 z-50 h-[280px] w-[280px]"
+        onAction={handleWheelAction}
+      />
     </div>
   );
 }

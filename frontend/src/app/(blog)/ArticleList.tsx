@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
-import { ArticleCard, ArticleListPagination, ArticleListSkeleton, ArticleEmpty, ArticleError, type ArticleCardData } from "@/components/blog/ArticleCard";
+import { ArticleCard, ArticleListPagination, ArticleEmpty, ArticleError, type ArticleCardData } from "@/components/blog/ArticleCard";
+import { AiImageGeneration } from "@/components/leibox/ai-generating/AiImageGeneration";
 import { CategorySidebar, TagSidebar, RecommendedArticles } from "@/components/blog/Sidebars";
 import { api } from "@/lib/api";
 import { cn } from "@/lib/utils";
@@ -186,8 +187,14 @@ export default function ArticleList() {
           style={loading && holdHeightRef.current ? { minHeight: holdHeightRef.current } : undefined}
         >
           {loading ? (
-            <div className="flex items-center justify-center text-sm text-blog-soft" style={{ minHeight: holdHeightRef.current ?? 600 }}>
-              <ArticleListSkeleton count={5} />
+            <div
+              className="flex items-center justify-center py-16"
+              style={holdHeightRef.current ? { minHeight: holdHeightRef.current } : undefined}
+            >
+              <AiImageGeneration
+                className="w-full max-w-[320px]"
+                label="正在载入文章"
+              />
             </div>
           ) : error ? (
             <ArticleError message={`加载失败: ${error}`} onRetry={() => fetch(current)} />

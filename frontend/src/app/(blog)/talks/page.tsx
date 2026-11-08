@@ -1,146 +1,216 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import Image from "next/image";
-import { Card, CardContent } from "@/components/ui/card";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { CircleNotch } from "@phosphor-icons/react";
+import {
+  TalkItem,
+  talkTimestamp,
+  type Talk,
+} from "@/components/blog/TalkItem";
+import { ImageLightbox } from "@/components/lightbox/ImageLightbox";
 import { Skeleton } from "@/components/ui/skeleton";
 import { api } from "@/lib/api";
-
-/**
- * 说说条目。字段与后端 TalkVO（service/talk.go）保持一致：
- * - content: 正文
- * - imgList: 图片 URL 数组（后端已按逗号拆好）
- * - isTop: 布尔值，true 表示置顶
- */
-interface Talk {
-  id: number;
-  nickname: string;
-  avatar: string;
-  content: string;
-  imgList: string[] | null;
-  isTop: boolean;
-  createTime: string;
-}
 
 interface PageResult {
   records: Talk[];
   count: number;
 }
 
+const PAGE_SIZE = 10;
+
+function TalkSkeleton() {
+  return (
+    <div aria-hidden="true">
+      {Array.from({ length: 3 }).map((_, index) => (
+        <div
+          key={index}
+          className="flex gap-3 border-b border-blog-line/80 py-4"
+        >
+          <Skeleton className="h-10 w-10 shrink-0 rounded-full" />
+          <div className="min-w-0 flex-1 space-y-2.5">
+            <div className="flex items-center gap-2">
+              <Skeleton className="h-3.5 w-24" />
+              <Skeleton className="h-3 w-16" />
+            </div>
+            <Skeleton className="h-3.5 w-full" />
+            <Skeleton className="h-3.5 w-4/5" />
+            {index === 0 && <Skeleton className="h-44 w-full rounded-2xl" />}
+            <div className="flex gap-6 pt-1">
+              <Skeleton className="h-4 w-10" />
+              <Skeleton className="h-4 w-10" />
+              <Skeleton className="h-4 w-10" />
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function TalksPage() {
   const [talks, setTalks] = useState<Talk[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState("");
+  const [lightbox, setLightbox] = useState<{
+    images: string[];
+    index: number;
+  } | null>(null);
 
-  useEffect(() => {
-    api
-      .get<PageResult>("/talks?current=1&size=10")
-      .then((res) => {
-        if (res.flag && res.data) {
-          setTalks(res.data.records || []);
-        }
-      })
-      .catch((err) => setError(err instanceof Error ? err.message : "加载失败"))
-      .finally(() => setLoading(false));
+  const loadMoreRef = useRef<HTMLDivElement>(null);
+  const loadingMoreRef = useRef(false);
+  const initialLoadedRef = useRef(false);
+
+  const loadTalks = useCallback(async (targetPage: number, append: boolean) => {
+    setError("");
+    if (append) setLoadingMore(true);
+    else setLoading(true);
+
+    try {
+      const res = await api.get<PageResult>(
+        `/talks?current=${targetPage}&size=${PAGE_SIZE}`,
+      );
+      if (!res.flag || !res.data) throw new Error(res.message || "加载失败");
+
+      const records = res.data.records ?? [];
+      setTalks((prev) => {
+        if (!append) return records;
+        // 翻页期间若有新说说插入，按 id 去重，避免重复渲染
+        const seen = new Set(prev.map((item) => item.id));
+        return [...prev, ...records.filter((item) => !seen.has(item.id))];
+      });
+      setTotal(res.data.count ?? 0);
+      setPage(targetPage);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "加载失败");
+    } finally {
+      if (append) setLoadingMore(false);
+      else setLoading(false);
+    }
   }, []);
 
-  if (loading) {
-    return (
-      <div className="space-y-6">
-        <h1 className="text-[1.75rem] font-semibold tracking-[-0.03em] text-blog-ink">
-          说说
-        </h1>
-        {Array.from({ length: 3 }).map((_, i) => (
-          <Skeleton key={i} className="h-32 w-full rounded-xl" />
-        ))}
-      </div>
-    );
-  }
+  useEffect(() => {
+    // StrictMode 下 effect 会执行两次，首次加载只发一次请求
+    if (initialLoadedRef.current) return;
+    initialLoadedRef.current = true;
+    void loadTalks(1, false);
+  }, [loadTalks]);
 
-  if (error) {
-    return (
-      <div className="flex flex-col items-center justify-center py-20 text-[13px] text-blog-soft">
-        <p>加载失败: {error}</p>
-      </div>
+  const hasMore = talks.length < total;
+
+  const loadMore = useCallback(() => {
+    if (loading || loadingMoreRef.current || !hasMore) return;
+    loadingMoreRef.current = true;
+    void loadTalks(page + 1, true).finally(() => {
+      loadingMoreRef.current = false;
+    });
+  }, [hasMore, loadTalks, loading, page]);
+
+  // 滚动到接近底部时自动续页，底部同时保留「加载更多」按钮
+  useEffect(() => {
+    const node = loadMoreRef.current;
+    if (!node || loading || !hasMore || error) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) loadMore();
+      },
+      { rootMargin: "400px 0px" },
     );
-  }
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [error, hasMore, loadMore, loading]);
+
+  // 后端按 id 排序；这里按时间重排，保证置顶之后的时间线始终由新到旧
+  const timeline = useMemo(
+    () =>
+      [...talks].sort((a, b) => {
+        if (a.isTop !== b.isTop) return a.isTop ? -1 : 1;
+        return talkTimestamp(b.createTime) - talkTimestamp(a.createTime);
+      }),
+    [talks],
+  );
+
+  const openMedia = useCallback((images: string[], index: number) => {
+    setLightbox({ images, index });
+  }, []);
+
+  const closeLightbox = useCallback(() => setLightbox(null), []);
+
+  const lightboxImages = useMemo(
+    () => (lightbox?.images ?? []).map((src) => ({ src })),
+    [lightbox],
+  );
 
   return (
     <div className="mx-auto max-w-2xl">
-      <header className="mb-8 border-b border-blog-line pb-5">
-        <h1 className="text-[1.75rem] font-semibold tracking-[-0.03em] text-blog-ink">
-          说说
-        </h1>
-        <p className="mt-2 text-[13px] text-blog-soft">随心所记</p>
-      </header>
+      <h1 className="sr-only">说说</h1>
 
-      {/* 时间线 */}
-      <div className="space-y-5">
-        {talks.map((talk) => {
-          // 后端已返回 imgList 数组，直接使用（null/undefined 时降级为空数组）
-          const imageList = talk.imgList ?? [];
+      {loading && talks.length === 0 ? (
+        <TalkSkeleton />
+      ) : error && talks.length === 0 ? (
+        <div className="flex flex-col items-center justify-center gap-3 py-20 text-[13px] text-blog-soft">
+          <p>加载失败：{error}</p>
+          <button
+            type="button"
+            onClick={() => void loadTalks(1, false)}
+            className="rounded-full border border-blog-line px-4 py-1.5 text-[12.5px] text-blog-ink transition-colors hover:bg-blog-muted"
+          >
+            重试
+          </button>
+        </div>
+      ) : (
+        <>
+          {timeline.map((talk) => (
+            <TalkItem key={talk.id} talk={talk} onOpenMedia={openMedia} />
+          ))}
 
-          return (
-            <Card key={talk.id}>
-              <CardContent className="pt-4">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
-                  <Avatar className="h-10 w-10 shrink-0">
-                    {talk.avatar ? (
-                      <Image src={talk.avatar} alt="" className="object-cover" fill sizes="40px" />
-                    ) : (
-                      <AvatarFallback>
-                        {(talk.nickname || "U").slice(0, 1)}
-                      </AvatarFallback>
-                    )}
-                  </Avatar>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="text-[13.5px] font-medium text-blog-ink">
-                        {talk.nickname || "博主"}
-                      </span>
-                      {talk.isTop && (
-                        <span className="rounded-full border border-blog-line px-2 py-0.5 text-[10.5px] text-blog-soft">
-                          置顶
-                        </span>
-                      )}
-                    </div>
-                    <p className="mt-1 whitespace-pre-wrap text-[13.5px] leading-relaxed text-blog-ink/85">
-                      {talk.content}
-                    </p>
+          {timeline.length === 0 && (
+            <div className="py-16 text-center text-[13px] text-blog-soft">
+              暂无说说
+            </div>
+          )}
 
-                    {/* 图片列表 */}
-                    {imageList.length > 0 && (
-                      <div className="mt-3 grid grid-cols-3 gap-2">
-{imageList.map((img, idx) => (
-                           <div key={idx} className="relative aspect-square">
-                             <Image
-                               src={img}
-                               alt=""
-                               className="rounded-lg object-cover"
-                               fill
-                               sizes="(max-width: 640px) 33vw, 200px"
-                               loading="lazy"
-                             />
-                           </div>
-                         ))}
-                      </div>
-                    )}
+          <div
+            ref={loadMoreRef}
+            className="flex min-h-[56px] items-center justify-center py-5 text-[12.5px] text-blog-soft"
+          >
+            {error ? (
+              <button
+                type="button"
+                onClick={loadMore}
+                className="rounded-full border border-blog-line px-4 py-1.5 text-blog-ink transition-colors hover:bg-blog-muted"
+              >
+                加载失败，点击重试
+              </button>
+            ) : loadingMore ? (
+              <span className="inline-flex items-center gap-2">
+                <CircleNotch className="h-4 w-4 animate-spin" />
+                正在加载
+              </span>
+            ) : hasMore ? (
+              <button
+                type="button"
+                onClick={loadMore}
+                className="rounded-full px-4 py-1.5 transition-colors hover:bg-blog-muted hover:text-blog-ink"
+              >
+                加载更多
+              </button>
+            ) : talks.length > 0 ? (
+              <span>已经到底了</span>
+            ) : null}
+          </div>
+        </>
+      )}
 
-                    <time className="mt-2.5 block font-mono text-[11px] text-blog-soft">
-                      {talk.createTime}
-                    </time>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
-
-        {talks.length === 0 && (
-          <p className="py-10 text-center text-[13px] text-blog-soft">暂无说说</p>
-        )}
-      </div>
+      <ImageLightbox
+        images={lightboxImages}
+        initialIndex={lightbox?.index ?? 0}
+        open={!!lightbox}
+        onClose={closeLightbox}
+      />
     </div>
   );
 }

@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import ArticleList from "./ArticleList";
 import { Hero, type HeroPinned } from "@/components/blog/Hero";
+import { AiImageGeneration } from "@/components/leibox/ai-generating/AiImageGeneration";
 
 interface HomePageProps {
   searchParams: Promise<{ category?: string; tag?: string }>;
@@ -29,8 +30,11 @@ export default async function HomePage({ searchParams }: HomePageProps) {
       <div className="flex w-full flex-col">
         <Suspense
           fallback={
-            <div className="flex items-center justify-center py-20 text-sm text-blog-soft">
-              加载中...
+            <div className="flex items-center justify-center py-10">
+              <AiImageGeneration
+                className="w-full max-w-[320px]"
+                label="正在载入文章"
+              />
             </div>
           }
         >

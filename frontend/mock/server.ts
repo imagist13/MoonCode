@@ -1138,6 +1138,10 @@ async function handlePublic(req: Request, url: URL, path: string): Promise<Respo
     );
   }
 
+  if (path === "/music/enabled" && method === "GET") {
+    return ok(db.musics.filter((m) => m.status === 1));
+  }
+
   /* ---------------- 评论 ---------------- */
   if (path === "/comments" && method === "GET") {
     const { current, size } = pageParams(url);

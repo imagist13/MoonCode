@@ -5,18 +5,20 @@ import { getAbout, updateAbout, type AboutInfo } from "@/lib/about";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { AboutSidebar } from "@/components/about/AboutSidebar";
 import { AboutMain } from "@/components/about/AboutMain";
+import { ToolboxShowcase } from "@/components/about/ToolboxShowcase";
 import { Skeleton } from "@/components/ui/skeleton";
 
 /**
- * 关于页（极简两栏，对齐文章页）：
- *   ┌──────────────┬─────────────────────────────┐
- *   │  左栏 300px   │  右栏（介绍 Markdown）       │
- *   │  - 身份卡     │  - bio 正文                  │
- *   │  - 联系方式   │  - About Me / 成就 / 技能     │
- *   │  - Tech Stack │                             │
- *   └──────────────┴─────────────────────────────┘
+ * 关于页（xl 起三栏，lg 两栏，更窄单栏）：
+ *   ┌──────────┬──────────────────┬──────────┐
+ *   │ 左栏     │ 中栏 1fr（主体） │ 右栏 340px│
+ *   │ 身份卡   │ bio 正文         │ 我的三件套│
+ *   │ 联系方式 │ About Me         │ 列表/卡片/│
+ *   │ 技术栈   │ 成就 / 技能      │ 叠放     │
+ *   └──────────┴──────────────────┴──────────┘
  *
- * - 左栏 sticky 跟随滚动，右栏 min-w-0 自适应；
+ * - 中栏为页面主体，宽度最大；左栏与右栏 sticky 跟随中栏滚动；
+ * - lg 下工具箱排在正文下方，窄屏退化为静态列表；
  * - 头像 hover 上传、「编辑资料」入口仅对管理员暴露；
  * - 头像上传后立即落库（updateAbout），换完刷新也在。
  */
@@ -92,7 +94,7 @@ export default function AboutPage() {
   }
 
   return (
-    <div className="grid items-start gap-12 lg:grid-cols-[300px_minmax(0,1fr)] lg:gap-16">
+    <div className="grid items-start gap-12 lg:grid-cols-[300px_minmax(0,1fr)] lg:gap-16 xl:grid-cols-[220px_minmax(0,1fr)_340px] xl:gap-6">
       <aside className="lg:sticky lg:top-28 lg:self-start">
         <AboutSidebar
           data={data}
@@ -104,6 +106,7 @@ export default function AboutPage() {
       <div className="min-w-0">
         <AboutMain data={data} />
       </div>
+      <ToolboxShowcase />
     </div>
   );
 }

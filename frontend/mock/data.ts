@@ -95,6 +95,17 @@ export interface PhotoRecord {
   updateTime: string | null;
 }
 
+export interface MusicRecord {
+  id: number;
+  uuid: string;
+  musicName: string;
+  musicAuthor: string;
+  musicUrl: string;
+  cover: string;
+  status: number; // 1 启用 0 停用
+  createTime: string;
+}
+
 export interface LinkRecord {
   id: number;
   linkName: string;
@@ -689,6 +700,64 @@ export default async function Page() {
     },
   ] as AlbumRecord[],
 
+  musics: [
+    {
+      id: 1,
+      uuid: "mock",
+      musicName: "夜航西飞",
+      musicAuthor: "Moon · 电子",
+      musicUrl:
+        "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
+      cover: "/uploads/music-cover-1.png",
+      status: 1,
+      createTime: "2026-10-01 10:00:00",
+    },
+    {
+      id: 2,
+      uuid: "mock",
+      musicName: "城市的雨",
+      musicAuthor: "Moon · 轻音乐",
+      musicUrl:
+        "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3",
+      cover: "/uploads/music-cover-2.png",
+      status: 1,
+      createTime: "2026-10-02 10:00:00",
+    },
+    {
+      id: 3,
+      uuid: "mock",
+      musicName: "山野回声",
+      musicAuthor: "Moon · 环境音",
+      musicUrl:
+        "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3",
+      cover: "/uploads/music-cover-3.png",
+      status: 1,
+      createTime: "2026-10-03 10:00:00",
+    },
+    {
+      id: 4,
+      uuid: "mock",
+      musicName: "Code & Coffee",
+      musicAuthor: "Moon · Lo-fi",
+      musicUrl:
+        "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3",
+      cover: "/uploads/music-cover-4.png",
+      status: 1,
+      createTime: "2026-10-04 10:00:00",
+    },
+    {
+      id: 5,
+      uuid: "mock",
+      musicName: "已下架的曲子",
+      musicAuthor: "Moon · Demo",
+      musicUrl:
+        "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-5.mp3",
+      cover: "/uploads/music-cover-5.png",
+      status: 0,
+      createTime: "2026-10-05 10:00:00",
+    },
+  ] as MusicRecord[],
+
   photos: [
     { id: 1, albumId: 1, photoName: "街角", photoDesc: "傍晚的街道", photoSrc: "/uploads/photo-1.png", isDelete: false, createTime: "2026-10-01 10:10:00", updateTime: null },
     { id: 2, albumId: 1, photoName: "橱窗", photoDesc: "暖色灯光", photoSrc: "/uploads/photo-2.png", isDelete: false, createTime: "2026-10-01 10:11:00", updateTime: null },
@@ -703,6 +772,8 @@ export default async function Page() {
     { id: 2, linkName: "Bun", linkAvatar: "/uploads/avatar-3.png", linkAddress: "https://bun.sh", linkIntro: "A fast all-in-one JavaScript runtime", createTime: "2026-08-01 10:00:00" },
     { id: 3, linkName: "Go", linkAvatar: "/uploads/avatar-2.png", linkAddress: "https://go.dev", linkIntro: "Build simple, secure, scalable systems", createTime: "2026-08-01 10:00:00" },
     { id: 4, linkName: "PostgreSQL", linkAvatar: "/uploads/avatar-3.png", linkAddress: "https://www.postgresql.org", linkIntro: "The world's most advanced open source database", createTime: "2026-08-01 10:00:00" },
+    { id: 5, linkName: "React", linkAvatar: "/uploads/avatar-1.png", linkAddress: "https://react.dev", linkIntro: "The library for web and native user interfaces", createTime: "2026-08-01 10:00:00" },
+    { id: 6, linkName: "Tailwind CSS", linkAvatar: "/uploads/avatar-2.png", linkAddress: "https://tailwindcss.com", linkIntro: "Rapidly build modern websites without leaving your HTML", createTime: "2026-08-01 10:00:00" },
   ] as LinkRecord[],
 
   pages: [
@@ -786,6 +857,7 @@ export const nextIds = {
   message: 5,
   talk: 5,
   album: 4,
+  music: 6,
   photo: 7,
   link: 5,
   page: 6,

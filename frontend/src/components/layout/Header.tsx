@@ -2,13 +2,11 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
   CaretDown,
   List,
-  Moon,
   MagnifyingGlass,
-  Sun,
   User,
   X,
 } from "@phosphor-icons/react";
@@ -16,6 +14,8 @@ import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuthStore, useHydrated } from "@/stores/auth";
 import { SearchPopover } from "@/components/blog/SearchPopover";
+import { PixelToggle } from "@/components/leibox/pixel-toggle/PixelToggle";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { useSiteConfig } from "@/hooks/useSiteConfig";
 
 const NAV_LINKS = [
@@ -45,33 +45,13 @@ function useTheme() {
     document.documentElement.classList.toggle("dark", isDark);
   }, [isDark]);
 
-  const toggle = useCallback(
-    (e: React.MouseEvent<HTMLButtonElement>) => {
-      const next = !isDark;
-      const apply = () => {
-        setIsDark(next);
-        localStorage.setItem("theme", next ? "dark" : "light");
-      };
+  // 像素开关本身承担切换动画，不再叠加全页 view-transition 波纹
+  const setDark = useCallback((next: boolean) => {
+    setIsDark(next);
+    localStorage.setItem("theme", next ? "dark" : "light");
+  }, []);
 
-      const root = document.documentElement;
-      if (
-        typeof document.startViewTransition === "function" &&
-        !window.matchMedia("(prefers-reduced-motion: reduce)").matches
-      ) {
-        const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-        const x = rect.left + rect.width / 2;
-        const y = rect.top + rect.height / 2;
-        root.style.setProperty("--theme-ripple-x", `${x}px`);
-        root.style.setProperty("--theme-ripple-y", `${y}px`);
-        document.startViewTransition(apply);
-      } else {
-        apply();
-      }
-    },
-    [isDark],
-  );
-
-  return { isDark, toggle, mounted };
+  return { isDark, setDark, mounted };
 }
 
 /** 测量并决定可见菜单项数（spec §4.1 菜单溢出策略） */
@@ -83,9 +63,8 @@ function useVisibleNavCount(containerRef: React.RefObject<HTMLElement | null>) {
       const ul = containerRef.current?.querySelector(
         "[data-measure-ul]",
       ) as HTMLUListElement | null;
-      const c = containerRef.current?.querySelector(
-        "[data-measure-container]",
-      ) as HTMLElement | null;
+      // 容器本身就是 ref 节点，不能再从它内部查找
+      const c = containerRef.current;
       if (!ul || !c) return;
       const items = Array.from(ul.querySelectorAll("li[data-measure-item]")) as HTMLLIElement[];
       const containerWidth = c.clientWidth;
@@ -121,7 +100,19 @@ export default function Header() {
   const siteName = siteConfig?.name || "博客";
   const { token, user, logout } = useAuthStore();
   const hydrated = useHydrated();
-  const { isDark, toggle, mounted } = useTheme();
+  const { isDark, setDark, mounted } = useTheme();
+  const isMobile = useIsMobile();
+
+  // 开关语义：checked = 日间，与 html.dark 相反
+  const pixelOptions = useMemo(
+    () => ({
+      checked: !isDark,
+      sound: false,
+      height: 250,
+      onCheckedChange: (day: boolean) => setDark(!day),
+    }),
+    [isDark, setDark],
+  );
 
   const [searchOpen, setSearchOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -136,7 +127,9 @@ export default function Header() {
   // 关闭菜单：外部点击
   useEffect(() => {
     const onClick = (e: MouseEvent) => {
-      if (mobileOpen && !(e.target as HTMLElement).closest("header")) setMobileOpen(false);
+      // 主题行在 header 之外，交互时保持展开，让开关动画完整可见
+      if (mobileOpen && !(e.target as HTMLElement).closest("header, [data-mobile-theme]"))
+        setMobileOpen(false);
       if (userMenuOpen && !(e.target as HTMLElement).closest(".user-menu-container"))
         setUserMenuOpen(false);
       if (moreMenuOpen && !(e.target as HTMLElement).closest(".more-menu-container"))
@@ -264,16 +257,14 @@ export default function Header() {
               <MagnifyingGlass className="h-[18px] w-[18px]" />
             </button>
 
-            {/* 主题切换（spec §4.9） */}
-            {mounted && (
-              <button
-                type="button"
-                onClick={toggle}
-                aria-label="切换主题"
-                className="inline-flex h-9 w-9 items-center justify-center rounded-full text-blog-soft transition-colors hover:bg-blog-muted hover:text-blog-ink"
-              >
-                {isDark ? <Sun className="h-[18px] w-[18px]" /> : <Moon className="h-[18px] w-[18px]" />}
-              </button>
+            {/* 主题切换：像素日夜开关（spec §4.9）
+                外层始终占位，保证导航溢出测量拿到真实宽度 */}
+            {!isMobile && (
+              <div className="pointer-events-none -mx-[38px] h-[60px] w-[172px] shrink-0">
+                {mounted && (
+                  <PixelToggle className="h-full w-full" options={pixelOptions} />
+                )}
+              </div>
             )}
 
             {/* 用户菜单 */}
@@ -361,6 +352,19 @@ export default function Header() {
               {link.label}
             </Link>
           ))}
+          {/* 移动端顶栏空间不足，日夜开关放进展开菜单 */}
+          {mounted && isMobile && (
+            <div
+              data-mobile-theme
+              className="mt-2 flex items-center justify-between rounded-xl px-3 py-1"
+            >
+              <span className="text-[15px] font-medium text-blog-soft">日夜主题</span>
+              <PixelToggle
+                className="h-[70px] w-[200px] shrink-0"
+                options={pixelOptions}
+              />
+            </div>
+          )}
           {!hydrated || !token ? (
             <Link
               href="/admin/login"

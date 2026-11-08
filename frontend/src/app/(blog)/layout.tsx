@@ -1,5 +1,6 @@
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
+import MusicPlayer from "@/components/player/MusicPlayer";
 
 export default function BlogLayout({
   children,
@@ -13,6 +14,7 @@ export default function BlogLayout({
         <div className="mx-auto w-full max-w-[1200px] px-5 py-10 md:px-8 md:py-14">{children}</div>
       </main>
       <Footer />
+      <MusicPlayer />
     </div>
   );
 }

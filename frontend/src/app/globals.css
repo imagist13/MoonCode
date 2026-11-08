@@ -332,44 +332,6 @@ body:has(.blog-theme) {
   background: linear-gradient(to top, var(--background), transparent);
 }
 
-/* ===== 音乐播放器（spec §6.6） ===== */
-.music-player-panel {
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(229, 231, 235, 0.5);
-  box-shadow: 4px 4px 24px rgba(0, 0, 0, 0.08), 2px 2px 8px rgba(0, 0, 0, 0.04);
-}
-.dark .music-player-panel {
-  background: rgba(31, 41, 55, 0.88);
-  border-color: rgba(75, 85, 99, 0.5);
-  box-shadow: 4px 4px 24px rgba(0, 0, 0, 0.3);
-}
-.music-progress-track {
-  background: #e5e7eb;
-  height: 4px;
-  border-radius: 9999px;
-  position: relative;
-  cursor: pointer;
-}
-.dark .music-progress-track {
-  background: #374151;
-}
-.music-progress-fill {
-  background: linear-gradient(90deg, #3b82f6, #60a5fa);
-  height: 100%;
-  border-radius: 9999px;
-  transition: width 100ms linear;
-}
-.music-playlist-active {
-  background-color: rgba(59, 130, 246, 0.1);
-  color: #1d4ed8;
-}
-.dark .music-playlist-active {
-  background-color: rgba(59, 130, 246, 0.2);
-  color: #93c5fd;
-}
-
 /* ===== 主题切换涟漪（View Transitions） ===== */
 ::view-transition-old(root),
 ::view-transition-new(root) {
@@ -1043,3 +1005,4 @@ body:has(.blog-theme) {
     animation: none;
   }
 }
+
