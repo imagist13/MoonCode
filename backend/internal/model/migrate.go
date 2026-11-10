@@ -23,6 +23,7 @@ var AllModels = []interface{}{
 	&ChatRecord{},
 	&PhotoAlbum{},
 	&Photo{},
+	&Music{},
 	&FriendLink{},
 	&Menu{},
 	&Resource{},

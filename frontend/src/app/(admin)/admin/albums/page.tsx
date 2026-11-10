@@ -9,7 +9,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Plus, Trash2, ImageIcon, ArrowRight } from "lucide-react";
 import {
@@ -36,12 +35,9 @@ interface Album {
   createTime: string;
 }
 
-const STATUS_MAP: Record<
-  number,
-  { label: string; variant: "outline" | "secondary" }
-> = {
-  1: { label: "公开", variant: "outline" },
-  2: { label: "私密", variant: "secondary" },
+const STATUS_MAP: Record<number, { label: string; dot: string }> = {
+  1: { label: "公开", dot: "bg-emerald-500" },
+  2: { label: "私密", dot: "bg-muted-foreground/50" },
 };
 
 export default function AlbumsPage() {
@@ -192,9 +188,12 @@ export default function AlbumsPage() {
         cell: ({ row }) => {
           const status = STATUS_MAP[row.original.status];
           return (
-            <Badge variant={status?.variant || "outline"}>
+            <span className="inline-flex items-center gap-1.5 text-[12.5px] text-foreground">
+              <span
+                className={`size-1.5 rounded-full ${status?.dot ?? "bg-muted-foreground/50"}`}
+              />
               {status?.label || "未知"}
-            </Badge>
+            </span>
           );
         },
       },
@@ -288,9 +287,9 @@ export default function AlbumsPage() {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold">相册管理</h1>
+        <h1 className="text-[1.35rem] font-semibold tracking-[-0.025em]">相册管理</h1>
         <div className="flex items-center gap-2">
           <ViewToggle view={viewMode} onChange={setViewMode} />
           <Button onClick={() => setDialogOpen(true)}>

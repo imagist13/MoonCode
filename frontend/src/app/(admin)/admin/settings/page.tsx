@@ -26,8 +26,8 @@ import {
 
 export default function SettingsPage() {
   return (
-    <div className="space-y-4">
-      <h1 className="text-xl font-semibold">站点设置</h1>
+    <div className="space-y-5">
+      <h1 className="text-[1.35rem] font-semibold tracking-[-0.025em]">站点设置</h1>
       <Tabs defaultValue="about">
         <TabsList>
           <TabsTrigger value="about">关于我</TabsTrigger>
@@ -278,7 +278,7 @@ function AboutSettings() {
             <div className="space-y-2">
               <Label>头像</Label>
               <div className="flex items-start gap-3">
-                <div className="h-20 w-20 shrink-0 overflow-hidden rounded-full ring-1 ring-black/5 bg-slate-100">
+                <div className="h-20 w-20 shrink-0 overflow-hidden rounded-full bg-muted ring-1 ring-border">
                   {info.avatar ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
@@ -287,7 +287,7 @@ function AboutSettings() {
                       className="h-full w-full object-cover"
                     />
                   ) : (
-                    <div className="flex h-full w-full items-center justify-center text-slate-400">
+                    <div className="flex h-full w-full items-center justify-center text-muted-foreground">
                       无
                     </div>
                   )}
@@ -311,7 +311,7 @@ function AboutSettings() {
             <div className="space-y-2">
               <Label>Banner 顶图</Label>
               <div className="flex items-start gap-3">
-                <div className="h-20 w-32 shrink-0 overflow-hidden rounded-md ring-1 ring-black/5 bg-slate-100">
+                <div className="h-20 w-32 shrink-0 overflow-hidden rounded-md bg-muted ring-1 ring-border">
                   {info.banner ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
@@ -320,7 +320,7 @@ function AboutSettings() {
                       className="h-full w-full object-cover"
                     />
                   ) : (
-                    <div className="flex h-full w-full items-center justify-center text-slate-400">
+                    <div className="flex h-full w-full items-center justify-center text-muted-foreground">
                       无
                     </div>
                   )}
@@ -611,7 +611,7 @@ function BadgeListCard({ title, description, items, onChange }: BadgeListCardPro
             />
             <input
               type="color"
-              className="h-9 w-12 shrink-0 cursor-pointer rounded border border-slate-200 bg-white p-0"
+              className="h-9 w-12 shrink-0 cursor-pointer rounded border border-border bg-background p-0"
               value={b.color || "#64748b"}
               onChange={(e) => {
                 const next = [...items];
@@ -657,7 +657,7 @@ interface ImageUploadButtonProps {
 function ImageUploadButton({ onPick, disabled, children }: ImageUploadButtonProps) {
   return (
     <label
-      className={`inline-flex h-9 cursor-pointer items-center justify-center rounded-md border border-slate-200 bg-white px-3 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-50 ${
+      className={`inline-flex h-9 cursor-pointer items-center justify-center rounded-md border border-border bg-background px-3 text-xs font-medium text-foreground transition-colors hover:bg-muted ${
         disabled ? "pointer-events-none opacity-50" : ""
       }`}
     >

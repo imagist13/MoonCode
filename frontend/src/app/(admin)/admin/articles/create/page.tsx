@@ -686,12 +686,7 @@ function UnifiedEditorContent() {
             已保存
           </Button>
 
-          <Button
-            size="sm"
-            className="bg-blue-500 hover:bg-blue-600"
-            onClick={handlePublish}
-            disabled={saving}
-          >
+          <Button size="sm" onClick={handlePublish} disabled={saving}>
             <Send className="mr-1 size-3.5" />
             {saving ? "发布中..." : "发布文章"}
           </Button>
@@ -767,13 +762,13 @@ function UnifiedEditorContent() {
           </div>
 
           {/* 工具栏 */}
-          <div className="flex items-center gap-1 border-b bg-muted/50 px-3 py-2">
+          <div className="flex flex-wrap items-center gap-x-1 gap-y-1.5 border-b bg-muted/50 px-3 py-2">
             {TOOLBAR_GROUPS.map((group, groupIndex) => (
-              <div key={group.label} className="flex items-center">
+              <div key={group.label} className="flex shrink-0 items-center">
                 {groupIndex > 0 && (
                   <div className="mx-2 h-4 w-px bg-border" />
                 )}
-                <span className="mr-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                <span className="mr-1.5 text-xs font-medium tracking-wide whitespace-nowrap text-muted-foreground uppercase">
                   {group.label}
                 </span>
                 {group.items.map((item) => {
@@ -801,7 +796,7 @@ function UnifiedEditorContent() {
               onClick={() => setSyncScroll(!syncScroll)}
               className={cn(
                 "relative h-4 w-8 rounded-full transition-colors",
-                syncScroll ? "bg-blue-500" : "bg-muted-foreground/30"
+                syncScroll ? "bg-primary" : "bg-muted-foreground/30"
               )}
             >
               <span
@@ -990,8 +985,8 @@ console.log(greeting);
                     className={cn(
                       "flex-1 rounded-md border py-2 text-sm transition-colors",
                       form.type === opt.value
-                        ? "border-blue-500 bg-blue-50 text-blue-600 dark:bg-blue-950"
-                        : "border-input hover:border-blue-500 hover:text-blue-500"
+                        ? "border-primary bg-muted text-foreground"
+                        : "border-input hover:border-foreground/40 hover:text-foreground"
                     )}
                   >
                     {opt.label}
@@ -1018,8 +1013,8 @@ console.log(greeting);
                     className={cn(
                       "flex-1 rounded-md border py-2 text-sm transition-colors",
                       form.status === opt.value
-                        ? "border-blue-500 bg-blue-50 text-blue-600 dark:bg-blue-950"
-                        : "border-input hover:border-blue-500 hover:text-blue-500"
+                        ? "border-primary bg-muted text-foreground"
+                        : "border-input hover:border-foreground/40 hover:text-foreground"
                     )}
                   >
                     {opt.label}
@@ -1032,7 +1027,7 @@ console.log(greeting);
           {/* 底部操作 */}
           <div className="border-t p-5">
             <Button
-              className="w-full bg-blue-500 hover:bg-blue-600"
+              className="w-full"
               onClick={handlePublish}
               disabled={saving}
             >

@@ -102,6 +102,7 @@ export interface MusicRecord {
   musicAuthor: string;
   musicUrl: string;
   cover: string;
+  sort: number;
   status: number; // 1 启用 0 停用
   createTime: string;
 }
@@ -709,6 +710,7 @@ export default async function Page() {
       musicUrl:
         "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
       cover: "/uploads/music-cover-1.png",
+      sort: 1,
       status: 1,
       createTime: "2026-10-01 10:00:00",
     },
@@ -720,6 +722,7 @@ export default async function Page() {
       musicUrl:
         "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3",
       cover: "/uploads/music-cover-2.png",
+      sort: 2,
       status: 1,
       createTime: "2026-10-02 10:00:00",
     },
@@ -731,6 +734,7 @@ export default async function Page() {
       musicUrl:
         "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3",
       cover: "/uploads/music-cover-3.png",
+      sort: 3,
       status: 1,
       createTime: "2026-10-03 10:00:00",
     },
@@ -742,6 +746,7 @@ export default async function Page() {
       musicUrl:
         "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3",
       cover: "/uploads/music-cover-4.png",
+      sort: 4,
       status: 1,
       createTime: "2026-10-04 10:00:00",
     },
@@ -753,6 +758,7 @@ export default async function Page() {
       musicUrl:
         "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-5.mp3",
       cover: "/uploads/music-cover-5.png",
+      sort: 5,
       status: 0,
       createTime: "2026-10-05 10:00:00",
     },

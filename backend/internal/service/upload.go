@@ -45,6 +45,19 @@ var attachmentExtensions = map[string]bool{
 	".jpg": true, ".jpeg": true, ".png": true, ".gif": true, ".webp": true,
 }
 
+// 音频白名单：点唱机上传专用，仅允许浏览器可播放的音频格式。
+var audioExtensions = map[string]bool{
+	".mp3":  true,
+	".m4a":  true,
+	".aac":  true,
+	".ogg":  true,
+	".oga":  true,
+	".opus": true,
+	".wav":  true,
+	".flac": true,
+	".webm": true,
+}
+
 // UploadImage 图片专用上传：扩展名白名单 + magic-byte MIME 嗅探双重校验
 func (s *UploadService) UploadImage(reader io.Reader, filename string, size int64) (string, error) {
 	if err := s.checkSize(size); err != nil {
@@ -65,6 +78,30 @@ func (s *UploadService) UploadImage(reader io.Reader, filename string, size int6
 	}
 
 	// 把嗅探读走的字节拼回 reader
+	full := io.MultiReader(bytes.NewReader(head), reader)
+	return s.writeWithExt(full, cleaned, ext)
+}
+
+// UploadAudio 音频上传：扩展名白名单 + 拒绝文本/网页类内容。
+func (s *UploadService) UploadAudio(reader io.Reader, filename string, size int64) (string, error) {
+	if err := s.checkSize(size); err != nil {
+		return "", err
+	}
+	cleaned, ext, err := sanitizeFilename(filename, audioExtensions)
+	if err != nil {
+		return "", err
+	}
+
+	head := make([]byte, 512)
+	n, _ := io.ReadFull(reader, head)
+	head = head[:n]
+	mimeType := http.DetectContentType(head)
+	if strings.HasPrefix(mimeType, "text/") ||
+		strings.Contains(mimeType, "html") ||
+		strings.Contains(mimeType, "svg") {
+		return "", fmt.Errorf("文件内容不是合法音频（检测到 %s）", mimeType)
+	}
+
 	full := io.MultiReader(bytes.NewReader(head), reader)
 	return s.writeWithExt(full, cleaned, ext)
 }

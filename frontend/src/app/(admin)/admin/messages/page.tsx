@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { api } from "@/lib/api";
 import type { PageResult } from "@/lib/types";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import Image from "next/image";
 import { Check, Trash2 } from "lucide-react";
@@ -163,12 +162,14 @@ export default function MessagesPage() {
         accessorKey: "isReview",
         header: "状态",
         enableSorting: true,
-        cell: ({ row }) =>
-          row.original.isReview ? (
-            <Badge variant="outline">已审核</Badge>
-          ) : (
-            <Badge variant="secondary">待审核</Badge>
-          ),
+        cell: ({ row }) => (
+          <span className="inline-flex items-center gap-1.5 text-[12.5px] text-foreground">
+            <span
+              className={`size-1.5 rounded-full ${row.original.isReview ? "bg-emerald-500" : "bg-amber-500"}`}
+            />
+            {row.original.isReview ? "已审核" : "待审核"}
+          </span>
+        ),
       },
       {
         accessorKey: "createTime",
@@ -237,8 +238,8 @@ export default function MessagesPage() {
   );
 
   return (
-    <div className="space-y-4">
-      <h1 className="text-xl font-semibold">留言管理</h1>
+    <div className="space-y-5">
+      <h1 className="text-[1.35rem] font-semibold tracking-[-0.025em]">留言管理</h1>
 
       {loading ? (
         <DataTableSkeleton columns={5} rows={5} />

@@ -221,9 +221,9 @@ export default function TalksPage() {
   );
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold">说说管理</h1>
+        <h1 className="text-[1.35rem] font-semibold tracking-[-0.025em]">说说管理</h1>
         <Button onClick={() => setDialogOpen(true)}>
           <Plus className="mr-1 size-4" />
           发布说说

@@ -6,7 +6,7 @@ import { type ColumnDef } from "@tanstack/react-table";
 import { api } from "@/lib/api";
 import type { PageResult } from "@/lib/types";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { Pencil, Pin, Trash2, Plus, Filter, Upload } from "lucide-react";
 import {
@@ -59,10 +59,10 @@ const TYPE_MAP: Record<number, string> = {
   3: "翻译",
 };
 
-const STATUS_MAP: Record<number, { label: string; variant: "outline" | "secondary" | "default" }> = {
-  1: { label: "公开", variant: "outline" },
-  2: { label: "私密", variant: "secondary" },
-  3: { label: "草稿", variant: "secondary" },
+const STATUS_MAP: Record<number, { label: string; dot: string }> = {
+  1: { label: "公开", dot: "bg-emerald-500" },
+  2: { label: "私密", dot: "bg-muted-foreground/50" },
+  3: { label: "草稿", dot: "bg-amber-500" },
 };
 
 const TYPE_OPTIONS = [
@@ -246,15 +246,17 @@ export default function ArticlesPage() {
         header: "标签",
         enableSorting: false,
         enableColumnFilter: false,
-        cell: ({ row }) => (
-          <div className="flex flex-wrap gap-1">
-            {row.original.tagNameList?.map((tag) => (
-              <Badge key={tag} variant="secondary" className="text-xs">
-                {tag}
-              </Badge>
-            ))}
-          </div>
-        ),
+        cell: ({ row }) => {
+          const tags = row.original.tagNameList ?? [];
+          if (tags.length === 0) {
+            return <span className="text-muted-foreground/60">—</span>;
+          }
+          return (
+            <span className="text-[12.5px] text-muted-foreground">
+              {tags.join(" · ")}
+            </span>
+          );
+        },
       },
       {
         accessorKey: "type",
@@ -331,9 +333,15 @@ export default function ArticlesPage() {
         cell: ({ row }) => {
           const status = STATUS_MAP[row.original.status];
           return (
-            <Badge variant={status?.variant || "outline"}>
+            <span className="inline-flex items-center gap-1.5 text-[12.5px] text-foreground">
+              <span
+                className={cn(
+                  "size-1.5 rounded-full",
+                  status?.dot ?? "bg-muted-foreground/50",
+                )}
+              />
               {status?.label || "未知"}
-            </Badge>
+            </span>
           );
         },
       },
@@ -435,9 +443,9 @@ export default function ArticlesPage() {
   );
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold">文章列表</h1>
+        <h1 className="text-[1.35rem] font-semibold tracking-[-0.025em]">文章列表</h1>
         <div className="flex items-center gap-2">
           {/* 隐藏的 file input */}
           <input

@@ -22,6 +22,7 @@ type Deps struct {
 	MessageHandler  *MessageHandler
 	ChatHub         *ChatHub
 	AlbumHandler    *AlbumHandler
+	MusicHandler    *MusicHandler
 	LinkHandler     *LinkHandler
 	BlogInfoHandler *BlogInfoHandler
 	AboutHandler    *AboutHandler
@@ -114,6 +115,9 @@ func setupPublicRoutes(rg *gin.RouterGroup, deps *Deps, rdb *redis.Client) {
 
 	// 友链
 	rg.GET("/links", deps.LinkHandler.ListLinks)
+
+	// 点唱机（公开启用列表）
+	rg.GET("/music/enabled", deps.MusicHandler.ListEnabled)
 
 	// 留言（访客可匿名提交）
 	rg.GET("/messages", deps.MessageHandler.ListMessages)
@@ -221,6 +225,12 @@ func setupAdminRoutes(rg *gin.RouterGroup, deps *Deps) {
 	rg.POST("/photos", deps.AlbumHandler.SavePhotos)
 	rg.PUT("/photos", deps.AlbumHandler.UpdatePhotos)
 	rg.DELETE("/photos", deps.AlbumHandler.DeletePhotos)
+
+	// 点唱机管理
+	rg.GET("/music", deps.MusicHandler.ListAdmin)
+	rg.POST("/music", deps.MusicHandler.SaveOrUpdate)
+	rg.DELETE("/music", deps.MusicHandler.Delete)
+	rg.POST("/music/audio", deps.UploadHandler.UploadAudio)
 
 	// 友链管理
 	rg.GET("/links", deps.LinkHandler.ListAdminLinks)

@@ -186,9 +186,9 @@ export default function TagsPage() {
   );
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold">标签管理</h1>
+        <h1 className="text-[1.35rem] font-semibold tracking-[-0.025em]">标签管理</h1>
         <Button onClick={openCreate}>
           <Plus className="mr-1 size-4" />
           新增标签

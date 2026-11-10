@@ -1,11 +1,11 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Menu, Moon, Sun, ChevronDown, LogOut, Globe } from "lucide-react";
+import { Menu, Moon, Sun, ChevronDown, ChevronRight, LogOut, Globe } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuthStore, useHydrated } from "@/stores/auth";
-import { cn } from "@/lib/utils";
 
 /** DashboardHeader（spec §5.3） */
 export function DashboardHeader({
@@ -62,62 +62,91 @@ export function DashboardHeader({
   };
 
   return (
-    <header className="h-16 shrink-0 border-b border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
-      <div className="flex h-full items-center justify-between px-4">
-        <div className="flex items-center">
+    <header className="flex h-14 shrink-0 items-center justify-between gap-3 border-b border-border bg-background/80 px-4 backdrop-blur-xl md:px-6">
+      <div className="flex min-w-0 items-center gap-2">
+        <button
+          type="button"
+          onClick={onToggleSidebar}
+          aria-label="切换侧栏"
+          className="mr-1 inline-flex size-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground active:scale-95 md:hidden"
+        >
+          <Menu className="size-4" />
+        </button>
+
+        {/* 面包屑（替代重复的页面大标题） */}
+        <nav aria-label="面包屑" className="flex min-w-0 items-center gap-1.5 text-[12.5px]">
+          <Link
+            href="/admin"
+            className="shrink-0 text-muted-foreground transition-colors hover:text-foreground"
+          >
+            控制台
+          </Link>
+          <ChevronRight className="size-3 shrink-0 text-muted-foreground/50" />
+          <span className="truncate font-medium text-foreground">{title}</span>
+        </nav>
+      </div>
+
+      <div className="flex shrink-0 items-center gap-1">
+        <Link
+          href="/"
+          className="hidden items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[12.5px] text-muted-foreground transition-colors hover:bg-muted hover:text-foreground sm:inline-flex"
+        >
+          <Globe className="size-3.5" />
+          返回网站
+        </Link>
+
+        {mounted && (
           <button
             type="button"
-            onClick={onToggleSidebar}
-            aria-label="切换侧栏"
-            className="mr-3 inline-flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 transition-all active:scale-95 hover:bg-gray-50 md:hidden dark:border-gray-700 dark:hover:bg-gray-700"
+            onClick={toggle}
+            aria-label="切换主题"
+            className="inline-flex size-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
           >
-            <Menu className="h-5 w-5" />
+            {isDark ? <Sun className="size-4" /> : <Moon className="size-4" />}
           </button>
-          <h1 className="text-xl font-bold text-blue-600">{title}</h1>
-        </div>
+        )}
 
-        <div className="flex items-center gap-4">
-          {mounted && (
-            <button
-              type="button"
-              onClick={toggle}
-              aria-label="切换主题"
-              className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700"
-            >
-              {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-            </button>
-          )}
-
-          {hydrated && user && (
+        {hydrated && user && (
+          <>
+            <span className="mx-1 hidden h-4 w-px bg-border sm:block" />
             <div ref={menuRef} className="user-menu-container relative">
               <button
                 type="button"
                 onClick={() => setMenuOpen((v) => !v)}
-                className="flex items-center gap-2 rounded-md px-2 py-1 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700"
+                className="flex items-center gap-2 rounded-lg py-1 pr-1 pl-1.5 transition-colors hover:bg-muted"
               >
-                <Avatar className="h-8 w-8">
+                <Avatar className="size-[26px]">
                   <AvatarImage src={user.avatar} alt={user.nickname} />
-                  <AvatarFallback>{user.nickname?.[0] || "U"}</AvatarFallback>
+                  <AvatarFallback className="text-[10px]">{user.nickname?.[0] || "U"}</AvatarFallback>
                 </Avatar>
-                <span className="hidden text-sm font-medium text-gray-700 sm:inline dark:text-gray-200">
+                <span className="hidden max-w-28 truncate text-[12.5px] font-medium text-foreground sm:inline">
                   {user.nickname}
                 </span>
-                <ChevronDown className="h-5 w-5 text-gray-500" />
+                <ChevronDown className="size-3.5 text-muted-foreground" />
               </button>
+
               {menuOpen && (
-                <div className="absolute right-0 top-full z-50 mt-2 w-48 overflow-hidden rounded-md border border-gray-200 bg-white py-1 shadow-lg dark:border-gray-700 dark:bg-gray-800">
+                <div className="absolute top-full right-0 z-50 mt-1.5 w-52 overflow-hidden rounded-xl border border-border bg-popover p-1 shadow-lg">
+                  <div className="px-2.5 py-2">
+                    <p className="truncate text-[12px] font-medium text-foreground">
+                      {user.nickname || "用户"}
+                    </p>
+                    <p className="mt-0.5 truncate text-[10.5px] text-muted-foreground">
+                      {user.email}
+                    </p>
+                  </div>
+                  <div className="my-1 h-px bg-border" />
                   <button
                     type="button"
                     onClick={() => {
                       setMenuOpen(false);
                       router.push("/");
                     }}
-                    className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-700"
+                    className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-[12.5px] text-foreground transition-colors hover:bg-muted"
                   >
-                    <Globe className="h-4 w-4" />
+                    <Globe className="size-3.5 text-muted-foreground" />
                     返回网站
                   </button>
-                  <hr className="my-1 border-gray-200 dark:border-gray-700" />
                   <button
                     type="button"
                     onClick={() => {
@@ -125,20 +154,17 @@ export function DashboardHeader({
                       logout();
                       router.push("/admin/login");
                     }}
-                    className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-red-600 hover:bg-gray-100 dark:hover:bg-gray-700"
+                    className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-[12.5px] text-destructive transition-colors hover:bg-muted"
                   >
-                    <LogOut className="h-4 w-4" />
+                    <LogOut className="size-3.5" />
                     登出
                   </button>
                 </div>
               )}
             </div>
-          )}
-        </div>
+          </>
+        )}
       </div>
     </header>
   );
 }
-
-// 避免 lint 报错
-void cn;

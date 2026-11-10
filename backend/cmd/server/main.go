@@ -58,6 +58,7 @@ func main() {
 	commentService := service.NewCommentService(config.DB, config.RDB)
 	messageService := service.NewMessageService(config.DB)
 	albumService := service.NewAlbumService(config.DB)
+	musicService := service.NewMusicService(config.DB)
 	linkService := service.NewLinkService(config.DB)
 	blogInfoService := service.NewBlogInfoService(config.DB)
 	aboutService := service.NewAboutService(config.DB)
@@ -75,6 +76,7 @@ func main() {
 	chatHub := handler.NewChatHub(config.DB, cfg.Server.Mode != "release", cfg.Server.AllowedOrigins)
 	go chatHub.Run()
 	albumHandler := handler.NewAlbumHandler(albumService)
+	musicHandler := handler.NewMusicHandler(musicService)
 	linkHandler := handler.NewLinkHandler(linkService)
 	blogInfoHandler := handler.NewBlogInfoHandler(blogInfoService, logService)
 	aboutHandler := handler.NewAboutHandler(aboutService)
@@ -90,6 +92,7 @@ func main() {
 		MessageHandler:  messageHandler,
 		ChatHub:         chatHub,
 		AlbumHandler:    albumHandler,
+		MusicHandler:    musicHandler,
 		LinkHandler:     linkHandler,
 		BlogInfoHandler: blogInfoHandler,
 		AboutHandler:    aboutHandler,

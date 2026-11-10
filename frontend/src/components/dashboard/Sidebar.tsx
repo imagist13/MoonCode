@@ -19,6 +19,8 @@ import {
   List,
   MessageCircle,
   Camera,
+  Music2,
+  Moon,
   type LucideIcon,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -60,6 +62,7 @@ export const NAV_ITEMS: NavItem[] = [
   { title: "留言管理", icon: Mail, href: "/admin/messages" },
   { title: "说说管理", icon: MessageCircle, href: "/admin/talks" },
   { title: "相册管理", icon: Camera, href: "/admin/albums" },
+  { title: "音乐管理", icon: Music2, href: "/admin/music" },
   { title: "站点设置", icon: Settings, href: "/admin/settings" },
   { title: "操作日志", icon: ScrollText, href: "/admin/logs" },
 ];
@@ -88,34 +91,46 @@ export function DashboardSidebar({
       {/* 移动端遮罩 */}
       {open && (
         <div
-          className="fixed inset-0 z-40 bg-black/20 backdrop-blur-sm md:hidden"
+          className="fixed inset-0 z-40 bg-foreground/15 backdrop-blur-sm md:hidden"
           onClick={onClose}
         />
       )}
 
       <aside
         className={cn(
-          "group fixed inset-y-0 left-0 z-50 flex h-screen flex-col border-r border-gray-200 bg-white transition-all duration-300 ease-in-out dark:border-gray-700 dark:bg-gray-800 md:sticky md:top-0 md:h-screen",
+          "group fixed inset-y-0 left-0 z-50 flex h-screen flex-col border-r border-border bg-background transition-all duration-300 ease-in-out md:sticky md:top-0 md:h-screen",
           open ? "translate-x-0" : "-translate-x-full md:translate-x-0",
-          collapsed ? "md:w-16" : "md:w-64",
-          "w-64",
+          collapsed ? "md:w-16" : "md:w-60",
+          "w-60",
         )}
       >
-        {/* 站点名 */}
-        <div className="h-16 shrink-0 border-b border-gray-200 px-4 dark:border-gray-700">
+        {/* 品牌区 */}
+        <div className="h-14 shrink-0 border-b border-border px-4">
           <div className="flex h-full items-center">
             <Link
               href="/admin"
               className={cn(
-                "cursor-pointer truncate text-2xl font-bold text-blue-600 transition-opacity hover:opacity-80",
-                collapsed && "md:hidden",
+                "flex min-w-0 items-center gap-2.5 transition-opacity hover:opacity-70",
+                collapsed && "md:justify-center",
               )}
             >
-              控制台
+              <span className="flex size-6 shrink-0 items-center justify-center rounded-md bg-foreground text-background">
+                <Moon className="size-3.5" strokeWidth={2} />
+              </span>
+              <span
+                className={cn(
+                  "flex min-w-0 flex-col leading-none",
+                  collapsed && "md:hidden",
+                )}
+              >
+                <span className="truncate text-[14px] font-semibold tracking-[-0.01em] text-foreground">
+                  控制台
+                </span>
+                <span className="mt-1 text-[8.5px] font-medium tracking-[0.2em] text-muted-foreground uppercase">
+                  Admin
+                </span>
+              </span>
             </Link>
-            {collapsed && (
-              <span className="hidden text-2xl font-bold text-blue-600 md:block">控</span>
-            )}
           </div>
         </div>
 
@@ -124,13 +139,13 @@ export function DashboardSidebar({
           type="button"
           onClick={() => setCollapsed((v) => !v)}
           title={collapsed ? "展开侧边栏" : "收起侧边栏"}
-          className="absolute -right-3 top-20 z-10 hidden h-6 w-6 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-500 opacity-0 shadow-md transition-all hover:text-blue-600 group-hover:opacity-100 md:flex"
+          className="absolute -right-3 top-[60px] z-10 hidden size-6 items-center justify-center rounded-full border border-border bg-card text-muted-foreground opacity-0 shadow-sm transition-opacity hover:text-foreground group-hover:opacity-100 md:flex"
         >
-          {collapsed ? <ChevronRight className="h-3 w-3" /> : <ChevronLeft className="h-3 w-3" />}
+          {collapsed ? <ChevronRight className="size-3" /> : <ChevronLeft className="size-3" />}
         </button>
 
         {/* 菜单 */}
-        <nav className="hide-scrollbar mt-4 flex-1 space-y-1 overflow-y-auto overflow-x-hidden px-2">
+        <nav className="hide-scrollbar mt-3 flex-1 space-y-0.5 overflow-y-auto overflow-x-hidden px-2.5 [&_svg]:stroke-[1.7]">
           {NAV_ITEMS.map((item) => (
             <SidebarNavItem
               key={item.title}
@@ -143,27 +158,29 @@ export function DashboardSidebar({
 
         {/* 底部用户信息 */}
         {hydrated && user && (
-          <div className="mt-auto border-t border-gray-200 p-4 dark:border-gray-700">
-            <div className="flex items-center gap-2">
-              <Avatar className="h-8 w-8 shrink-0">
+          <div className="mt-auto border-t border-border p-3">
+            <div className={cn("flex items-center gap-2.5", collapsed && "md:justify-center")}>
+              <Avatar className="size-7 shrink-0">
                 <AvatarImage src={user.avatar} alt={user.nickname} />
-                <AvatarFallback>{user.nickname?.[0] || "U"}</AvatarFallback>
+                <AvatarFallback className="text-[11px]">{user.nickname?.[0] || "U"}</AvatarFallback>
               </Avatar>
               {!collapsed && (
                 <>
                   <div className="min-w-0 flex-1">
-                    <div className="truncate text-sm font-medium text-gray-900 dark:text-gray-100">
+                    <div className="truncate text-[12.5px] font-medium text-foreground">
                       {user.nickname || "用户"}
                     </div>
-                    <div className="truncate text-xs text-gray-500">{user.email}</div>
+                    <div className="mt-0.5 truncate text-[10.5px] text-muted-foreground">
+                      {user.email}
+                    </div>
                   </div>
                   <button
                     type="button"
                     onClick={handleLogout}
                     title="登出"
-                    className="rounded p-1 text-gray-500 transition-colors hover:bg-gray-100 hover:text-red-500 dark:hover:bg-gray-700"
+                    className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-destructive"
                   >
-                    <LogOut className="h-4 w-4" />
+                    <LogOut className="size-3.5" />
                   </button>
                 </>
               )}
@@ -199,18 +216,25 @@ function SidebarLeafItem({
   pathname: string;
   collapsed: boolean;
 }) {
+  const active = pathname === item.href;
+
   return (
     <Link
       href={item.href!}
+      title={collapsed ? item.title : undefined}
       className={cn(
-        "flex items-center rounded-md px-3 py-2 text-sm font-medium transition-colors",
-        pathname === item.href
-          ? "bg-blue-100 text-blue-700 dark:bg-blue-800/30 dark:text-blue-300"
-          : "text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700",
+        "relative flex items-center gap-2.5 rounded-lg px-2.5 py-[7px] text-[13px] transition-colors duration-150",
+        collapsed && "md:justify-center md:px-0",
+        active
+          ? "bg-muted font-medium text-foreground"
+          : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
       )}
     >
-      <item.icon className="h-4 w-4 shrink-0" />
-      {!collapsed && <span className="ml-3 truncate">{item.title}</span>}
+      {active && (
+        <span className="absolute top-1.5 bottom-1.5 left-0 w-[2px] rounded-full bg-[var(--admin-accent)]" />
+      )}
+      <item.icon className="size-[15px] shrink-0" />
+      {!collapsed && <span className="truncate">{item.title}</span>}
     </Link>
   );
 }
@@ -235,24 +259,26 @@ function SidebarGroupItem({
   }
 
   return (
-    <div className="space-y-1">
+    <div className="space-y-0.5">
       <button
         type="button"
         onClick={() => !collapsed && setOpen((v) => !v)}
+        title={collapsed ? item.title : undefined}
         className={cn(
-          "flex w-full items-center rounded-md px-3 py-2 text-sm font-medium transition-colors",
+          "flex w-full items-center gap-2.5 rounded-lg px-2.5 py-[7px] text-[13px] transition-colors duration-150",
+          collapsed && "md:justify-center md:px-0",
           childActive
-            ? "bg-blue-100 text-blue-700 dark:bg-blue-800/30 dark:text-blue-300"
-            : "text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700",
+            ? "font-medium text-foreground"
+            : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
         )}
       >
-        <item.icon className="h-4 w-4 shrink-0" />
+        <item.icon className="size-[15px] shrink-0" />
         {!collapsed && (
           <>
-            <span className="ml-3 truncate">{item.title}</span>
+            <span className="truncate">{item.title}</span>
             <ChevronRight
               className={cn(
-                "ml-auto h-4 w-4 transition-transform",
+                "ml-auto size-3.5 text-muted-foreground/70 transition-transform duration-200",
                 open && "rotate-90",
               )}
             />
@@ -267,22 +293,24 @@ function SidebarGroupItem({
         )}
       >
         <div className="overflow-hidden">
-          <div className="ml-6 space-y-1 py-0.5">
-            {item.children!.map((child) => (
-              <Link
-                key={child.href}
-                href={child.href}
-                className={cn(
-                  "block rounded-md px-3 py-2 text-sm transition-colors",
-                  pathname === child.href
-                    ? "bg-blue-50 font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
-                    : "text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-700",
-                )}
-              >
-                <child.icon className="mr-2 inline h-4 w-4" />
-                {child.title}
-              </Link>
-            ))}
+          <div className="mt-0.5 ml-[19px] space-y-0.5 border-l border-border py-0.5 pl-2.5">
+            {item.children!.map((child) => {
+              const active = pathname === child.href;
+              return (
+                <Link
+                  key={child.href}
+                  href={child.href}
+                  className={cn(
+                    "block truncate rounded-md px-2 py-[5px] text-[12.5px] transition-colors duration-150",
+                    active
+                      ? "bg-muted font-medium text-foreground"
+                      : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
+                  )}
+                >
+                  {child.title}
+                </Link>
+              );
+            })}
           </div>
         </div>
       </div>

@@ -216,7 +216,7 @@ export function DataTable<TData>({
           <Skeleton className="h-8 w-[200px]" />
           <Skeleton className="h-8 w-[100px]" />
         </div>
-        <div className="rounded-lg border">
+        <div className="rounded-xl border border-border bg-card">
           <div className="space-y-2 p-4">
             {Array.from({ length: 5 }).map((_, i) => (
               <Skeleton key={i} className="h-10 w-full" />
@@ -237,7 +237,7 @@ export function DataTable<TData>({
         title={emptyTitle}
         description={emptyDescription}
         action={emptyAction}
-        className={cn("rounded-lg border bg-card", className)}
+        className={cn("rounded-xl border border-border bg-card", className)}
       />
     )
   }
@@ -254,7 +254,7 @@ export function DataTable<TData>({
         batchActions={batchActions}
       />
 
-      <div className="overflow-x-auto rounded-lg border">
+      <div className="overflow-x-auto rounded-xl border border-border bg-card">
         <Table className="min-w-full">
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
@@ -265,33 +265,37 @@ export function DataTable<TData>({
                       key={header.id}
                       style={{ width: header.getSize() }}
                       className={cn(
-                        "group",
+                        "group px-3 text-[10.5px] font-medium tracking-[0.12em] text-muted-foreground uppercase",
                         header.column.getCanSort() && "cursor-pointer select-none hover:bg-muted/50",
                       )}
                       onClick={header.column.getToggleSortingHandler()}
                     >
-                      {header.isPlaceholder
-                        ? null
-                        : flexRender(
-                            header.column.columnDef.header,
-                            header.getContext()
-                          )}
-                      {header.column.getCanSort() && (
-                        <span className="ml-1 inline-flex align-middle">
-                          {header.column.getIsSorted() === "asc" ? (
-                            <ArrowUp className="size-3.5 text-blue-600" />
-                          ) : header.column.getIsSorted() === "desc" ? (
-                            <ArrowDown className="size-3.5 text-blue-600" />
-                          ) : (
-                            <ChevronsUpDown className="size-3.5 text-gray-300 transition-colors group-hover:text-gray-500" />
-                          )}
-                        </span>
-                      )}
+                      <div className="inline-flex items-center gap-1">
+                        {header.isPlaceholder
+                          ? null
+                          : flexRender(
+                              header.column.columnDef.header,
+                              header.getContext()
+                            )}
+                        {header.column.getCanSort() && (
+                          <span className="inline-flex">
+                            {header.column.getIsSorted() === "asc" ? (
+                              <ArrowUp className="size-3.5 text-foreground" />
+                            ) : header.column.getIsSorted() === "desc" ? (
+                              <ArrowDown className="size-3.5 text-foreground" />
+                            ) : (
+                              <ChevronsUpDown className="size-3.5 text-muted-foreground/50 transition-colors group-hover:text-muted-foreground" />
+                            )}
+                          </span>
+                        )}
+                      </div>
                     </TableHead>
                   )
                 })}
                 {rowActions && rowActions.length > 0 && (
-                  <TableHead className="w-[50px]">操作</TableHead>
+                  <TableHead className="w-[50px] px-3 text-[10.5px] font-medium tracking-[0.12em] text-muted-foreground uppercase">
+                    操作
+                  </TableHead>
                 )}
               </TableRow>
             ))}
@@ -304,7 +308,7 @@ export function DataTable<TData>({
                   data-state={row.getIsSelected() && "selected"}
                 >
                   {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
+                    <TableCell key={cell.id} className="px-3 py-3.5 text-[13px]">
                       {flexRender(
                         cell.column.columnDef.cell,
                         cell.getContext()
@@ -312,7 +316,7 @@ export function DataTable<TData>({
                     </TableCell>
                   ))}
                   {rowActions && rowActions.length > 0 && (
-                    <TableCell>
+                    <TableCell className="px-3 py-3.5 text-[13px]">
                       <DropdownMenu>
                         <DropdownMenuTrigger render={
                           <Button variant="ghost" size="icon-sm">

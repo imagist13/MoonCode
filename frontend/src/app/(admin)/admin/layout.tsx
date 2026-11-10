@@ -18,6 +18,7 @@ function titleForPath(pathname: string): string {
     "/admin/messages": "留言管理",
     "/admin/talks": "说说管理",
     "/admin/albums": "相册管理",
+    "/admin/music": "音乐管理",
     "/admin/settings": "站点设置",
     "/admin/logs": "操作日志",
   };
@@ -43,6 +44,18 @@ export default function AdminLayout({
     }
   }, [hydrated, token, isLoginPage, router]);
 
+  // 后台主题作用域：挂在 <html> 上，让 portal（对话框/下拉）也继承 token。
+  // 登录页保持原样，不加 admin-theme。
+  useEffect(() => {
+    const root = document.documentElement;
+    if (isLoginPage) {
+      root.classList.remove("admin-theme");
+      return;
+    }
+    root.classList.add("admin-theme");
+    return () => root.classList.remove("admin-theme");
+  }, [isLoginPage]);
+
   // 登录页：不显示后台框架
   if (isLoginPage) {
     return <>{children}</>;
@@ -51,22 +64,24 @@ export default function AdminLayout({
   // 等待 hydrate / 检查登录
   if (!hydrated || !token) {
     return (
-      <div className="flex h-screen items-center justify-center bg-gray-50 text-gray-500 dark:bg-gray-900">
-        <div className="text-center">
-          <div className="mb-2 inline-block h-8 w-8 animate-spin rounded-full border-2 border-blue-500 border-t-transparent" />
-          <p className="text-sm">加载中...</p>
+      <div className="admin-theme flex h-screen items-center justify-center bg-background text-muted-foreground">
+        <div className="flex items-center gap-2.5 text-[13px]">
+          <span className="size-1.5 animate-pulse rounded-full bg-foreground" />
+          正在加载…
         </div>
       </div>
     );
   }
 
   return (
-    <div className="flex h-screen bg-gray-50 transition-colors duration-200 dark:bg-gray-900">
+    <div className="admin-theme flex h-screen overflow-hidden bg-background text-foreground">
       <DashboardSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
-      <div className="flex w-full flex-1 flex-col overflow-hidden md:w-auto">
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
         <DashboardHeader title={titleForPath(pathname)} onToggleSidebar={() => setSidebarOpen((v) => !v)} />
-        <main className="flex-1 overflow-y-auto p-6">{children}</main>
+        <main className="flex-1 overflow-y-auto">
+          <div className="mx-auto w-full max-w-[1440px] p-6 md:p-8">{children}</div>
+        </main>
       </div>
     </div>
   );

@@ -31,3 +31,21 @@ func (h *UploadHandler) UploadImage(c *gin.Context) {
 	}
 	OK(c, url)
 }
+
+// UploadAudio 上传音频（点唱机曲目）
+// 扩展名白名单 + 拒绝文本/网页类内容伪装。
+func (h *UploadHandler) UploadAudio(c *gin.Context) {
+	file, header, err := c.Request.FormFile("file")
+	if err != nil {
+		FailValidation(c, "请选择要上传的音频文件")
+		return
+	}
+	defer file.Close()
+
+	url, err := h.svc.UploadAudio(file, header.Filename, header.Size)
+	if err != nil {
+		FailValidation(c, err.Error())
+		return
+	}
+	OK(c, url)
+}

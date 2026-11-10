@@ -254,6 +254,96 @@
   --blog-accent: #4da3ff;
 }
 
+/* ============================================================
+   后台管理主题（Editorial Console）
+   与博客前台共用同一套暖白 / 墨色色板；
+   强调蓝只用于焦点环、侧栏活动标记与图表。
+   ============================================================ */
+.admin-theme {
+  --admin-bg: #fbfbf8;
+  --admin-surface: #ffffff;
+  --admin-ink: #12120f;
+  --admin-soft: #6f6f68;
+  --admin-line: rgba(18, 18, 15, 0.09);
+  --admin-muted: #f2f2ee;
+  --admin-accent: #0a84ff;
+
+  /* 让后台内的 shadcn 组件走同一套中性色 */
+  --background: var(--admin-bg);
+  --foreground: var(--admin-ink);
+  --card: var(--admin-surface);
+  --card-foreground: var(--admin-ink);
+  --popover: var(--admin-surface);
+  --popover-foreground: var(--admin-ink);
+  --secondary: var(--admin-muted);
+  --secondary-foreground: var(--admin-ink);
+  --muted: var(--admin-muted);
+  --muted-foreground: var(--admin-soft);
+  --accent: var(--admin-muted);
+  --accent-foreground: var(--admin-ink);
+  --primary: var(--admin-ink);
+  --primary-foreground: var(--admin-bg);
+  --border: var(--admin-line);
+  --input: var(--admin-line);
+  --ring: var(--admin-accent);
+  --radius: 0.75rem;
+
+  --sidebar: var(--admin-bg);
+  --sidebar-foreground: var(--admin-ink);
+  --sidebar-primary: var(--admin-ink);
+  --sidebar-primary-foreground: var(--admin-bg);
+  --sidebar-accent: var(--admin-muted);
+  --sidebar-accent-foreground: var(--admin-ink);
+  --sidebar-border: var(--admin-line);
+  --sidebar-ring: var(--admin-accent);
+
+  --shadow-brand-glow-value: 0 0 0 3px rgb(10 132 255 / 0.18);
+  color-scheme: light;
+
+  font-family:
+    "Geist", "PingFang SC", "HarmonyOS Sans SC", "Noto Sans SC",
+    "Microsoft YaHei", ui-sans-serif, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* 深色：<html> 与外壳都可能带 admin-theme，两种层级都要覆盖 */
+.dark.admin-theme,
+.dark .admin-theme {
+  --admin-bg: #0b0b0a;
+  --admin-surface: #141412;
+  --admin-ink: #f4f4f0;
+  --admin-soft: #a3a39b;
+  --admin-line: rgba(255, 255, 255, 0.1);
+  --admin-muted: #1c1c19;
+  --admin-accent: #4da3ff;
+
+  --destructive: #f97066;
+  --shadow-brand-glow-value: 0 0 0 3px rgb(77 163 255 / 0.22);
+  color-scheme: dark;
+}
+
+.admin-theme ::selection {
+  background: var(--admin-ink);
+  color: var(--admin-bg);
+}
+
+.admin-theme h1,
+.admin-theme h2,
+.admin-theme h3 {
+  letter-spacing: -0.02em;
+}
+
+/* 后台内的 shadcn Card：发丝边框，无阴影、无漂浮 */
+.admin-theme [data-slot="card"] {
+  border: 1px solid var(--admin-line);
+  box-shadow: none;
+}
+.admin-theme [data-slot="card"]:hover {
+  translate: 0 0;
+  box-shadow: none;
+}
+
 /* 博客内的 shadcn Card：去掉阴影与悬浮位移，改为发丝边框 */
 .blog-theme [data-slot="card"] {
   border: 1px solid var(--blog-line);

@@ -18,6 +18,7 @@ import {
   type MessageRecord,
   type AlbumRecord,
   type PhotoRecord,
+  type MusicRecord,
   type LinkRecord,
   type PageRecord,
 } from "./data";
@@ -356,15 +357,24 @@ async function handleAdmin(req: Request, url: URL, path: string): Promise<Respon
       viewCount: db.articles.reduce((sum, a) => sum + a.viewCount, 0),
       categoryList,
       tagDTOList,
+      // 与真实后端一致：补满最近 7 天（没有数据的天数记 0）
       articleStatisticsList: [
+        { date: "2026-11-04", count: 0 },
         { date: "2026-11-05", count: 1 },
         { date: "2026-11-06", count: 1 },
         { date: "2026-11-07", count: 0 },
+        { date: "2026-11-08", count: 0 },
+        { date: "2026-11-09", count: 2 },
+        { date: "2026-11-10", count: 1 },
       ],
       viewList: [
-        { date: "2026-11-05", count: 128 },
-        { date: "2026-11-06", count: 203 },
-        { date: "2026-11-07", count: 76 },
+        { date: "2026-11-04", count: 62 },
+        { date: "2026-11-05", count: 95 },
+        { date: "2026-11-06", count: 128 },
+        { date: "2026-11-07", count: 203 },
+        { date: "2026-11-08", count: 76 },
+        { date: "2026-11-09", count: 141 },
+        { date: "2026-11-10", count: 88 },
       ],
     });
   }
@@ -841,6 +851,63 @@ async function handleAdmin(req: Request, url: URL, path: string): Promise<Respon
     return ok(null);
   }
 
+  /* ---------------- 音乐 ---------------- */
+  if (path === "/admin/music" && method === "GET") {
+    const { current, size } = pageParams(url);
+    const keyword = url.searchParams.get("keywords")?.trim().toLowerCase() || "";
+    const list = [...db.musics]
+      .filter(
+        (m) =>
+          !keyword ||
+          m.musicName.toLowerCase().includes(keyword) ||
+          m.musicAuthor.toLowerCase().includes(keyword),
+      )
+      .sort((a, b) => a.sort - b.sort || a.id - b.id);
+    return ok(pageOf(list, current, size));
+  }
+
+  if (path === "/admin/music/audio" && method === "POST") {
+    // 不解析 multipart，返回可播放的外链示例，方便前端联调上传流程
+    return ok("https://www.soundhelix.com/examples/mp3/SoundHelix-Song-6.mp3");
+  }
+
+  if (path === "/admin/music" && method === "POST") {
+    const body = await readBody<Partial<MusicRecord> & { id?: number }>(req);
+    if (!body.musicName?.trim()) return fail("请填写歌曲名称", 40010);
+    if (!body.musicUrl?.trim()) return fail("请填写音乐地址", 40010);
+    const payload = {
+      musicName: body.musicName.trim(),
+      musicAuthor: body.musicAuthor?.trim() ?? "",
+      musicUrl: body.musicUrl.trim(),
+      cover: body.cover?.trim() ?? "",
+      sort: body.sort ?? 0,
+      status: body.status === 0 ? 0 : 1,
+    };
+    if (body.id) {
+      const music = db.musics.find((m) => m.id === body.id);
+      if (!music) return fail("曲目不存在", 40004);
+      Object.assign(music, payload);
+      addLog("音乐管理", "更新", "/admin/music", "POST", `更新曲目《${payload.musicName}》`);
+      return ok(null);
+    }
+    db.musics.push({
+      id: nextIds.music++,
+      uuid: "mock",
+      ...payload,
+      createTime: nowString(),
+    });
+    addLog("音乐管理", "新增", "/admin/music", "POST", `新增曲目《${payload.musicName}》`);
+    return ok(null);
+  }
+
+  if (path === "/admin/music" && method === "DELETE") {
+    const ids = await readBody<number[]>(req);
+    const list = Array.isArray(ids) ? ids : [];
+    db.musics = db.musics.filter((m) => !list.includes(m.id));
+    addLog("音乐管理", "删除", "/admin/music", "DELETE", `删除 ${list.length} 首曲目`);
+    return ok(null);
+  }
+
   /* ---------------- 友链 ---------------- */
   if (path === "/admin/links" && method === "GET") {
     return ok(db.links);
@@ -1139,7 +1206,11 @@ async function handlePublic(req: Request, url: URL, path: string): Promise<Respo
   }
 
   if (path === "/music/enabled" && method === "GET") {
-    return ok(db.musics.filter((m) => m.status === 1));
+    return ok(
+      db.musics
+        .filter((m) => m.status === 1)
+        .sort((a, b) => a.sort - b.sort || a.id - b.id),
+    );
   }
 
   /* ---------------- 评论 ---------------- */
@@ -1279,7 +1350,8 @@ async function handlePublic(req: Request, url: URL, path: string): Promise<Respo
 
   /* ---------------- 留言 ---------------- */
   if (path === "/messages" && method === "GET") {
-    // 前端按顶层数组消费（message/page.tsx）
+    // 与真实后端一致：返回分页对象，而不是顶层数组
+    const { current, size } = pageParams(url);
     const list = db.messages
       .filter((m) => m.isReview)
       .sort((a, b) => b.id - a.id)
@@ -1290,7 +1362,7 @@ async function handlePublic(req: Request, url: URL, path: string): Promise<Respo
         messageContent: m.messageContent,
         createTime: m.createTime,
       }));
-    return ok(list);
+    return ok(pageOf(list, current, size));
   }
 
   if (path === "/messages" && method === "POST") {

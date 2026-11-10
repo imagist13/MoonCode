@@ -224,7 +224,7 @@ export default function AlbumDetailPage() {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       {/* 头部 */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -237,7 +237,7 @@ export default function AlbumDetailPage() {
             返回
           </Button>
           <div>
-            <h1 className="text-xl font-semibold">
+            <h1 className="text-[1.35rem] font-semibold tracking-[-0.025em]">
               {album?.albumName || "相册详情"}
             </h1>
             {album?.albumDesc && (

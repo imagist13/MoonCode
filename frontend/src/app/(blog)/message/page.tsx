@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState, type CSSProperties } from "react";
 import { Plus } from "@phosphor-icons/react";
 import { api } from "@/lib/api";
+import type { PageResult } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -152,9 +153,14 @@ export default function MessagePage() {
       setLoading(true);
     }
     try {
-      const res = await api.get<Message[]>("/messages");
+      // 后端返回分页对象 { records, count, current, size }；
+      // 兼容早期 mock 的顶层数组，避免两类响应形状导致空白。
+      const res = await api.get<PageResult<Message> | Message[]>(
+        "/messages?current=1&size=100",
+      );
       if (res.flag && res.data) {
-        setMessages(Array.isArray(res.data) ? res.data : []);
+        const list = Array.isArray(res.data) ? res.data : res.data.records;
+        setMessages(list ?? []);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "加载失败");
