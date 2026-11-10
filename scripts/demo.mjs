@@ -2,8 +2,9 @@
 /**
  * Moon Blog 演示 GIF 录制脚本
  *
- * 用 Playwright 录制一段首页浏览 + 深浅主题切换的短视频，
- * 再用 ffmpeg 转成 README 顶部的 docs/screenshots/demo.gif。
+ * 用 Playwright 录制一条完整动线：首页 → 文章详情（目录小船）→ 分类 →
+ * 留言板 → 登录页 → 蜘蛛点唱机换歌 → 深色模式，再用 ffmpeg 转成
+ * README 顶部的 docs/screenshots/demo.gif。
  *
  * 使用前先启动站点：
  *   cd frontend
@@ -249,10 +250,7 @@ function chromiumCandidates(dir) {
 
 async function hideChrome(page) {
   await page.addStyleTag({
-    content: `
-      .music-player { display: none !important; }
-      * { scroll-behavior: auto !important; }
-    `,
+    content: `* { scroll-behavior: auto !important; }`,
   });
 
   // Next.js 开发模式左下角的调试按钮藏在 shadow root 里
@@ -274,8 +272,49 @@ async function scrollTo(page, top) {
   }, top);
 }
 
+/** 收起状态的播放器会在左下角露出一条边，非播放器段落先藏起来 */
+async function setPlayerHidden(page, hidden) {
+  await page.evaluate((hide) => {
+    const id = "demo-player-visibility";
+    const existing = document.getElementById(id);
+    if (!hide) {
+      existing?.remove();
+      return;
+    }
+    if (existing) return;
+    const style = document.createElement("style");
+    style.id = id;
+    style.textContent = ".music-player { display: none !important; }";
+    document.head.appendChild(style);
+  }, hidden);
+}
+
+async function clickNav(page, href, name, opts) {
+  console.log(`打开${name}`);
+  const link = page.locator(`header a[href="${href}"]`).first();
+  await link.waitFor({ state: "visible", timeout: opts.timeout });
+  await link.click();
+  await page.waitForURL(
+    (url) => (typeof url === "string" ? new URL(url) : url).pathname === href,
+    { timeout: opts.timeout },
+  );
+}
+
+async function openPlayer(page) {
+  console.log("打开蜘蛛点唱机");
+  const trigger = page.getByRole("button", { name: "展开蜘蛛点唱机" });
+  await trigger.waitFor({ state: "visible", timeout: 15000 });
+  // 展开按钮被播放器面板压住，直接触发 DOM 点击
+  await trigger.evaluate((element) => element.click());
+  await page
+    .locator('[aria-label="蜘蛛点唱机"]')
+    .first()
+    .waitFor({ state: "visible", timeout: 15000 });
+}
+
 async function record(page, opts) {
   const started = Date.now();
+  const pause = (ms) => page.waitForTimeout(ms);
 
   console.log("首页");
   await page.goto(`${opts.baseUrl}/`, { waitUntil: "domcontentloaded", timeout: opts.timeout });
@@ -285,33 +324,69 @@ async function record(page, opts) {
       await document.fonts.ready;
     } catch {}
   });
-  await page.waitForTimeout(1000);
+  await pause(900);
   await hideChrome(page);
-  await page.waitForTimeout(1200);
+  await setPlayerHidden(page, true);
+  await pause(1100);
 
   console.log("滚动到文章列表");
-  await scrollTo(page, 760);
-  await page.waitForTimeout(1800);
+  await scrollTo(page, 720);
+  await pause(1400);
+
+  console.log("打开文章详情");
+  const card = page.locator('#article-list-wrap a[href^="/articles/"]').first();
+  await card.waitFor({ state: "visible", timeout: opts.timeout });
+  await card.click();
+  await page.waitForURL((url) => /^\/articles\/\d+$/.test(url.pathname), {
+    timeout: opts.timeout,
+  });
+  await pause(1800);
+
+  console.log("滚动到目录小船");
+  await scrollTo(page, 640);
+  await pause(1700);
+
+  await clickNav(page, "/categories", "分类页", opts);
+  await pause(1500);
+
+  await clickNav(page, "/message", "留言板", opts);
+  await pause(1600);
+
+  await clickNav(page, "/admin/login", "登录页", opts);
+  await pause(2300);
+
+  console.log("返回首页");
+  const backHome = page.getByRole("link", { name: /返回首页/ }).first();
+  await backHome.click();
+  await page.waitForURL(
+    (url) => (typeof url === "string" ? new URL(url) : url).pathname === "/",
+    { timeout: opts.timeout },
+  );
+  await pause(1200);
+
+  await setPlayerHidden(page, false);
+  await pause(400);
+  await openPlayer(page);
+  await pause(1600);
+
+  console.log("蜘蛛换歌");
+  const nextTrack = page.locator('[data-action="next"]').first();
+  await nextTrack.waitFor({ state: "visible", timeout: 15000 });
+  await nextTrack.click({ force: true });
+  await pause(3000);
+
+  console.log("关闭点唱机");
+  await page.getByRole("button", { name: "关闭展开播放器" }).click();
+  await pause(700);
 
   console.log("切换深色主题");
-  const toggle = page
-    .locator(".pixel-switch")
-    .or(page.locator('[role="switch"]'))
-    .first();
+  const toggle = page.locator(".pixel-switch").first();
   if (await toggle.count()) {
     await toggle.click({ force: true }).catch(() => {});
-    await page.waitForTimeout(1600);
+    await pause(1800);
   } else {
     console.log("未找到主题切换按钮，跳过这一步");
   }
-
-  console.log("深色下继续浏览");
-  await scrollTo(page, 1900);
-  await page.waitForTimeout(1800);
-
-  console.log("回到顶部");
-  await scrollTo(page, 0);
-  await page.waitForTimeout(1500);
 
   console.log(`录制完成，用时 ${((Date.now() - started) / 1000).toFixed(1)}s`);
 }
