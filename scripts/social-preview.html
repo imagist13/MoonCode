@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 1280px; height: 640px; overflow: hidden; }
+  body {
+    background: #fbfbf8;
+    color: #12120f;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+      "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .page {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    padding: 54px 64px 46px;
+    display: flex;
+    gap: 56px;
+  }
+  .page::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background-image: radial-gradient(rgba(18, 18, 15, 0.055) 1px, transparent 1px);
+    background-size: 22px 22px;
+    mask-image: linear-gradient(115deg, rgba(0,0,0,.55), transparent 62%);
+  }
+  .left {
+    flex: 0 0 520px;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    z-index: 1;
+    padding-top: 8px;
+  }
+  .eyebrow {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: #6f6f68;
+  }
+  .eyebrow::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #0a84ff;
+  }
+  h1 {
+    margin-top: 30px;
+    font-family: Georgia, "Times New Roman", "Songti SC", "SimSun", serif;
+    font-size: 104px;
+    line-height: 0.92;
+    letter-spacing: -0.055em;
+    font-weight: 500;
+  }
+  h1 .moon { font-size: 58px; vertical-align: 42px; letter-spacing: 0; margin-right: 6px; }
+  .rule {
+    width: 64px;
+    height: 1px;
+    background: #12120f;
+    margin: 30px 0 24px;
+    opacity: 0.75;
+  }
+  .cn {
+    font-size: 30px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+  }
+  .cn-meta {
+    margin-top: 10px;
+    font-size: 13px;
+    letter-spacing: 0.14em;
+    color: #6f6f68;
+  }
+  .en {
+    margin-top: 10px;
+    font-size: 16.5px;
+    line-height: 1.55;
+    color: #6f6f68;
+    max-width: 440px;
+  }
+  .en b { color: #12120f; font-weight: 600; }
+  .stack {
+    margin-top: 26px;
+    font-size: 12px;
+    letter-spacing: 0.015em;
+    color: #6f6f68;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 12px;
+  }
+  .stack span { display: flex; align-items: center; gap: 12px; }
+  .stack span:not(:last-child)::after {
+    content: "";
+    width: 3px;
+    height: 3px;
+    border-radius: 50%;
+    background: rgba(18, 18, 15, 0.3);
+  }
+  .foot {
+    margin-top: auto;
+    display: flex;
+    gap: 40px;
+    align-items: flex-end;
+  }
+  .foot div { display: flex; flex-direction: column; gap: 5px; }
+  .foot small {
+    font-size: 9.5px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: #96968d;
+  }
+  .foot strong {
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+  .foot .demo strong { color: #0a84ff; }
+
+  .right {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    position: relative;
+    z-index: 1;
+    padding-top: 8px;
+  }
+  .caption {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    font-size: 9.5px;
+    letter-spacing: 0.18em;
+    color: #6f6f68;
+  }
+  .caption::before {
+    content: "";
+    width: 18px;
+    height: 1px;
+    background: rgba(18, 18, 15, 0.35);
+  }
+  .caption b {
+    color: #c9c9c0;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+  }
+  .shot {
+    border: 1px solid rgba(18, 18, 15, 0.14);
+    border-radius: 10px;
+    background: #fff;
+    overflow: hidden;
+    position: relative;
+  }
+  .shot img { width: 100%; display: block; }
+  .shot.main { height: 322px; }
+  .shot.main img { height: 100%; object-fit: cover; object-position: top center; }
+  .shot.sub { height: 166px; }
+  .shot.sub img { height: 100%; object-fit: cover; object-position: top center; }
+</style>
+</head>
+<body>
+  <div class="page">
+    <div class="left">
+      <div class="eyebrow">Open Source · Full Stack</div>
+      <h1><span class="moon">🌙</span>Moon<br />Blog</h1>
+      <div class="rule"></div>
+      <div class="cn">简约不简单</div>
+      <div class="cn-meta">可部署 · 可学习</div>
+      <div class="en">
+        <b>Minimal, but not simple.</b><br />
+        A blog you can deploy as-is — and read from top to bottom.
+      </div>
+      <div class="stack">
+        <span>Next.js 16</span>
+        <span>Go</span>
+        <span>PostgreSQL</span>
+        <span>Redis</span>
+        <span>Elasticsearch</span>
+      </div>
+      <div class="foot">
+        <div class="demo"><small>Live demo</small><strong>ideast.top</strong></div>
+        <div><small>Source</small><strong>github.com/imagist13/MoonCode</strong></div>
+      </div>
+    </div>
+
+    <div class="right">
+      <div class="caption"><b>01</b>博客前台</div>
+      <div class="shot main">
+        <img src="../docs/screenshots/home.png" alt="" />
+      </div>
+      <div class="caption" style="margin-top: 4px"><b>02</b>管理后台</div>
+      <div class="shot sub">
+        <img src="../docs/screenshots/admin.png" alt="" />
+      </div>
+    </div>
+  </div>
+</body>
+</html>

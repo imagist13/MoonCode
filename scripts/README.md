@@ -112,3 +112,38 @@ bun scripts/screenshots.mjs --only admin \
 - **后台截图登录失败**：检查 `--email` / `--password`；mock 默认密码为 `12345678`。
 - **Git Bash 下 `--url /admin/music` 报本地路径错误**：MSYS 会把以 `/` 开头的参数转成 Windows 路径。
   改用完整 URL（`--url http://localhost:3000/admin/music`），或设置 `MSYS_NO_PATHCONV=1`。
+
+## 演示 GIF
+
+`scripts/demo.mjs` 用 Playwright 录制首页浏览和深浅主题切换，再用 ffmpeg 转成
+README 顶部的 `docs/screenshots/demo.gif`。页面改版后重跑一次即可更新演示。
+
+需要 Playwright（`frontend/node_modules` 已带）和系统 `ffmpeg`（不在 PATH 时用
+`--ffmpeg` 或 `FFMPEG_PATH` 指定）。站点照常先启动 `bun run mock` + `bun run dev`。
+
+```bash
+# 录制并生成 GIF（默认 960px / 9fps / 128 色）
+bun scripts/demo.mjs
+
+# 体积太大时降一档
+bun scripts/demo.mjs --gif-width 800 --fps 8
+
+# 保留中间视频，便于自己剪
+bun scripts/demo.mjs --keep-video --out .tmp/demo.gif
+```
+
+录制内容来自当前运行中的 Mock 数据；想换个演示效果，改 mock 数据后重启
+`bun run mock` 再录。完整参数：`bun scripts/demo.mjs --help`。
+
+## 社交预览图
+
+`scripts/social-preview.mjs` 把 `scripts/social-preview.html` 渲染成 1280 × 640 的
+`docs/social-preview.png`（GitHub 仓库分享卡）。改文案或换截图后重跑：
+
+```bash
+bun scripts/social-preview.mjs
+```
+
+生成后到 GitHub 仓库 **Settings → Social preview** 手动上传
+`docs/social-preview.png`。模板里的截图路径是相对 `docs/screenshots/` 的，
+换图时保持文件名不变即可。
