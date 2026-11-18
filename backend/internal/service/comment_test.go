@@ -22,6 +22,34 @@ func newCommentTestDB(t *testing.T) *gorm.DB {
 	return db
 }
 
+// TestCommentVO_IsScannable 回归测试：CommentVO 作为 Find 的扫描目标时，
+// ReplyVOList 必须被 gorm:"-" 忽略，否则 GORM 会把它当关联解析并报
+// "invalid field found ... define a valid foreign key"，线上表现为公开评论接口 500。
+func TestCommentVO_IsScannable(t *testing.T) {
+	db := newCommentTestDB(t)
+	row := &model.Comment{
+		UserID:         1,
+		CommentContent: "hello",
+		Type:           1,
+		IsReview:       true,
+	}
+	if err := db.Create(row).Error; err != nil {
+		t.Fatalf("seed comment: %v", err)
+	}
+
+	var comments []CommentVO
+	err := db.Table("tb_comment c").
+		Select("c.id, c.user_id, c.comment_content").
+		Where("c.parent_id IS NULL").
+		Find(&comments).Error
+	if err != nil {
+		t.Fatalf("CommentVO 扫描失败（ReplyVOList 关联解析回归）: %v", err)
+	}
+	if len(comments) != 1 || comments[0].CommentContent != "hello" {
+		t.Fatalf("扫描结果异常: %+v", comments)
+	}
+}
+
 // TestCreate_RejectsMismatchedTopic 回复评论时 topic_id/type 与父评论不一致应被拒绝
 func TestCreate_RejectsMismatchedTopic(t *testing.T) {
 	db := newCommentTestDB(t)

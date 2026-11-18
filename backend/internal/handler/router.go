@@ -33,6 +33,8 @@ type Deps struct {
 	RDB *redis.Client
 	// DB 句柄（用于 JWT 中间件查 token_version、RBAC 查角色）
 	DB *gorm.DB
+	// CacheTTL 公开读接口缓存有效期；<= 0 表示关闭缓存
+	CacheTTL time.Duration
 }
 
 // SetupRouter 初始化路由
@@ -95,6 +97,11 @@ func SetupRouter(mode string, deps *Deps, db ...interface{}) *gin.Engine {
 
 // setupPublicRoutes 注册公开路由（无需登录）
 func setupPublicRoutes(rg *gin.RouterGroup, deps *Deps, rdb *redis.Client) {
+	// 公开读接口缓存：TTL <= 0 或未注入 Redis 时自动降级为直通。
+	if deps != nil && deps.CacheTTL > 0 {
+		rg.Use(middleware.ResponseCache(rdb, deps.CacheTTL))
+	}
+
 	// 文章
 	rg.GET("/articles", deps.ArticleHandler.ListHomeArticles)
 	rg.GET("/articles/:id", deps.ArticleHandler.GetPublicArticle)

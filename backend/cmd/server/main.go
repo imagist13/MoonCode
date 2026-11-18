@@ -100,6 +100,7 @@ func main() {
 		UploadPath:      cfg.Upload.LocalPath,
 		DB:              config.DB,
 		RDB:             config.RDB,
+		CacheTTL:        cfg.Cache.CacheTTL(),
 	}
 
 	// 初始化路由（InjectDB 在 SetupRouter 内部注册，在路由组之前）

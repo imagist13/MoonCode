@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"strings"
+	"time"
 
 	"github.com/spf13/viper"
 )
@@ -19,6 +20,7 @@ type Config struct {
 	JWT      JWTConfig      `mapstructure:"jwt"`
 	Mail     MailConfig     `mapstructure:"mail"`
 	Upload   UploadConfig   `mapstructure:"upload"`
+	Cache    CacheConfig    `mapstructure:"cache"`
 }
 
 type ServerConfig struct {
@@ -36,6 +38,20 @@ type DatabaseConfig struct {
 	Password string `mapstructure:"password"`
 	DBName   string `mapstructure:"dbname"`
 	SSLMode  string `mapstructure:"sslmode"`
+
+	// 连接池参数。低并发下 database/sql 默认只保留 2 个空闲连接，
+	// 流量起伏时会反复建连/断连（压测中表现为 P50 抖动）。
+	// 通过显式配置让空闲连接数与通常并发量匹配。
+	MaxOpenConns           int `mapstructure:"max_open_conns"`
+	MaxIdleConns           int `mapstructure:"max_idle_conns"`
+	ConnMaxLifetimeMinutes int `mapstructure:"conn_max_lifetime_minutes"`
+	ConnMaxIdleTimeMinutes int `mapstructure:"conn_max_idle_time_minutes"`
+}
+
+// CacheConfig 公开读接口的 Redis 响应缓存
+type CacheConfig struct {
+	// TTLSeconds 缓存有效期（秒）；<= 0 表示关闭缓存。
+	TTLSeconds int `mapstructure:"ttl_seconds"`
 }
 
 // DSN 返回 PostgreSQL 连接字符串
@@ -95,6 +111,10 @@ var envBindings = []string{
 	"database.password",
 	"database.dbname",
 	"database.sslmode",
+	"database.max_open_conns",
+	"database.max_idle_conns",
+	"database.conn_max_lifetime_minutes",
+	"database.conn_max_idle_time_minutes",
 	"redis.addr",
 	"redis.password",
 	"redis.db",
@@ -110,6 +130,7 @@ var envBindings = []string{
 	"upload.mode",
 	"upload.local_path",
 	"upload.max_size_mb",
+	"cache.ttl_seconds",
 }
 
 // envAliases 把「基础设施镜像用的标准变量」映射到「viper 内部路径」。
@@ -126,6 +147,10 @@ var envAliases = []struct {
 	{"POSTGRES_PASSWORD", "database.password"},
 	{"POSTGRES_DB", "database.dbname"},
 	{"DATABASE_SSLMODE", "database.sslmode"},
+	{"DATABASE_MAX_OPEN_CONNS", "database.max_open_conns"},
+	{"DATABASE_MAX_IDLE_CONNS", "database.max_idle_conns"},
+	{"DATABASE_CONN_MAX_LIFETIME_MINUTES", "database.conn_max_lifetime_minutes"},
+	{"DATABASE_CONN_MAX_IDLE_TIME_MINUTES", "database.conn_max_idle_time_minutes"},
 	// Redis：与 redis 镜像共享 REDIS_*（addr 由 host:port 在 Load 里合成）
 	{"REDIS_PASSWORD", "redis.password"},
 	{"REDIS_DB", "redis.db"},
@@ -142,6 +167,7 @@ var envAliases = []struct {
 	{"UPLOAD_MODE", "upload.mode"},
 	{"UPLOAD_LOCAL_PATH", "upload.local_path"},
 	{"UPLOAD_MAX_SIZE_MB", "upload.max_size_mb"},
+	{"CACHE_TTL_SECONDS", "cache.ttl_seconds"},
 }
 
 // Load 加载配置文件；配置文件不存在时不致命，退化为仅使用环境变量。
@@ -177,6 +203,9 @@ func Load(path string) {
 		}
 	}
 
+	// 缓存默认 30 秒；显式设置 CACHE_TTL_SECONDS=0 可关闭（0 有明确语义，故走 viper 默认值而非 applyDefaults）。
+	viper.SetDefault("cache.ttl_seconds", 30)
+
 	if err := viper.Unmarshal(&AppConfig); err != nil {
 		log.Fatalf("解析配置文件失败: %v", err)
 	}
@@ -187,6 +216,8 @@ func Load(path string) {
 	composeRabbitURL()
 	// 合成：ELASTICSEARCH_URL -> addresses
 	composeESAddresses()
+	// 未显式配置时补齐数据库连接池默认值
+	applyDefaults(&AppConfig)
 
 	if err := validate(&AppConfig); err != nil {
 		log.Fatalf("配置校验失败: %v", err)
@@ -239,6 +270,48 @@ func composeESAddresses() {
 	if u := viper.GetString("ELASTICSEARCH_URL"); u != "" {
 		AppConfig.ES.Addresses = []string{u}
 	}
+}
+
+// applyDefaults 为可选配置补齐默认值。
+//
+// 连接池默认值按「单实例 + 中小流量」设定：PostgreSQL max_connections=100，
+// 后端保留 30 个上限、常驻 20 个空闲连接，既能承接突发并发，
+// 又不会与其他组件争抢连接。部署规模变化时通过环境变量调整即可。
+func applyDefaults(cfg *Config) {
+	db := &cfg.Database
+	if db.MaxOpenConns <= 0 {
+		db.MaxOpenConns = 30
+	}
+	if db.MaxIdleConns <= 0 {
+		db.MaxIdleConns = 20
+	}
+	if db.MaxIdleConns > db.MaxOpenConns {
+		db.MaxIdleConns = db.MaxOpenConns
+	}
+	if db.ConnMaxLifetimeMinutes <= 0 {
+		db.ConnMaxLifetimeMinutes = 30
+	}
+	if db.ConnMaxIdleTimeMinutes <= 0 {
+		db.ConnMaxIdleTimeMinutes = 5
+	}
+}
+
+// ConnMaxLifetime 返回连接最长存活时间
+func (d DatabaseConfig) ConnMaxLifetime() time.Duration {
+	return time.Duration(d.ConnMaxLifetimeMinutes) * time.Minute
+}
+
+// ConnMaxIdleTime 返回连接最长空闲时间
+func (d DatabaseConfig) ConnMaxIdleTime() time.Duration {
+	return time.Duration(d.ConnMaxIdleTimeMinutes) * time.Minute
+}
+
+// CacheTTL 返回缓存有效期；<= 0 表示关闭缓存
+func (c CacheConfig) CacheTTL() time.Duration {
+	if c.TTLSeconds <= 0 {
+		return 0
+	}
+	return time.Duration(c.TTLSeconds) * time.Second
 }
 
 // validate 检查必填配置。缺失时返回错误，由调用方决定是否 fatal。

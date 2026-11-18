@@ -32,15 +32,18 @@ func NewCommentService(db *gorm.DB, rdb *redis.Client) *CommentService {
 
 // CommentVO 评论视图对象（含子回复）
 type CommentVO struct {
-	ID             int         `json:"id"`
-	UserID         int         `json:"userId"`
-	Nickname       string      `json:"nickname"`
-	Avatar         string      `json:"avatar"`
-	CommentContent string      `json:"commentContent"`
-	LikeCount      int64       `json:"likeCount"`
-	CreateTime     string      `json:"createTime"`
-	ReplyCount     int64       `json:"replyCount"`
-	ReplyVOList    []ReplyVO   `json:"replyVOList"`
+	ID             int    `json:"id"`
+	UserID         int    `json:"userId"`
+	Nickname       string `json:"nickname"`
+	Avatar         string `json:"avatar"`
+	CommentContent string `json:"commentContent"`
+	LikeCount      int64  `json:"likeCount"`
+	CreateTime     string `json:"createTime"`
+	ReplyCount     int64  `json:"replyCount"`
+	// gorm:"-" 必须保留：CommentVO 直接作为 Find 的扫描目标，
+	// 没有该标记时 GORM 会把 []ReplyVO 当成关联关系去解析，
+	// 进而报 "define a valid foreign key"，导致公开评论接口 500。
+	ReplyVOList []ReplyVO `json:"replyVOList" gorm:"-"`
 }
 
 // ReplyVO 回复视图对象

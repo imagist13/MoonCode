@@ -37,6 +37,25 @@ func InitDatabase() {
 		log.Fatalf("数据库连接失败: %v", err)
 	}
 
+	// 连接池调优：database/sql 默认 MaxIdleConns=2，低并发时连接会被
+	// 超过 2 个的并发请求反复重新建立（TCP + TLS + PostgreSQL 认证），
+	// 表现为 P50 抖动和额外的数据库连接开销。这里显式配置空闲连接数，
+	// 让连接在请求间隙保持复用。
+	sqlDB, err := db.DB()
+	if err != nil {
+		log.Fatalf("获取数据库连接池失败: %v", err)
+	}
+	sqlDB.SetMaxOpenConns(AppConfig.Database.MaxOpenConns)
+	sqlDB.SetMaxIdleConns(AppConfig.Database.MaxIdleConns)
+	sqlDB.SetConnMaxLifetime(AppConfig.Database.ConnMaxLifetime())
+	sqlDB.SetConnMaxIdleTime(AppConfig.Database.ConnMaxIdleTime())
+	log.Printf("数据库连接池: max_open=%d max_idle=%d max_lifetime=%s max_idle_time=%s",
+		AppConfig.Database.MaxOpenConns,
+		AppConfig.Database.MaxIdleConns,
+		AppConfig.Database.ConnMaxLifetime(),
+		AppConfig.Database.ConnMaxIdleTime(),
+	)
+
 	if shouldAutoMigrate() {
 		if err := model.AutoMigrate(db); err != nil {
 			log.Fatalf("数据库迁移失败: %v", err)
