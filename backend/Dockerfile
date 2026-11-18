@@ -1,4 +1,5 @@
-FROM golang:1.26-alpine AS builder
+# 固定到已修复 GO-2026-6859（net/http MaxBytesReader 竞态）的 Go 版本
+FROM golang:1.26.11-alpine AS builder
 
 WORKDIR /app
 
