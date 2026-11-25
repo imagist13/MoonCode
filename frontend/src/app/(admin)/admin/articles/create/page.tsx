@@ -1,9 +1,17 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef, Suspense } from "react";
+import {
+  useEffect,
+  useState,
+  useCallback,
+  useDeferredValue,
+  useRef,
+  Suspense,
+} from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { flushSync } from "react-dom";
 import { api } from "@/lib/api";
+import { MarkdownContent } from "@/components/blog/MarkdownContent";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { SmartTagInput } from "@/components/editor/smart-tag-input";
@@ -42,9 +50,9 @@ import {
 const TOOLBAR_GROUPS = [
   { label: "格式", items: ["bold", "italic", "strikethrough"] },
   { label: "标题", items: ["h2", "h3"] },
-  { label: "内容", items: ["quote", "code", "codeBlock"] },
+  { label: "内容", items: ["quote", "code", "codeBlock", "table"] },
   { label: "媒体", items: ["link", "image", "hr"] },
-  { label: "列表", items: ["ul", "ol"] },
+  { label: "列表", items: ["ul", "ol", "task"] },
 ] as const;
 
 const TOOLBAR_COMMANDS: Record<
@@ -64,6 +72,8 @@ const TOOLBAR_COMMANDS: Record<
   hr: { icon: "—", label: "hr", title: "分割线" },
   ul: { icon: "≡", label: "ul", title: "无序列表" },
   ol: { icon: "1.", label: "ol", title: "有序列表" },
+  task: { icon: "☑", label: "task", title: "任务列表" },
+  table: { icon: "▦", label: "table", title: "表格" },
 };
 
 /* ==============================
@@ -92,40 +102,6 @@ interface Tag {
 }
 
 type ViewMode = "editor" | "split" | "preview";
-
-/* ==============================
- * Markdown 渲染（简单实现）
- * ============================== */
-
-function renderPreview(markdown: string): string {
-  const html = markdown
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/^### (.+)$/gm, "<h3>$1</h3>")
-    .replace(/^## (.+)$/gm, "<h2>$1</h2>")
-    .replace(/^# (.+)$/gm, "<h1>$1</h1>")
-    .replace(/^> (.+)$/gm, "<blockquote>$1</blockquote>")
-    .replace(/^- (.+)$/gm, "<li>$1</li>")
-    .replace(/^(\d+)\. (.+)$/gm, "<li>$2</li>")
-    .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
-    .replace(/\*(.+?)\*/g, "<em>$1</em>")
-    .replace(/~~(.+?)~~/g, "<del>$1</del>")
-    .replace(
-      /```(\w*)\n([\s\S]*?)```/g,
-      '<pre><code class="language-$1">$2</code></pre>'
-    )
-    .replace(/`([^`]+)`/g, "<code>$1</code>")
-    .replace(/\[(.+?)\]\((.+?)\)/g, '<a href="$2" target="_blank">$1</a>')
-    .replace(
-      /!\[(.+?)\]\((.+?)\)/g,
-      '<img src="$2" alt="$1" style="max-width:100%;border-radius:8px;margin:16px 0;" />'
-    )
-    .replace(/\n\n/g, "</p><p>")
-    .replace(/^---$/gm, "<hr />");
-
-  return `<p>${html}</p>`;
-}
 
 /* ==============================
  * 主内容组件
@@ -161,6 +137,9 @@ function UnifiedEditorContent() {
   const [saving, setSaving] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // 预览使用延迟值：长文输入时优先保证编辑区响应，避免每个按键都同步渲染全文
+  const previewContent = useDeferredValue(form.articleContent);
 
   // 草稿恢复提示
   const [draftBanner, setDraftBanner] = useState<{
@@ -447,6 +426,21 @@ function UnifiedEditorContent() {
           newText =
             text.slice(0, lineStartOl) + "1. " + text.slice(lineStartOl);
           newCursorPos = start + 3;
+          break;
+        }
+        case "task": {
+          const lineStartTask = text.lastIndexOf("\n", start - 1) + 1;
+          newText =
+            text.slice(0, lineStartTask) +
+            "- [ ] " +
+            text.slice(lineStartTask);
+          newCursorPos = start + 6;
+          break;
+        }
+        case "table": {
+          const table = "\n| 列 1 | 列 2 |\n| --- | --- |\n| 内容 | 内容 |\n";
+          newText = text.slice(0, start) + table + text.slice(end);
+          newCursorPos = start + table.length;
           break;
         }
       }
@@ -833,6 +827,12 @@ console.log(greeting);
 
 - 列表项 1
 - 列表项 2
+- [x] 已完成的任务
+- [ ] 待办的任务
+
+| 列 1 | 列 2 |
+| --- | --- |
+| 内容 | 内容 |
 
 [链接文字](https://example.com)
 
@@ -872,14 +872,9 @@ console.log(greeting);
               {form.articleTitle || "在这里输入文章标题..."}
             </h1>
 
-            {/* 预览内容 */}
+            {/* 预览内容：与文章详情页共用同一个渲染器，所见即所得 */}
             {form.articleContent ? (
-              <div
-                className="prose prose-sm dark:prose-invert max-w-none"
-                dangerouslySetInnerHTML={{
-                  __html: renderPreview(form.articleContent),
-                }}
-              />
+              <MarkdownContent content={previewContent} />
             ) : (
               <p className="text-muted-foreground">
                 预览将在您开始输入后显示...

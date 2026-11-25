@@ -4,9 +4,6 @@ import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
-import rehypeHighlight from "rehype-highlight";
 import {
   CalendarBlank,
   Eye,
@@ -14,6 +11,7 @@ import {
   CaretLeft,
   CaretRight,
 } from "@phosphor-icons/react";
+import { MarkdownContent } from "@/components/blog/MarkdownContent";
 import { SailingToc } from "@/components/blog/SailingToc";
 import { CommentSection, type CommentNode } from "@/components/blog/CommentSection";
 import { SoftActionWheel } from "@/components/leibox/soft-action-wheel/SoftActionWheel";
@@ -55,14 +53,6 @@ const SKELETON_WIDTHS = [
   "90%",
   "76%",
 ];
-
-/** 标题转 id */
-function headingId(text: string): string {
-  return text
-    .toLowerCase()
-    .replace(/[^\w一-龥]+/g, "-")
-    .replace(/^-|-$/g, "");
-}
 
 export default function ArticleDetailPage() {
   const params = useParams();
@@ -342,77 +332,7 @@ export default function ArticleDetailPage() {
           )}
 
           {/* Markdown 正文 */}
-          <div className="prose max-w-none">
-            <ReactMarkdown
-              remarkPlugins={[remarkGfm]}
-              rehypePlugins={[rehypeHighlight]}
-              components={{
-                h1: ({ children, ...props }) => {
-                  const text = String(children);
-                  const id = headingId(text);
-                  return (
-                    <h1 id={id} className="scroll-mt-24" {...props}>
-                      {children}
-                    </h1>
-                  );
-                },
-                h2: ({ children, ...props }) => {
-                  const text = String(children);
-                  const id = headingId(text);
-                  return (
-                    <h2 id={id} className="scroll-mt-24" {...props}>
-                      {children}
-                    </h2>
-                  );
-                },
-                h3: ({ children, ...props }) => {
-                  const text = String(children);
-                  const id = headingId(text);
-                  return (
-                    <h3 id={id} className="scroll-mt-24" {...props}>
-                      {children}
-                    </h3>
-                  );
-                },
-                h4: ({ children, ...props }) => {
-                  const text = String(children);
-                  const id = headingId(text);
-                  return (
-                    <h4 id={id} className="scroll-mt-24" {...props}>
-                      {children}
-                    </h4>
-                  );
-                },
-                a: ({ href, children, ...props }) => {
-                  const isExternal = /^https?:\/\//.test(href ?? "");
-                  if (isExternal) {
-                    return (
-                      <a href={href} target="_blank" rel="noopener noreferrer" {...props}>
-                        {children}
-                      </a>
-                    );
-                  }
-                  return <a href={href} {...props}>{children}</a>;
-                },
-                // 增强代码块样式
-                pre: ({ children, ...props }) => (
-                  <pre className="relative group" {...props}>
-                    {children}
-                  </pre>
-                ),
-                // 增强图片样式
-                img: ({ src, alt, ...props }) => (
-                  <figure className="my-8">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={src} alt={alt} className="rounded-xl" {...props} />
-                    {alt && <figcaption className="mt-3 text-center text-[12.5px] text-blog-soft">{alt}</figcaption>}
-                  </figure>
-                ),
-              }}
-            >
-              {article.articleContent}
-            </ReactMarkdown>
-          </div>
+          <MarkdownContent content={article.articleContent} />
 
           {/* 上下篇导航 */}
           <nav className="mt-20 grid gap-10 border-t border-blog-line pt-8 md:grid-cols-2">
