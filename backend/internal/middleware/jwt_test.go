@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"strings"
 	"testing"
 )
 
@@ -51,8 +52,18 @@ func TestParseTokenRejectsTampered(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	// 篡改最后一个字符
-	bad := tok[:len(tok)-1] + "X"
+	// 只改签名段的第一个字符：它承载完整的 6 个有效位，任何变化都会改变解码结果。
+	// 不要改最后一个字符——base64url 末尾字符含填充位，改它可能解码出相同字节，
+	// 导致这个用例偶发失败。
+	parts := strings.Split(tok, ".")
+	if len(parts) != 3 {
+		t.Fatalf("unexpected token format: %s", tok)
+	}
+	replacement := "A"
+	if parts[2][0] == 'A' {
+		replacement = "B"
+	}
+	bad := parts[0] + "." + parts[1] + "." + replacement + parts[2][1:]
 	if _, err := ParseToken(bad); err == nil {
 		t.Fatal("期望篡改 token 被拒绝")
 	}
