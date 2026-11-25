@@ -1,9 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
-import rehypeHighlight from "rehype-highlight";
+import { MarkdownContent } from "@/components/blog/MarkdownContent";
 import type { AboutInfo } from "@/lib/about";
 
 interface AboutMainProps {
@@ -23,16 +21,7 @@ export function AboutMain({ data }: AboutMainProps) {
   return (
     <div className="reveal-up" style={{ animationDelay: "50ms" }}>
       {/* 自我介绍（Markdown），复用文章页 .blog-theme .prose 排版 */}
-      {data.bio && (
-        <div className="prose max-w-none">
-          <ReactMarkdown
-            remarkPlugins={[remarkGfm]}
-            rehypePlugins={[rehypeHighlight]}
-          >
-            {data.bio}
-          </ReactMarkdown>
-        </div>
-      )}
+      {data.bio && <MarkdownContent content={data.bio} />}
 
       {/* About Me 要点 */}
       {data.aboutPoints.length > 0 && (
