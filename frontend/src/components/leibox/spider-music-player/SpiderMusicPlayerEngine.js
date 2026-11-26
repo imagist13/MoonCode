@@ -92,6 +92,9 @@ function createSpiderMusicPlayer(target, initial, CSS2, MARKUP2, DATA2, ICONS2) 
   let options = { ...initial }, current = Number.isInteger(initial?.track) ? Math.max(0, Math.min(records.length - 1, initial.track)) : 0;
   if (Number.isFinite(initial?.duration) && initial.duration > 0) records[current].duration = Math.round(initial.duration);
   let requested = current, pending = null, busy = false, dead = false, playing = initial?.playing ?? true, controlled = initial?.position !== void 0, elapsed = Number.isFinite(initial?.position) ? Math.max(0, initial.position) : Math.min(85, records[current].duration);
+  // 宿主最近一次真正上报的曲目索引：宿主每次回传 position 都会带上同一个 track，
+  // 只有这个值变化时才代表「宿主换歌了」。
+  let hostTrack = current;
   let transfer = null, walking = null, impact = null, labelTween = null, toastTimer = 0, geometryReady = false, fitScale = 1;
   const deviceScale = 1;
   let shuffle = false, repeat = false, side = "right", paintX = null, paintY = null;
@@ -594,7 +597,16 @@ function createSpiderMusicPlayer(target, initial, CSS2, MARKUP2, DATA2, ICONS2) 
       elapsed = Math.max(0, Math.min(records[current].duration, Number(next.position) || 0));
       progress();
     }
-    if (next.track !== void 0) select(next.track);
+    if (next.track !== void 0) {
+      const track = Number(next.track);
+      // 宿主每个 tick 都会回传同一个 track；宿主主动换歌后 React 要等动画 commit
+      // 才更新这个值，动画进行中收到的仍是旧曲目。若把旧值当成新请求排队，
+      // 蜘蛛会在两首歌之间来回搬运——只响应真正变化的值。
+      if (Number.isInteger(track) && track !== hostTrack) {
+        hostTrack = track;
+        select(track);
+      }
+    }
   } };
 }
 
