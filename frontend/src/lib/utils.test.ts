@@ -1,5 +1,61 @@
 import { describe, expect, it } from "vitest";
-import { extractHeadings, slugifyHeading, stripMarkdown } from "./utils";
+import {
+  extractHeadings,
+  formatTime,
+  parseDateTime,
+  slugifyHeading,
+  stripMarkdown,
+  titleFromMarkdown,
+} from "./utils";
+
+describe("parseDateTime / formatTime", () => {
+  it("解析后端 RFC3339 时间戳，不再原样输出", () => {
+    const raw = "2026-11-25T23:40:22.961521+08:00";
+    expect(parseDateTime(raw)).toBeInstanceOf(Date);
+    expect(formatTime(raw)).not.toBe(raw);
+    expect(formatTime(raw)).not.toContain("T");
+  });
+
+  it("兼容空格或斜杠分隔的日期", () => {
+    expect(parseDateTime("2020-01-02 03:04:05")).toBeInstanceOf(Date);
+    expect(parseDateTime("2020/01/02 03:04:05")).toBeInstanceOf(Date);
+    expect(formatTime("2020-01-02 03:04:05")).toContain("2020");
+    expect(formatTime("2020/01/02 03:04:05")).toContain("2020");
+  });
+
+  it("无法解析时原样返回，避免变成空白", () => {
+    expect(formatTime("not-a-date")).toBe("not-a-date");
+    expect(parseDateTime("")).toBeNull();
+  });
+});
+
+describe("titleFromMarkdown", () => {
+  it("取第一个标题（含二级标题），并跳过代码块里的伪标题", () => {
+    const markdown = [
+      "```bash",
+      "# 安装依赖",
+      "```",
+      "",
+      "## 第一篇文章为什么难写",
+      "",
+      "正文",
+    ].join("\n");
+    expect(titleFromMarkdown(markdown, "first-post")).toBe(
+      "第一篇文章为什么难写",
+    );
+  });
+
+  it("标题里的行内代码按纯文本提取", () => {
+    expect(titleFromMarkdown("## 使用 `npm run dev` 启动")).toBe(
+      "使用 npm run dev 启动",
+    );
+  });
+
+  it("没有标题时回退到文件名", () => {
+    expect(titleFromMarkdown("> 引用\n\n正文", "first-post")).toBe("first-post");
+    expect(titleFromMarkdown("", "first-post")).toBe("first-post");
+  });
+});
 
 describe("slugifyHeading", () => {
   it("保留中英文与数字，把标点折叠为连字符", () => {

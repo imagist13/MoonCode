@@ -10,7 +10,7 @@ import {
 } from "@phosphor-icons/react";
 import { SidebarCard, FadeScrollContainer } from "./SidebarCard";
 import { api } from "@/lib/api";
-import { cn } from "@/lib/utils";
+import { cn, formatTime } from "@/lib/utils";
 
 /** 分类侧栏 */
 export function CategorySidebar({
@@ -175,7 +175,7 @@ export function RecommendedArticles() {
                     {a.articleTitle}
                   </h4>
                   <div className="mt-1.5 flex items-center gap-1.5 truncate text-[10.5px] text-blog-soft">
-                    <span className="truncate">{a.createTime}</span>
+                    <span className="truncate">{formatTime(a.createTime)}</span>
                     <span className="shrink-0">·</span>
                     <span className="truncate">{a.categoryName || "未分类"}</span>
                   </div>

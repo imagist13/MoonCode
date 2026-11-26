@@ -10,10 +10,32 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+/**
+ * 解析后端时间。
+ *
+ * Go 的 time.Time 默认序列化为 RFC3339（如 2026-11-25T23:40:22.961521+08:00），
+ * 这类字符串必须原样交给 Date —— 任何改写（例如把所有 - 换成 /）都会让它解析失败。
+ * 只有原生解析不了时才做兜底：把斜杠换回短横线、空格换成 T，
+ * 兼容 "YYYY-MM-DD HH:mm:ss"（部分浏览器不认空格分隔的写法）。
+ */
+export function parseDateTime(value: string | Date): Date | null {
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime()) ? null : value;
+  }
+  const text = value.trim();
+  if (!text) return null;
+
+  const native = new Date(text);
+  if (!Number.isNaN(native.getTime())) return native;
+
+  const fallback = new Date(text.replace(/\//g, "-").replace(" ", "T"));
+  return Number.isNaN(fallback.getTime()) ? null : fallback;
+}
+
 /** 格式化时间戳为「几分钟前」等相对时间 */
 export function formatTime(date: string | Date): string {
-  const d = typeof date === "string" ? new Date(date.replace(/-/g, "/")) : date;
-  if (isNaN(d.getTime())) return typeof date === "string" ? date : "";
+  const d = parseDateTime(date);
+  if (!d) return typeof date === "string" ? date : "";
   const seconds = Math.floor((Date.now() - d.getTime()) / 1000);
   if (seconds < 60) return "刚刚";
   if (seconds < 3600) return `${Math.floor(seconds / 60)} 分钟前`;
@@ -170,4 +192,13 @@ export function extractHeadings(
 /** 源码行号 → 标题 id，供 Markdown 渲染器按节点位置取用 */
 export function headingIdMap(markdown: string): Map<number, string> {
   return new Map(scanHeadings(markdown).map((h) => [h.line, h.id]));
+}
+
+/**
+ * 从导入的 Markdown 推断文章标题：取第一个标题（h1~h4），
+ * 没有标题时回退到文件名。扫描复用 scanHeadings，会跳过代码块里的伪标题。
+ */
+export function titleFromMarkdown(markdown: string, fallback = ""): string {
+  const first = scanHeadings(markdown)[0]?.text.trim();
+  return first || fallback.trim();
 }

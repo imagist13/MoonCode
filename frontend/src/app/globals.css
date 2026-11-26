@@ -823,6 +823,15 @@ body:has(.blog-theme) {
   font-weight: 400;
 }
 
+/* 窄屏下长代码行折行：横向滚动条在触屏/悬浮滚动条下不可见，
+   不折行的话内容看起来像被直接截断了 */
+@media (max-width: 767px) {
+  .prose pre {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+}
+
 /* 代码块外壳：语言标签 + 复制按钮 */
 .prose-pre {
   position: relative;

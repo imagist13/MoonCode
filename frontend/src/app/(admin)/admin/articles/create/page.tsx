@@ -20,7 +20,7 @@ import { useAutoSave } from "@/hooks/use-auto-save";
 import { articleSchema, type ArticleFormData } from "@/lib/validations/article";
 import { toast } from "sonner";
 import { ZodError } from "zod";
-import { cn } from "@/lib/utils";
+import { cn, titleFromMarkdown } from "@/lib/utils";
 import {
   ArrowLeft,
   Save,
@@ -190,11 +190,12 @@ function UnifiedEditorContent() {
         content?: string;
       };
       if (!content) return;
-      const h1Match = content.match(/^\s*#\s+(.+)\s*$/m);
+      // 优先取第一个标题（不一定是 h1），没有标题才回退到文件名
+      const suggestedTitle = titleFromMarkdown(content, fileName ?? "");
       flushSync(() => {
         setForm((prev) => ({
           ...prev,
-          articleTitle: h1Match?.[1] ?? fileName ?? "",
+          articleTitle: suggestedTitle,
           articleContent: content,
         }));
         setIsDirty(true);
